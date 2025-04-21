@@ -6,7 +6,6 @@ let milestones = [];
 $(document).ready(function() {
     initializeEventListeners();
     loadProfile();
-    loadMilestones();  // Load milestones regardless of profile status
 });
 
 // Event Listeners
@@ -106,42 +105,40 @@ function handleProfileSubmit(e) {
 
 // Milestone Functions
 function createDefaultMilestones() {
-    // Create Current milestone
-    $.ajax({
-        url: '/api/milestones',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            name: 'Current',
-            age_at_occurrence: currentAge,
-            expense_type: 'lump_sum',
-            amount: 0
+    // Create both milestones in parallel and wait for both to complete
+    Promise.all([
+        // Create Current milestone
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Current',
+                age_at_occurrence: currentAge,
+                expense_type: 'lump_sum',
+                amount: 0
+            })
         }),
-        success: function(response) {
-            console.log('Created Current milestone');
-        },
-        error: function(error) {
-            console.error('Error creating Current milestone:', error);
-        }
-    });
-
-    // Create Inheritance milestone
-    $.ajax({
-        url: '/api/milestones',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            name: 'Inheritance',
-            age_at_occurrence: 100,
-            expense_type: 'lump_sum',
-            amount: 10000
-        }),
-        success: function(response) {
-            console.log('Created Inheritance milestone');
-        },
-        error: function(error) {
-            console.error('Error creating Inheritance milestone:', error);
-        }
+        // Create Inheritance milestone
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Inheritance',
+                age_at_occurrence: 100,
+                expense_type: 'lump_sum',
+                amount: 10000
+            })
+        })
+    ])
+    .then(() => {
+        console.log('Created default milestones');
+        loadMilestones();
+    })
+    .catch(error => {
+        console.error('Error creating default milestones:', error);
+        alert('Error creating default milestones. Please try again.');
     });
 }
 
@@ -152,6 +149,9 @@ function loadMilestones() {
         success: function(response) {
             milestones = response;
             updateTimeline();
+            
+            // Clear existing milestone forms before creating new ones
+            $('#milestoneForms').empty();
             response.forEach(createMilestoneForm);
         },
         error: function(error) {
