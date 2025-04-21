@@ -167,9 +167,9 @@ function addNewMilestone() {
         age_at_occurrence: currentAge + 5,
         expense_type: 'lump_sum',
         amount: 0,
-        occurrence: 'Yearly',
-        duration: 1,
-        rate_of_return: 0.0
+        occurrence: null,
+        duration: null,
+        rate_of_return: null
     };
     
     $.ajax({
@@ -223,20 +223,20 @@ function createMilestoneForm(milestone) {
                     <label class="form-label">Amount</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
                     <label class="form-label">Occurrence</label>
                     <select class="form-control" name="occurrence">
                         <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Duration (years)</label>
-                    <input type="number" class="form-control" name="duration" value="${milestone.duration}">
+                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
+                    <label class="form-label">Duration</label>
+                    <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
                     <label class="form-label">Rate of Return (%)</label>
-                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return * 100}" step="0.1">
+                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-danger delete-milestone">Delete</button>
@@ -245,6 +245,12 @@ function createMilestoneForm(milestone) {
     `);
     
     $('#milestoneForms').append(form);
+    
+    // Add event listener for expense type changes
+    form.find('[name="expense_type"]').on('change', function() {
+        const isAnnuity = $(this).val() === 'annuity';
+        form.find('.annuity-fields').toggle(isAnnuity);
+    });
     
     // Add event listeners for the new form
     form.find('.milestone-form-content').on('submit', handleMilestoneUpdate);
@@ -258,15 +264,24 @@ function handleMilestoneUpdate(e) {
     const milestone = milestones.find(m => m.id === milestoneId);
     
     if (milestone) {
+        const expenseType = form.find('[name="expense_type"]').val();
         const updatedMilestone = {
             name: form.find('[name="name"]').val(),
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
-            expense_type: form.find('[name="expense_type"]').val(),
-            amount: parseFloat(form.find('[name="amount"]').val()),
-            occurrence: form.find('[name="occurrence"]').val(),
-            duration: parseInt(form.find('[name="duration"]').val()),
-            rate_of_return: parseFloat(form.find('[name="rate_of_return"]').val()) / 100  // Convert percentage to decimal
+            expense_type: expenseType,
+            amount: parseFloat(form.find('[name="amount"]').val())
         };
+        
+        // Only include annuity fields if expense type is annuity
+        if (expenseType === 'annuity') {
+            updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
+            updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
+            updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;  // Convert percentage to decimal
+        } else {
+            updatedMilestone.occurrence = null;
+            updatedMilestone.duration = null;
+            updatedMilestone.rate_of_return = null;
+        }
         
         $.ajax({
             url: `/api/milestones/${milestoneId}`,

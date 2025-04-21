@@ -12,22 +12,29 @@ class Milestone(db.Model):
     amount = db.Column(db.Float, nullable=False)
     duration_years = db.Column(db.Integer)  # Only for annuity type
     monthly_income = db.Column(db.Float)  # Only for retirement milestone
-    occurrence = db.Column(db.String(10), nullable=False, default='Yearly')  # 'Monthly' or 'Yearly'
-    duration = db.Column(db.Integer, nullable=False, default=1)  # Duration in years
-    rate_of_return = db.Column(db.Float, nullable=False, default=0.0)  # Rate of return as decimal
+    occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
+    duration = db.Column(db.Integer, nullable=True)  # Duration in years
+    rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, expense_type, amount, duration_years=None, monthly_income=None, occurrence='Yearly', duration=1, rate_of_return=0.0):
+    def __init__(self, name, age_at_occurrence, expense_type, amount, duration_years=None, monthly_income=None, occurrence=None, duration=None, rate_of_return=None):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.expense_type = expense_type
         self.amount = amount
         self.duration_years = duration_years
         self.monthly_income = monthly_income
-        self.occurrence = occurrence
-        self.duration = duration
-        self.rate_of_return = rate_of_return
+        
+        # Only set these fields if it's an annuity
+        if expense_type == 'annuity':
+            self.occurrence = occurrence or 'Yearly'
+            self.duration = duration or 1
+            self.rate_of_return = rate_of_return or 0.0
+        else:
+            self.occurrence = None
+            self.duration = None
+            self.rate_of_return = None
         
     def to_dict(self):
         """Convert milestone to dictionary."""
