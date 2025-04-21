@@ -7,7 +7,18 @@ The personal finance app will help users plan for major life events and retireme
 
 2.1 Timeline Visualization
 - Interactive timeline showing major life events/milestones
-- Ability to add/remove milestones
+- Timeline should be blank by default with message "Select birthday to populate timeline"
+- Once birthday is selected, timeline shows:
+  - Age-based markers every 10 years (20, 30, 40, 50, etc.)
+  - Two default milestones:
+    - "Current" point showing user's current age
+    - "Inheritance" point at age 100 (default lump sum of $10,000)
+- Visual elements:
+  - Vertical dashes for age markers
+  - Age labels below the timeline line
+  - Milestone names above the timeline line
+  - Current age marker labeled as "Current"
+- Ability to add/remove additional milestones
 - Drag-and-drop functionality to adjust milestone timing
 - Visual representation of age at each milestone
 

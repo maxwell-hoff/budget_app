@@ -1,14 +1,17 @@
 class Timeline {
     constructor() {
         this.timeline = document.getElementById('timeline');
+        this.timelineContent = document.getElementById('timeline-content');
+        this.timelinePlaceholder = document.getElementById('timeline-placeholder');
         this.timelineLine = document.getElementById('timeline-line');
         this.timelineMarkers = document.getElementById('timeline-markers');
         this.timelineLabels = document.getElementById('timeline-labels');
         this.timelineMilestones = document.getElementById('timeline-milestones');
-        this.timelinePlaceholder = document.getElementById('timeline-placeholder');
         this.birthdayInput = document.getElementById('birthday');
         this.currentAgeInput = document.getElementById('currentAge');
         
+        // Initialize the timeline
+        this.showPlaceholder();
         this.setupEventListeners();
     }
 
@@ -41,7 +44,10 @@ class Timeline {
         
         this.clearTimeline();
         this.createAgeMarkers();
-        this.createMilestones(currentAge);
+        this.createDefaultMilestones(currentAge);
+        
+        // Show timeline content and hide placeholder
+        this.timelineContent.style.display = 'block';
         this.timelinePlaceholder.style.display = 'none';
     }
 
@@ -52,13 +58,13 @@ class Timeline {
     }
 
     createAgeMarkers() {
-        const timelineWidth = this.timeline.offsetWidth;
+        const timelineWidth = this.timeline.offsetWidth - 40; // Account for padding
         const startAge = 20;
         const endAge = 100;
         const step = 10;
 
         for (let age = startAge; age <= endAge; age += step) {
-            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth;
+            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth + 20;
             
             // Create marker
             const marker = document.createElement('div');
@@ -75,26 +81,28 @@ class Timeline {
         }
     }
 
-    createMilestones(currentAge) {
-        const timelineWidth = this.timeline.offsetWidth;
+    createDefaultMilestones(currentAge) {
+        const timelineWidth = this.timeline.offsetWidth - 40; // Account for padding
         const startAge = 20;
         const endAge = 100;
 
         // Current age marker
-        const currentPosition = ((currentAge - startAge) / (endAge - startAge)) * timelineWidth;
-        this.createMilestoneMarker('Current', currentPosition, 'current-marker');
+        const currentPosition = ((currentAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
+        this.createMilestoneMarker('Current', currentPosition, 'current');
 
         // Inheritance marker (age 100)
-        const inheritancePosition = ((100 - startAge) / (endAge - startAge)) * timelineWidth;
-        this.createMilestoneMarker('Inheritance', inheritancePosition, 'inheritance-marker');
+        const inheritancePosition = ((100 - startAge) / (endAge - startAge)) * timelineWidth + 20;
+        this.createMilestoneMarker('Inheritance', inheritancePosition, 'inheritance');
     }
 
-    createMilestoneMarker(name, position, className) {
+    createMilestoneMarker(name, position, type) {
+        // Create marker
         const marker = document.createElement('div');
-        marker.className = `milestone-marker ${className}`;
+        marker.className = `milestone-marker ${type}-marker`;
         marker.style.left = `${position}px`;
         this.timelineMilestones.appendChild(marker);
 
+        // Create label
         const label = document.createElement('div');
         label.className = 'milestone-label';
         label.textContent = name;
@@ -103,7 +111,7 @@ class Timeline {
     }
 
     showPlaceholder() {
-        this.clearTimeline();
+        this.timelineContent.style.display = 'none';
         this.timelinePlaceholder.style.display = 'block';
     }
 }

@@ -35,19 +35,36 @@ body {
 
 #timeline {
     height: 200px;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 20px 0;
     position: relative;
     background-color: #f8f9fa;
     border-radius: 4px;
+    border: 1px solid #ddd;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+#timeline-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #666;
+    font-size: 1.2em;
+    text-align: center;
+    z-index: 1;
+}
+
+#timeline-content {
+    height: 100%;
+    position: relative;
+    display: none;
 }
 
 #timeline-line {
     position: absolute;
     top: 50%;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 20px;
     height: 2px;
     background-color: #333;
     transform: translateY(-50%);
@@ -76,16 +93,6 @@ body {
     left: 0;
     right: 0;
     height: 100%;
-}
-
-#timeline-placeholder {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #666;
-    font-size: 1.2em;
-    text-align: center;
 }
 
 .age-marker {
@@ -123,6 +130,9 @@ body {
     font-size: 0.9em;
     color: #333;
     white-space: nowrap;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2px 5px;
+    border-radius: 3px;
 }
 
 .current-marker {
