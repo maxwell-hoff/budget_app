@@ -165,7 +165,9 @@ function addNewMilestone() {
     const milestone = {
         name: 'New Milestone',
         age_at_occurrence: currentAge + 5,
+        milestone_type: 'Expense',
         expense_type: 'lump_sum',
+        income_type: null,
         amount: 0,
         occurrence: null,
         duration: null,
@@ -213,28 +215,43 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">Milestone Type</label>
+                    <select class="form-control" name="milestone_type">
+                        <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
+                        <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
+                    </select>
+                </div>
+                <div class="mb-3 expense-fields" style="display: ${milestone.milestone_type === 'Expense' ? 'block' : 'none'}">
                     <label class="form-label">Expense Type</label>
                     <select class="form-control" name="expense_type">
                         <option value="lump_sum" ${milestone.expense_type === 'lump_sum' ? 'selected' : ''}>Lump Sum</option>
                         <option value="annuity" ${milestone.expense_type === 'annuity' ? 'selected' : ''}>Annuity</option>
                     </select>
                 </div>
+                <div class="mb-3 income-fields" style="display: ${milestone.milestone_type === 'Income' ? 'block' : 'none'}">
+                    <label class="form-label">Income Type</label>
+                    <select class="form-control" name="income_type">
+                        <option value="Lump Sum" ${milestone.income_type === 'Lump Sum' ? 'selected' : ''}>Lump Sum</option>
+                        <option value="Fixed Duration" ${milestone.income_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
+                        <option value="Perpetuity" ${milestone.income_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
+                    </select>
+                </div>
                 <div class="mb-3">
                     <label class="form-label">Amount</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type === 'annuity') || (milestone.milestone_type === 'Income' && milestone.income_type !== 'Lump Sum') ? 'block' : 'none'}">
                     <label class="form-label">Occurrence</label>
                     <select class="form-control" name="occurrence">
                         <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type === 'annuity') || (milestone.milestone_type === 'Income' && milestone.income_type !== 'Lump Sum') ? 'block' : 'none'}">
                     <label class="form-label">Duration</label>
                     <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${milestone.expense_type === 'annuity' ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type === 'annuity') || (milestone.milestone_type === 'Income' && milestone.income_type !== 'Lump Sum') ? 'block' : 'none'}">
                     <label class="form-label">Rate of Return (%)</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
@@ -246,15 +263,33 @@ function createMilestoneForm(milestone) {
     
     $('#milestoneForms').append(form);
     
-    // Add event listener for expense type changes
-    form.find('[name="expense_type"]').on('change', function() {
-        const isAnnuity = $(this).val() === 'annuity';
-        form.find('.annuity-fields').toggle(isAnnuity);
+    // Add event listener for milestone type changes
+    form.find('[name="milestone_type"]').on('change', function() {
+        const isExpense = $(this).val() === 'Expense';
+        form.find('.expense-fields').toggle(isExpense);
+        form.find('.income-fields').toggle(!isExpense);
+        updateAnnuityFieldsVisibility(form);
+    });
+    
+    // Add event listener for expense/income type changes
+    form.find('[name="expense_type"], [name="income_type"]').on('change', function() {
+        updateAnnuityFieldsVisibility(form);
     });
     
     // Add event listeners for the new form
     form.find('.milestone-form-content').on('submit', handleMilestoneUpdate);
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+}
+
+function updateAnnuityFieldsVisibility(form) {
+    const milestoneType = form.find('[name="milestone_type"]').val();
+    const expenseType = form.find('[name="expense_type"]').val();
+    const incomeType = form.find('[name="income_type"]').val();
+    
+    const showAnnuityFields = (milestoneType === 'Expense' && expenseType === 'annuity') || 
+                            (milestoneType === 'Income' && incomeType !== 'Lump Sum');
+    
+    form.find('.annuity-fields').toggle(showAnnuityFields);
 }
 
 function handleMilestoneUpdate(e) {
@@ -264,23 +299,42 @@ function handleMilestoneUpdate(e) {
     const milestone = milestones.find(m => m.id === milestoneId);
     
     if (milestone) {
-        const expenseType = form.find('[name="expense_type"]').val();
+        const milestoneType = form.find('[name="milestone_type"]').val();
         const updatedMilestone = {
             name: form.find('[name="name"]').val(),
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
-            expense_type: expenseType,
+            milestone_type: milestoneType,
             amount: parseFloat(form.find('[name="amount"]').val())
         };
         
-        // Only include annuity fields if expense type is annuity
-        if (expenseType === 'annuity') {
-            updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
-            updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
-            updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;  // Convert percentage to decimal
-        } else {
-            updatedMilestone.occurrence = null;
-            updatedMilestone.duration = null;
-            updatedMilestone.rate_of_return = null;
+        if (milestoneType === 'Expense') {
+            const expenseType = form.find('[name="expense_type"]').val();
+            updatedMilestone.expense_type = expenseType;
+            updatedMilestone.income_type = null;
+            
+            if (expenseType === 'annuity') {
+                updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
+                updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
+                updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
+            } else {
+                updatedMilestone.occurrence = null;
+                updatedMilestone.duration = null;
+                updatedMilestone.rate_of_return = null;
+            }
+        } else {  // Income
+            const incomeType = form.find('[name="income_type"]').val();
+            updatedMilestone.expense_type = null;
+            updatedMilestone.income_type = incomeType;
+            
+            if (incomeType !== 'Lump Sum') {
+                updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
+                updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
+                updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
+            } else {
+                updatedMilestone.occurrence = null;
+                updatedMilestone.duration = null;
+                updatedMilestone.rate_of_return = null;
+            }
         }
         
         $.ajax({
