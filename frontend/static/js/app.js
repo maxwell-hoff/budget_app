@@ -1,0 +1,203 @@
+// Global variables
+let currentAge = 0;
+let milestones = [];
+
+// Initialize the application
+$(document).ready(function() {
+    initializeEventListeners();
+    loadMilestones();
+});
+
+// Event Listeners
+function initializeEventListeners() {
+    // User profile form
+    $('#userProfileForm').on('submit', handleProfileSubmit);
+    $('#birthday').on('change', calculateAge);
+    
+    // Milestone controls
+    $('#addMilestone').on('click', addNewMilestone);
+    
+    // Bank statement upload
+    $('#statementUploadForm').on('submit', handleStatementUpload);
+}
+
+// User Profile Functions
+function calculateAge() {
+    const birthday = new Date($('#birthday').val());
+    const today = new Date();
+    const age = today.getFullYear() - birthday.getFullYear();
+    const monthDiff = today.getMonth() - birthday.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) {
+        currentAge = age - 1;
+    } else {
+        currentAge = age;
+    }
+    
+    $('#currentAge').val(currentAge);
+}
+
+function handleProfileSubmit(e) {
+    e.preventDefault();
+    // Save profile to backend
+    // TODO: Implement API call
+}
+
+// Milestone Functions
+function addNewMilestone() {
+    const milestone = {
+        name: 'New Milestone',
+        age_at_occurrence: currentAge + 5,
+        expense_type: 'lump_sum',
+        amount: 0
+    };
+    
+    milestones.push(milestone);
+    updateTimeline();
+    createMilestoneForm(milestone);
+}
+
+function updateTimeline() {
+    const timeline = $('#timeline');
+    timeline.empty();
+    
+    milestones.forEach((milestone, index) => {
+        const marker = $('<div>')
+            .addClass('milestone-marker')
+            .attr('data-index', index)
+            .css('left', `${(milestone.age_at_occurrence - currentAge) * 50}px`);
+        
+        timeline.append(marker);
+    });
+}
+
+function createMilestoneForm(milestone) {
+    const form = $(`
+        <div class="milestone-form" data-id="${milestone.id || Date.now()}">
+            <h3>${milestone.name}</h3>
+            <form class="milestone-form-content">
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" value="${milestone.name}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Age at Occurrence</label>
+                    <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Expense Type</label>
+                    <select class="form-control" name="expense_type">
+                        <option value="lump_sum" ${milestone.expense_type === 'lump_sum' ? 'selected' : ''}>Lump Sum</option>
+                        <option value="annuity" ${milestone.expense_type === 'annuity' ? 'selected' : ''}>Annuity</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-danger delete-milestone">Delete</button>
+            </form>
+        </div>
+    `);
+    
+    $('#milestoneForms').append(form);
+    
+    // Add event listeners for the new form
+    form.find('.milestone-form-content').on('submit', handleMilestoneUpdate);
+    form.find('.delete-milestone').on('click', handleMilestoneDelete);
+}
+
+function handleMilestoneUpdate(e) {
+    e.preventDefault();
+    const form = $(e.target);
+    const milestoneId = form.closest('.milestone-form').data('id');
+    const milestone = milestones.find(m => m.id === milestoneId);
+    
+    if (milestone) {
+        milestone.name = form.find('[name="name"]').val();
+        milestone.age_at_occurrence = parseInt(form.find('[name="age_at_occurrence"]').val());
+        milestone.expense_type = form.find('[name="expense_type"]').val();
+        milestone.amount = parseFloat(form.find('[name="amount"]').val());
+        
+        updateTimeline();
+        // TODO: Implement API call to update milestone
+    }
+}
+
+function handleMilestoneDelete(e) {
+    const form = $(e.target).closest('.milestone-form');
+    const milestoneId = form.data('id');
+    
+    milestones = milestones.filter(m => m.id !== milestoneId);
+    form.remove();
+    updateTimeline();
+    // TODO: Implement API call to delete milestone
+}
+
+// Bank Statement Functions
+function handleStatementUpload(e) {
+    e.preventDefault();
+    const file = $('#statementFile')[0].files[0];
+    
+    if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // TODO: Implement API call to upload and parse statement
+        $.ajax({
+            url: '/api/parse-statement',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: displayBalanceSheet,
+            error: handleError
+        });
+    }
+}
+
+function displayBalanceSheet(data) {
+    const balanceSheet = $('#balanceSheet');
+    balanceSheet.empty();
+    
+    balanceSheet.append(`
+        <div class="balance-sheet-item">
+            <h4>Total Income: $${data.total_income.toFixed(2)}</h4>
+        </div>
+    `);
+    
+    for (const [category, amount] of Object.entries(data.expenses_by_category)) {
+        balanceSheet.append(`
+            <div class="balance-sheet-item">
+                <strong>${category}:</strong> $${Math.abs(amount).toFixed(2)}
+            </div>
+        `);
+    }
+    
+    balanceSheet.append(`
+        <div class="balance-sheet-item">
+            <h4>Net Worth: $${data.net_worth.toFixed(2)}</h4>
+        </div>
+    `);
+}
+
+// Utility Functions
+function handleError(error) {
+    console.error('Error:', error);
+    // TODO: Implement error handling UI
+}
+
+function loadMilestones() {
+    // TODO: Implement API call to load milestones
+    $.ajax({
+        url: '/api/milestones',
+        type: 'GET',
+        success: function(data) {
+            milestones = data;
+            updateTimeline();
+            data.forEach(createMilestoneForm);
+        },
+        error: handleError
+    });
+} 

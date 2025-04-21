@@ -1,0 +1,109 @@
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+.container-fluid {
+    padding: 20px;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100vh;
+    position: sticky;
+    top: 20px;
+}
+
+/* Timeline Styles */
+.timeline-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.timeline-controls {
+    margin-bottom: 20px;
+}
+
+#timeline {
+    height: 200px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 20px 0;
+    position: relative;
+}
+
+/* Milestone Styles */
+.milestone-marker {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: #007bff;
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.milestone-marker:hover {
+    transform: scale(1.2);
+}
+
+.milestone-form {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Bank Statement Styles */
+#balanceSheet {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.balance-sheet-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        height: auto;
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .container-fluid {
+        padding: 10px;
+    }
+} 
