@@ -3,8 +3,11 @@ from ..database import db
 from ..models.milestone import Milestone
 from ..services.dcf_calculator import DCFCalculator
 from ..services.statement_parser import StatementParser
+from werkzeug.utils import secure_filename
+import os
 
 api_bp = Blueprint('api', __name__)
+parser = StatementParser()
 
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
@@ -83,16 +86,32 @@ def calculate_dcf():
 
 @api_bp.route('/parse-statement', methods=['POST'])
 def parse_statement():
-    """Parse a bank statement CSV file."""
+    """Parse a bank statement CSV file and return the latest balance."""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+        
     file = request.files['file']
-    parser = StatementParser()
-    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+        
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File must be a CSV'}), 400
+        
     try:
-        transactions = parser.parse_chase_csv(file)
-        balance_sheet = parser.calculate_balance_sheet(transactions)
-        return jsonify(balance_sheet)
+        # Save the file temporarily
+        filename = secure_filename(file.filename)
+        filepath = os.path.join('/tmp', filename)
+        file.save(filepath)
+        
+        # Parse the statement and get the latest balance
+        latest_balance = parser.parse_chase_csv(filepath)
+        
+        # Clean up the temporary file
+        os.remove(filepath)
+        
+        return jsonify({
+            'latest_balance': latest_balance
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 400 

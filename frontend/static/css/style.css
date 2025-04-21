@@ -39,30 +39,98 @@ body {
     white-space: nowrap;
     padding: 20px 0;
     position: relative;
+    background-color: #f8f9fa;
+    border-radius: 4px;
 }
 
-/* Milestone Styles */
-.milestone-marker {
-    display: inline-block;
-    width: 20px;
+#timeline-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #333;
+    transform: translateY(-50%);
+}
+
+#timeline-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+}
+
+#timeline-labels {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: 20px;
+    text-align: center;
+}
+
+#timeline-milestones {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+}
+
+#timeline-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #666;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.age-marker {
+    position: absolute;
+    top: 50%;
+    width: 1px;
+    height: 10px;
+    background-color: #666;
+    transform: translateY(-50%);
+}
+
+.age-label {
+    position: absolute;
+    bottom: -20px;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    color: #666;
+}
+
+.milestone-marker {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
     background-color: #007bff;
     border-radius: 50%;
-    position: absolute;
+    transform: translate(-50%, -50%);
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.milestone-marker:hover {
-    transform: scale(1.2);
+.milestone-label {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    color: #333;
+    white-space: nowrap;
 }
 
-.milestone-form {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+.current-marker {
+    background-color: #28a745;
+}
+
+.inheritance-marker {
+    background-color: #dc3545;
 }
 
 /* Bank Statement Styles */
@@ -106,4 +174,26 @@ body {
     .container-fluid {
         padding: 10px;
     }
+}
+
+.bank-statements {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.balance-amount {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2ecc71;
+    margin: 10px 0;
+}
+
+#latest-balance {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #2ecc71;
 } 
