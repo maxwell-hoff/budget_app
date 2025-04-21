@@ -166,7 +166,10 @@ function addNewMilestone() {
         name: 'New Milestone',
         age_at_occurrence: currentAge + 5,
         expense_type: 'lump_sum',
-        amount: 0
+        amount: 0,
+        occurrence: 'Yearly',
+        duration: 1,
+        rate_of_return: 0.0
     };
     
     $.ajax({
@@ -220,6 +223,21 @@ function createMilestoneForm(milestone) {
                     <label class="form-label">Amount</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">Occurrence</label>
+                    <select class="form-control" name="occurrence">
+                        <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                        <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Duration (years)</label>
+                    <input type="number" class="form-control" name="duration" value="${milestone.duration}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Rate of Return (%)</label>
+                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return * 100}" step="0.1">
+                </div>
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-danger delete-milestone">Delete</button>
             </form>
@@ -244,7 +262,10 @@ function handleMilestoneUpdate(e) {
             name: form.find('[name="name"]').val(),
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
             expense_type: form.find('[name="expense_type"]').val(),
-            amount: parseFloat(form.find('[name="amount"]').val())
+            amount: parseFloat(form.find('[name="amount"]').val()),
+            occurrence: form.find('[name="occurrence"]').val(),
+            duration: parseInt(form.find('[name="duration"]').val()),
+            rate_of_return: parseFloat(form.find('[name="rate_of_return"]').val()) / 100  // Convert percentage to decimal
         };
         
         $.ajax({
