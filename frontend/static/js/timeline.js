@@ -47,7 +47,7 @@ class Timeline {
         
         this.clearTimeline();
         this.createTimelineLine();
-        this.createAgeMarkers();
+        this.createAgeMarkers(currentAge);
         
         // Show timeline content and hide placeholder
         this.timelineContent.style.display = 'block';
@@ -66,22 +66,22 @@ class Timeline {
         line.className = 'timeline-line';
         line.style.position = 'absolute';
         line.style.top = '50%';
-        line.style.left = '0';
-        line.style.right = '0';
+        line.style.left = '20px';  // Add left margin
+        line.style.right = '20px';  // Add right margin
         line.style.height = '2px';
         line.style.backgroundColor = '#333';
         line.style.transform = 'translateY(-50%)';
         this.timelineLine.appendChild(line);
     }
 
-    createAgeMarkers() {
-        const timelineWidth = this.timeline.offsetWidth;
-        const startAge = 20;
+    createAgeMarkers(currentAge) {
+        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const startAge = currentAge;
         const endAge = 100;
         const step = 10;
 
         for (let age = startAge; age <= endAge; age += step) {
-            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth;
+            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add left margin
             
             // Create marker
             const marker = document.createElement('div');
@@ -110,10 +110,11 @@ class Timeline {
     }
 
     addMilestone(milestone) {
-        const timelineWidth = this.timeline.offsetWidth;
-        const startAge = 20;
+        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const currentAge = this.calculateAge(this.birthdayInput.value);
+        const startAge = currentAge;
         const endAge = 100;
-        const position = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth;
+        const position = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add left margin
         
         this.createMilestoneMarker(milestone.name, position, milestone.name === 'Current' ? 'current' : 'inheritance');
     }

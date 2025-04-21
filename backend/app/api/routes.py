@@ -1,13 +1,40 @@
 from flask import Blueprint, request, jsonify
 from ..database import db
 from ..models.milestone import Milestone
+from ..models.user import User
 from ..services.dcf_calculator import DCFCalculator
 from ..services.statement_parser import StatementParser
 from werkzeug.utils import secure_filename
 import os
+from datetime import datetime
 
 api_bp = Blueprint('api', __name__)
 parser = StatementParser()
+
+@api_bp.route('/profile', methods=['GET'])
+def get_profile():
+    """Get the user's profile."""
+    user = User.query.first()
+    if user:
+        return jsonify(user.to_dict())
+    return jsonify({'error': 'No profile found'}), 404
+
+@api_bp.route('/profile', methods=['POST'])
+def create_profile():
+    """Create or update the user's profile."""
+    data = request.get_json()
+    birthday = datetime.strptime(data['birthday'], '%Y-%m-%d').date()
+    
+    # Check if profile already exists
+    user = User.query.first()
+    if user:
+        user.birthday = birthday
+    else:
+        user = User(birthday=birthday)
+        db.session.add(user)
+    
+    db.session.commit()
+    return jsonify(user.to_dict())
 
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():

@@ -5,7 +5,7 @@ let milestones = [];
 // Initialize the application
 $(document).ready(function() {
     initializeEventListeners();
-    loadMilestones();
+    loadProfile();
 });
 
 // Event Listeners
@@ -22,6 +22,23 @@ function initializeEventListeners() {
 }
 
 // User Profile Functions
+function loadProfile() {
+    $.ajax({
+        url: '/api/profile',
+        method: 'GET',
+        success: function(response) {
+            if (response.birthday) {
+                $('#birthday').val(response.birthday);
+                calculateAge();
+                loadMilestones();
+            }
+        },
+        error: function(error) {
+            console.error('Error loading profile:', error);
+        }
+    });
+}
+
 function calculateAge() {
     const birthday = new Date($('#birthday').val());
     const today = new Date();
