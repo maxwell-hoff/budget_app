@@ -6,6 +6,7 @@ let milestones = [];
 $(document).ready(function() {
     initializeEventListeners();
     loadProfile();
+    loadMilestones();  // Load milestones regardless of profile status
 });
 
 // Event Listeners
@@ -45,6 +46,10 @@ function loadProfile() {
                 // Set the birthday input value and calculate age
                 $('#birthday').val(response.birthday);
                 calculateAge();
+                
+                // Update the timeline with the loaded birthday
+                window.timeline.updateTimeline();
+                
                 loadMilestones();
             } else {
                 // Show the profile form if no birthday is saved

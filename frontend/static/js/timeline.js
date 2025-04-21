@@ -49,6 +49,13 @@ class Timeline {
         this.createTimelineLine(currentAge);
         this.createAgeMarkers(currentAge);
         
+        // Redraw all milestones
+        if (window.milestones) {
+            window.milestones.forEach(milestone => {
+                this.addMilestone(milestone);
+            });
+        }
+        
         // Show timeline content and hide placeholder
         this.timelineContent.style.display = 'block';
         this.timelinePlaceholder.style.display = 'none';

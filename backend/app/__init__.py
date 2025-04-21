@@ -1,6 +1,8 @@
 from flask import Flask, render_template
 from flask_cors import CORS
 from .database import init_db
+from .models.milestone import Milestone
+from .models.user import User
 
 def create_app():
     """Create and configure the Flask application."""
