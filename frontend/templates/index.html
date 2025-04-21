@@ -35,6 +35,21 @@
                             <p><strong>Current Age:</strong> <span id="savedCurrentAge"></span></p>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <h3>Bank Statement Analysis</h3>
+                    <form id="upload-form" class="mt-3">
+                        <div class="form-group">
+                            <label for="statement-file">Upload Bank Statement (CSV)</label>
+                            <input type="file" class="form-control" id="statement-file" name="file" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Upload</button>
+                    </form>
+                    <div id="latest-balance" style="display: none; margin-top: 20px;">
+                        <h4>Latest Balance</h4>
+                        <p class="balance-amount"></p>
+                    </div>
                 </div>
             </div>
 
@@ -42,9 +57,9 @@
             <div class="col-md-9">
                 <!-- Timeline Section -->
                 <div class="timeline-container">
-                    <h2>Life Timeline</h2>
+                    <!-- <h2>Life Timeline</h2> -->
                     <div class="timeline-controls">
-                        <button id="addMilestone" class="btn btn-success">Add Milestone</button>
+                        <button id="addMilestone" class="btn btn-success">+</button>
                     </div>
                     <div id="timeline">
                         <div id="timeline-placeholder">Select birthday to populate timeline</div>
@@ -61,22 +76,6 @@
                 <div id="milestoneDetails" class="mt-4">
                     <h2>Milestone Details</h2>
                     <div id="milestoneForms"></div>
-                </div>
-
-                <!-- Bank Statement Upload -->
-                <div class="bank-statements">
-                    <h2>Bank Statement Analysis</h2>
-                    <form id="upload-form">
-                        <div class="form-group">
-                            <label for="statement-file">Upload Bank Statement (CSV)</label>
-                            <input type="file" id="statement-file" name="file" accept=".csv" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Upload</button>
-                    </form>
-                    <div id="latest-balance" style="display: none; margin-top: 20px;">
-                        <h3>Latest Balance</h3>
-                        <p class="balance-amount"></p>
-                    </div>
                 </div>
             </div>
         </div>
