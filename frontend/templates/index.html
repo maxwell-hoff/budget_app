@@ -13,18 +13,29 @@
         <div class="row">
             <!-- User Profile Section -->
             <div class="col-md-3 sidebar">
-                <h2>User Profile</h2>
-                <form id="userProfileForm">
-                    <div class="mb-3">
-                        <label for="birthday" class="form-label">Birthday</label>
-                        <input type="date" class="form-control" id="birthday" required>
+                <div class="profile-section">
+                    <div id="profileForm">
+                        <h3>User Profile</h3>
+                        <form id="userProfileForm">
+                            <div class="form-group">
+                                <label for="birthday">Birthday</label>
+                                <input type="date" class="form-control" id="birthday" name="birthday" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="currentAge">Current Age</label>
+                                <input type="number" class="form-control" id="currentAge" name="currentAge" readonly>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Profile</button>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label for="currentAge" class="form-label">Current Age</label>
-                        <input type="number" class="form-control" id="currentAge" readonly>
+                    <div id="profileInfo" style="display: none;">
+                        <h3>User Profile</h3>
+                        <div class="profile-details">
+                            <p><strong>Birthday:</strong> <span id="savedBirthday"></span></p>
+                            <p><strong>Current Age:</strong> <span id="savedCurrentAge"></span></p>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Save Profile</button>
-                </form>
+                </div>
             </div>
 
             <!-- Main Content -->

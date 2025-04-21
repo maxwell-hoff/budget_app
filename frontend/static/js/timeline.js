@@ -46,7 +46,7 @@ class Timeline {
         this.currentAgeInput.value = currentAge;
         
         this.clearTimeline();
-        this.createTimelineLine();
+        this.createTimelineLine(currentAge);
         this.createAgeMarkers(currentAge);
         
         // Show timeline content and hide placeholder
@@ -61,13 +61,21 @@ class Timeline {
         this.timelineLine.innerHTML = '';
     }
 
-    createTimelineLine() {
+    createTimelineLine(currentAge) {
+        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const startAge = currentAge;
+        const endAge = 100;
+        
+        // Calculate the position of the current age marker
+        const startPosition = 20;  // Left margin
+        const endPosition = timelineWidth + 20;  // Right margin
+        
         const line = document.createElement('div');
         line.className = 'timeline-line';
         line.style.position = 'absolute';
         line.style.top = '50%';
-        line.style.left = '20px';  // Add left margin
-        line.style.right = '20px';  // Add right margin
+        line.style.left = `${startPosition}px`;
+        line.style.width = `${endPosition - startPosition}px`;
         line.style.height = '2px';
         line.style.backgroundColor = '#333';
         line.style.transform = 'translateY(-50%)';

@@ -28,13 +28,35 @@ function loadProfile() {
         method: 'GET',
         success: function(response) {
             if (response.birthday) {
+                // Hide the profile form and show the profile info
+                $('#profileForm').hide();
+                $('#profileInfo').show();
+                
+                // Set the birthday and current age display
+                const birthday = new Date(response.birthday);
+                const formattedDate = birthday.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                $('#savedBirthday').text(formattedDate);
+                $('#savedCurrentAge').text(currentAge);
+                
+                // Set the birthday input value and calculate age
                 $('#birthday').val(response.birthday);
                 calculateAge();
                 loadMilestones();
+            } else {
+                // Show the profile form if no birthday is saved
+                $('#profileForm').show();
+                $('#profileInfo').hide();
             }
         },
         error: function(error) {
             console.error('Error loading profile:', error);
+            // Show the profile form if there's an error
+            $('#profileForm').show();
+            $('#profileInfo').hide();
         }
     });
 }
@@ -52,6 +74,7 @@ function calculateAge() {
     }
     
     $('#currentAge').val(currentAge);
+    $('#savedCurrentAge').text(currentAge);
 }
 
 function handleProfileSubmit(e) {
