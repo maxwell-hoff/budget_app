@@ -142,16 +142,12 @@ function addNewMilestone() {
 }
 
 function updateTimeline() {
-    const timeline = $('#timeline');
-    timeline.empty();
+    // Clear existing milestones
+    $('#timeline-milestones').empty();
     
-    milestones.forEach((milestone, index) => {
-        const marker = $('<div>')
-            .addClass('milestone-marker')
-            .attr('data-index', index)
-            .css('left', `${(milestone.age_at_occurrence - currentAge) * 50}px`);
-        
-        timeline.append(marker);
+    // Add each milestone to the timeline
+    milestones.forEach(milestone => {
+        window.timeline.addMilestone(milestone);
     });
 }
 

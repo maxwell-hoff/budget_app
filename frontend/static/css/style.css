@@ -27,6 +27,8 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+    width: 100%;
+    overflow: hidden;
 }
 
 .timeline-controls {
@@ -40,7 +42,8 @@ body {
     border-radius: 4px;
     border: 1px solid #ddd;
     margin: 20px 0;
-    overflow: hidden;
+    width: 100%;
+    overflow: visible;
 }
 
 #timeline-placeholder {
@@ -58,16 +61,18 @@ body {
     height: 100%;
     position: relative;
     display: none;
+    width: 100%;
 }
 
 #timeline-line {
     position: absolute;
     top: 50%;
-    left: 20px;
-    right: 20px;
+    left: 0;
+    right: 0;
     height: 2px;
     background-color: #333;
     transform: translateY(-50%);
+    width: 100%;
 }
 
 #timeline-markers {
@@ -76,15 +81,16 @@ body {
     left: 0;
     right: 0;
     height: 100%;
+    width: 100%;
 }
 
 #timeline-labels {
     position: absolute;
-    bottom: 0;
+    bottom: -20px;
     left: 0;
     right: 0;
     height: 20px;
-    text-align: center;
+    width: 100%;
 }
 
 #timeline-milestones {
@@ -93,6 +99,7 @@ body {
     left: 0;
     right: 0;
     height: 100%;
+    width: 100%;
 }
 
 .age-marker {
@@ -125,7 +132,7 @@ body {
 
 .milestone-label {
     position: absolute;
-    top: 0;
+    top: -20px;
     transform: translateX(-50%);
     font-size: 0.9em;
     color: #333;
