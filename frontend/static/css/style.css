@@ -73,10 +73,10 @@ body {
 
 #timeline-line {
     position: absolute;
-    top: 20px;
+    top: 25px;
     left: 0;
     right: 0;
-    height: 2px;
+    height: 3px;
     background-color: #333;
     width: 100%;
     z-index: 1;
@@ -93,7 +93,7 @@ body {
 
 #timeline-labels {
     position: absolute;
-    bottom: -20px;
+    bottom: 150px;
     left: 0;
     right: 0;
     height: 20px;
@@ -111,9 +111,9 @@ body {
 
 .age-marker {
     position: absolute;
-    top: 20px;
-    width: 1px;
-    height: 10px;
+    top: 27px;
+    width: 2px;
+    height: 12px;
     background-color: #666;
     transform: translateY(-50%);
     z-index: 1;
