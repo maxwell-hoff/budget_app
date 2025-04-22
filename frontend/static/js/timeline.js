@@ -10,6 +10,11 @@ class Timeline {
         this.birthdayInput = document.getElementById('birthday');
         this.currentAgeInput = document.getElementById('currentAge');
         
+        // Track milestone positions
+        this.milestonePositions = new Map();
+        this.verticalSpacing = 30; // pixels between milestone rows
+        this.labelOffset = 100; // pixels from left edge for labels
+        
         // Initialize the timeline
         this.showPlaceholder();
         this.setupEventListeners();
@@ -66,6 +71,8 @@ class Timeline {
         this.timelineLabels.innerHTML = '';
         this.timelineMilestones.innerHTML = '';
         this.timelineLine.innerHTML = '';
+        this.milestonePositions.clear();
+        this.timeline.style.height = '75px'; // Reset to minimum height
     }
 
     createTimelineLine(currentAge) {
@@ -102,12 +109,7 @@ class Timeline {
             const marker = document.createElement('div');
             marker.className = 'age-marker';
             marker.style.position = 'absolute';
-            marker.style.top = '50%';
             marker.style.left = `${position}px`;
-            marker.style.width = '1px';
-            marker.style.height = '10px';
-            marker.style.backgroundColor = '#666';
-            marker.style.transform = 'translateY(-50%)';
             this.timelineMarkers.appendChild(marker);
 
             // Create label
@@ -115,11 +117,7 @@ class Timeline {
             label.className = 'age-label';
             label.textContent = age;
             label.style.position = 'absolute';
-            label.style.bottom = '-20px';
             label.style.left = `${position}px`;
-            label.style.transform = 'translateX(-50%)';
-            label.style.fontSize = '0.8em';
-            label.style.color = '#666';
             this.timelineLabels.appendChild(label);
         }
     }
@@ -151,29 +149,54 @@ class Timeline {
             endPosition = ((maxAge - startAge) / (maxAge - startAge)) * timelineWidth + 20;
         }
         
+        // Calculate vertical position for this milestone
+        const verticalPosition = this.calculateVerticalPosition(milestone.id);
+        
         this.createMilestoneMarker(
             milestone.name,
             startPosition,
             milestone.name === 'Current' ? 'current' : 'inheritance',
             milestone.id,
-            endPosition
+            endPosition,
+            verticalPosition
         );
     }
 
-    createMilestoneMarker(name, position, type, milestoneId, endPosition = null) {
+    calculateVerticalPosition(milestoneId) {
+        // If we already have a position for this milestone, use it
+        if (this.milestonePositions.has(milestoneId)) {
+            return this.milestonePositions.get(milestoneId);
+        }
+        
+        // Find the next available vertical position
+        // Start below the timeline line (20px) plus spacing
+        let nextPosition = 20 + this.verticalSpacing;
+        const existingPositions = Array.from(this.milestonePositions.values());
+        
+        while (existingPositions.includes(nextPosition)) {
+            nextPosition += this.verticalSpacing;
+        }
+        
+        // Store the position for this milestone
+        this.milestonePositions.set(milestoneId, nextPosition);
+        
+        // Update timeline height if needed
+        const requiredHeight = nextPosition + this.verticalSpacing + 20; // Add padding
+        if (this.timeline.offsetHeight < requiredHeight) {
+            this.timeline.style.height = `${requiredHeight}px`;
+        }
+        
+        return nextPosition;
+    }
+
+    createMilestoneMarker(name, position, type, milestoneId, endPosition = null, verticalPosition) {
         // Create start marker
         const marker = document.createElement('div');
         marker.className = `milestone-marker ${type}-marker`;
         marker.setAttribute('data-id', milestoneId);
         marker.style.position = 'absolute';
-        marker.style.top = '50%';
+        marker.style.top = `${verticalPosition}px`;
         marker.style.left = `${position}px`;
-        marker.style.width = '12px';
-        marker.style.height = '12px';
-        marker.style.backgroundColor = type === 'current' ? '#28a745' : '#dc3545';
-        marker.style.borderRadius = '50%';
-        marker.style.transform = 'translate(-50%, -50%)';
-        marker.style.cursor = 'pointer';
         
         // Add hover functionality to marker
         marker.addEventListener('mouseenter', () => {
@@ -192,15 +215,8 @@ class Timeline {
         label.setAttribute('data-id', milestoneId);
         label.textContent = name;
         label.style.position = 'absolute';
-        label.style.top = '-20px';
-        label.style.left = `${position}px`;
-        label.style.transform = 'translateX(-50%)';
-        label.style.fontSize = '0.9em';
-        label.style.color = '#333';
-        label.style.whiteSpace = 'nowrap';
-        label.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-        label.style.padding = '2px 5px';
-        label.style.borderRadius = '3px';
+        label.style.top = `${verticalPosition}px`;
+        label.style.left = `${this.labelOffset}px`;
         
         // Add hover functionality to label
         label.addEventListener('mouseenter', () => {
@@ -219,14 +235,8 @@ class Timeline {
             endMarker.className = `milestone-marker ${type}-marker end-marker`;
             endMarker.setAttribute('data-id', milestoneId);
             endMarker.style.position = 'absolute';
-            endMarker.style.top = '50%';
+            endMarker.style.top = `${verticalPosition}px`;
             endMarker.style.left = `${endPosition}px`;
-            endMarker.style.width = '12px';
-            endMarker.style.height = '12px';
-            endMarker.style.backgroundColor = type === 'current' ? '#28a745' : '#dc3545';
-            endMarker.style.borderRadius = '50%';
-            endMarker.style.transform = 'translate(-50%, -50%)';
-            endMarker.style.cursor = 'pointer';
             
             // Add hover functionality to end marker
             endMarker.addEventListener('mouseenter', () => {
@@ -244,13 +254,9 @@ class Timeline {
             line.className = 'milestone-line';
             line.setAttribute('data-id', milestoneId);
             line.style.position = 'absolute';
-            line.style.top = '50%';
+            line.style.top = `${verticalPosition}px`;
             line.style.left = `${position}px`;
             line.style.width = `${endPosition - position}px`;
-            line.style.height = '2px';
-            line.style.backgroundColor = type === 'current' ? '#28a745' : '#dc3545';
-            line.style.transform = 'translateY(-50%)';
-            line.style.opacity = '0.5';
             
             this.timelineMilestones.appendChild(line);
         }

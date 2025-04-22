@@ -36,7 +36,8 @@ body {
 }
 
 #timeline {
-    height: 75px;
+    height: auto;
+    min-height: 75px;
     position: relative;
     background-color: #f8f9fa;
     border-radius: 4px;
@@ -44,6 +45,7 @@ body {
     margin: 20px 0;
     width: 100%;
     overflow: visible;
+    padding-bottom: 20px;
 }
 
 #timeline-placeholder {
@@ -66,13 +68,13 @@ body {
 
 #timeline-line {
     position: absolute;
-    top: 50%;
+    top: 20px;
     left: 0;
     right: 0;
     height: 2px;
     background-color: #333;
-    transform: translateY(-50%);
     width: 100%;
+    z-index: 1;
 }
 
 #timeline-markers {
@@ -104,24 +106,25 @@ body {
 
 .age-marker {
     position: absolute;
-    top: 50%;
+    top: 20px;
     width: 1px;
     height: 10px;
     background-color: #666;
     transform: translateY(-50%);
+    z-index: 1;
 }
 
 .age-label {
     position: absolute;
-    bottom: -20px;
-    transform: translateX(-50%);
+    top: 20px;
+    transform: translate(-50%, -100%);
     font-size: 0.8em;
     color: #666;
+    z-index: 1;
 }
 
 .milestone-marker {
     position: absolute;
-    top: 50%;
     width: 12px;
     height: 12px;
     background-color: #007bff;
@@ -135,23 +138,42 @@ body {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
 }
 
+.milestone-marker.end-marker {
+    background-color: #6c757d;
+    width: 8px;
+    height: 8px;
+}
+
+.milestone-line {
+    position: absolute;
+    height: 2px;
+    background-color: #6c757d;
+    opacity: 0.5;
+    z-index: 0;
+    transform: translateY(-50%);
+}
+
+.milestone-line.highlighted {
+    background-color: #007bff;
+    opacity: 0.8;
+}
+
+.milestone-marker.end-marker.highlighted {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
 .milestone-label {
     position: absolute;
-    top: -20px;
-    transform: translateX(-50%);
     font-size: 0.9em;
     color: #333;
     white-space: nowrap;
     background-color: rgba(255, 255, 255, 0.9);
     padding: 2px 5px;
     border-radius: 3px;
-    transition: all 0.3s ease;
-}
-
-.milestone-label.highlighted {
-    border: 2px solid #007bff;
-    padding: 0 3px;
-    background-color: rgba(0, 123, 255, 0.1);
+    text-align: right;
+    width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .current-marker {
@@ -312,28 +334,4 @@ body {
 .milestone-form.highlighted {
     border: 2px solid #007bff;
     box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-}
-
-.milestone-marker.end-marker {
-    background-color: #6c757d;
-    width: 8px;
-    height: 8px;
-}
-
-.milestone-line {
-    position: absolute;
-    top: 50%;
-    height: 2px;
-    background-color: #6c757d;
-    opacity: 0.5;
-    z-index: -1;
-}
-
-.milestone-line.highlighted {
-    background-color: #007bff;
-    opacity: 0.8;
-}
-
-.milestone-marker.end-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
 } 
