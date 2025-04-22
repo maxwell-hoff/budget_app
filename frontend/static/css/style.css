@@ -112,6 +112,7 @@ body {
     transition: width 0.3s ease;
     padding-left: 0;
     position: relative;
+    padding-top: 20px;
 }
 
 #timeline {
@@ -139,8 +140,9 @@ body {
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
-    position: relative;
-    z-index: 1;
+    position: sticky;
+    top: 20px;
+    z-index: 100;
 }
 
 .timeline-controls {
@@ -148,6 +150,7 @@ body {
     position: absolute;
     left: 20px;
     top: 20px;
+    z-index: 101;
 }
 
 #timeline {
@@ -497,4 +500,20 @@ body {
 .sidebar.hidden + .main-content #timeline-markers {
     left: 20px;
     width: calc(100% - 20px);
+}
+
+/* Milestone Details Section */
+#milestoneDetails {
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+/* Ensure milestone forms have proper spacing */
+#milestoneForms {
+    margin-top: 20px;
+}
+
+/* Add some spacing between milestone forms */
+.milestone-form {
+    margin-bottom: 20px;
 } 
