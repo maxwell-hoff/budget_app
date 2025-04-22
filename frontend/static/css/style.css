@@ -28,11 +28,15 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
 }
 
 .timeline-controls {
     margin-bottom: 20px;
+    position: absolute;
+    left: 20px;
+    top: 20px;
 }
 
 #timeline {
@@ -43,7 +47,8 @@ body {
     border-radius: 4px;
     border: 1px solid #ddd;
     margin: 20px 0;
-    width: 100%;
+    width: calc(100% - 100px);
+    margin-left: 100px;
     overflow: visible;
     padding-bottom: 20px;
 }
@@ -170,10 +175,11 @@ body {
     background-color: rgba(255, 255, 255, 0.9);
     padding: 2px 5px;
     border-radius: 3px;
-    text-align: right;
+    text-align: left;
     width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
+    left: -90px;
 }
 
 .current-marker {

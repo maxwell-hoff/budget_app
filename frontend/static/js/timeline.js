@@ -216,7 +216,6 @@ class Timeline {
         label.textContent = name;
         label.style.position = 'absolute';
         label.style.top = `${verticalPosition}px`;
-        label.style.left = `${this.labelOffset}px`;
         
         // Add hover functionality to label
         label.addEventListener('mouseenter', () => {
