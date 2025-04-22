@@ -106,22 +106,54 @@ function handleProfileSubmit(e) {
 
 // Milestone Functions
 function createDefaultMilestones() {
-    // Create both milestones in parallel and wait for both to complete
+    // Create all milestones in parallel and wait for all to complete
     Promise.all([
-        // Create Current milestone
+        // Create Current Income milestone
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: 'Current',
+                name: 'Current Income',
                 age_at_occurrence: currentAge,
+                milestone_type: 'Income',
+                disbursement_type: 'Fixed Duration',
+                amount: 50000,
+                occurrence: 'Yearly',
+                duration: 70 - currentAge,  // Auto-calculate duration
+                rate_of_return: 0.02  // 2%
+            })
+        }),
+        // Create Current Assets milestone
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Current Assets',
+                age_at_occurrence: currentAge,
+                milestone_type: 'Asset',
+                disbursement_type: 'Perpetuity',
+                amount: 30000,
+                payment: 5000,
+                occurrence: 'Yearly',
+                rate_of_return: 0.07  // 7%
+            })
+        }),
+        // Create Long Term Care (self) milestone
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Long Term Care (self)',
+                age_at_occurrence: 96,
                 milestone_type: 'Expense',
                 disbursement_type: 'Fixed Duration',
-                amount: 0,
-                occurrence: 'Yearly',
-                duration: 1,
-                rate_of_return: 0.0
+                amount: 6000,
+                occurrence: 'Monthly',
+                duration: 48,  // 4 years
+                rate_of_return: 0.04  // 4%
             })
         }),
         // Create Inheritance milestone
@@ -132,10 +164,10 @@ function createDefaultMilestones() {
             data: JSON.stringify({
                 name: 'Inheritance',
                 age_at_occurrence: 100,
-                milestone_type: 'Income',
+                milestone_type: 'Expense',
                 disbursement_type: 'Fixed Duration',
                 amount: 10000,
-                occurrence: 'Yearly',
+                occurrence: 'Monthly',
                 duration: 1,
                 rate_of_return: 0.0
             })
