@@ -51,24 +51,27 @@ class NPVChart {
     }
 
     createXAxis(maxAbsValue) {
-        // Calculate number of intervals (aim for 5-10 markers)
-        const magnitude = Math.floor(Math.log10(maxAbsValue));
-        const base = Math.pow(10, magnitude);
-        let interval = base;
+        // Calculate initial interval of 100,000
+        let interval = 100000;
         
-        // Adjust interval to get reasonable number of markers
-        if (maxAbsValue / interval > 10) {
+        // Calculate how many markers we would have with current interval
+        let numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1; // +1 for zero
+        
+        // Keep doubling the interval until we have 10 or fewer markers
+        while (numMarkers > 10) {
             interval *= 2;
-        } else if (maxAbsValue / interval < 5) {
-            interval /= 2;
+            numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1;
         }
+
+        // Round maxAbsValue up to nearest multiple of interval
+        const roundedMax = Math.ceil(maxAbsValue / interval) * interval;
 
         // Create markers and labels
         const chartWidth = this.chart.offsetWidth;
         const center = chartWidth / 2;
         
-        for (let value = -maxAbsValue; value <= maxAbsValue; value += interval) {
-            const position = center + (value / maxAbsValue) * (chartWidth / 2);
+        for (let value = -roundedMax; value <= roundedMax; value += interval) {
+            const position = center + (value / roundedMax) * (chartWidth / 2);
             
             // Create marker
             const marker = document.createElement('div');
