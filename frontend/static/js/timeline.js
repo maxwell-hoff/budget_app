@@ -82,20 +82,20 @@ class Timeline {
     }
 
     createTimelineLine(currentAge) {
-        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
         const startAge = currentAge;
         const endAge = 100;
         
         // Calculate the position of the current age marker
-        const startPosition = 20;  // Left margin
-        const endPosition = timelineWidth + 20;  // Right margin
+        const startPosition = 0;  // Let CSS handle the margin
+        const endPosition = timelineWidth;  // End at the right edge of the timeline
         
         const line = document.createElement('div');
         line.className = 'timeline-line';
         line.style.position = 'absolute';
         line.style.top = '50%';
         line.style.left = `${startPosition}px`;
-        line.style.width = `${endPosition - startPosition}px`;
+        line.style.width = `${endPosition}px`;
         line.style.height = '2px';
         line.style.backgroundColor = '#333';
         line.style.transform = 'translateY(-50%)';
@@ -103,13 +103,13 @@ class Timeline {
     }
 
     createAgeMarkers(currentAge) {
-        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
         const startAge = currentAge;
         const endAge = 100;
         const step = 10;
 
         for (let age = startAge; age <= endAge; age += step) {
-            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add left margin
+            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth;  // Let CSS handle the margin
             
             // Create marker
             const marker = document.createElement('div');
@@ -130,13 +130,13 @@ class Timeline {
     }
 
     addMilestone(milestone) {
-        const timelineWidth = this.timeline.offsetWidth - 40;  // Account for margins
+        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
         const currentAge = this.calculateAge(this.birthdayInput.value);
         const startAge = currentAge;
-        const maxAge = 100;  // Maximum age shown on timeline
+        const endAge = 100;  // Maximum age shown on timeline
         
-        // Calculate start position
-        const startPosition = ((milestone.age_at_occurrence - startAge) / (maxAge - startAge)) * timelineWidth + 20;  // Add left margin
+        // Calculate start position using the same formula as age markers
+        const startPosition = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add margin for milestone markers
         
         // Calculate end position based on disbursement type
         let endPosition = null;
@@ -149,11 +149,11 @@ class Timeline {
             } else { // Yearly
                 milestoneEndAge = milestone.age_at_occurrence + milestone.duration;
             }
-            // Calculate position based on the actual end age
-            endPosition = ((milestoneEndAge - startAge) / (maxAge - startAge)) * timelineWidth + 20;
+            // Calculate position using the same formula as age markers
+            endPosition = ((milestoneEndAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
         } else if (milestone.disbursement_type === 'Perpetuity') {
             // For perpetuity, use inheritance age (100)
-            endPosition = ((maxAge - startAge) / (maxAge - startAge)) * timelineWidth + 20;
+            endPosition = ((endAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
         }
         
         // Calculate vertical position for this milestone
