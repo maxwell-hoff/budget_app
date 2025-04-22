@@ -8,23 +8,23 @@ class Milestone(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     age_at_occurrence = db.Column(db.Integer, nullable=False)
-    milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income' or 'Expense'
+    milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income', 'Expense', 'Asset', or 'Liability'
     disbursement_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
     amount = db.Column(db.Float, nullable=False)
-    duration_years = db.Column(db.Integer)  # Only for annuity type
-    monthly_income = db.Column(db.Float)  # Only for retirement milestone
+    payment = db.Column(db.Float, nullable=True)  # Payment amount for Assets and Liabilities
     occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, duration_years=None, monthly_income=None, occurrence=None, duration=None, rate_of_return=None):
+    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
         self.disbursement_type = disbursement_type
         self.amount = amount
+        self.payment = payment
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -38,9 +38,6 @@ class Milestone(db.Model):
             self.duration = None
             self.rate_of_return = None
         
-        self.duration_years = duration_years
-        self.monthly_income = monthly_income
-        
     def to_dict(self):
         """Convert milestone to dictionary."""
         return {
@@ -50,8 +47,7 @@ class Milestone(db.Model):
             'milestone_type': self.milestone_type,
             'disbursement_type': self.disbursement_type,
             'amount': self.amount,
-            'duration_years': self.duration_years,
-            'monthly_income': self.monthly_income,
+            'payment': self.payment,
             'occurrence': self.occurrence,
             'duration': self.duration,
             'rate_of_return': self.rate_of_return,

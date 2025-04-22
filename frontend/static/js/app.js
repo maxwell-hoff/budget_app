@@ -176,6 +176,7 @@ function addNewMilestone() {
         milestone_type: 'Expense',
         disbursement_type: 'Fixed Duration',
         amount: 0,
+        payment: null,
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0
@@ -226,6 +227,8 @@ function createMilestoneForm(milestone) {
                     <select class="form-control" name="milestone_type">
                         <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
                         <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
+                        <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
+                        <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -238,6 +241,10 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Amount</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                </div>
+                <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
+                    <label class="form-label">Payment (enter negative value for asset withdrawals / enter positive value for liability payments)</label>
+                    <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Occurrence</label>
@@ -278,7 +285,11 @@ function createMilestoneForm(milestone) {
 }
 
 function updateAnnuityFieldsVisibility(form) {
+    const milestoneType = form.find('[name="milestone_type"]').val();
     const disbursementType = form.find('[name="disbursement_type"]').val();
+    
+    // Show payment field for Asset and Liability types
+    form.find('.payment-field').toggle(['Asset', 'Liability'].includes(milestoneType));
     
     // Show all annuity fields if disbursement type is selected
     const showAnnuityFields = disbursementType !== null;
@@ -299,14 +310,20 @@ function handleMilestoneUpdate(e) {
     const milestone = milestones.find(m => m.id === milestoneId);
     
     if (milestone) {
+        const milestoneType = form.find('[name="milestone_type"]').val();
         const disbursementType = form.find('[name="disbursement_type"]').val();
         const updatedMilestone = {
             name: form.find('[name="name"]').val(),
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
-            milestone_type: form.find('[name="milestone_type"]').val(),
+            milestone_type: milestoneType,
             disbursement_type: disbursementType,
             amount: parseFloat(form.find('[name="amount"]').val())
         };
+        
+        // Add payment field for Asset and Liability types
+        if (['Asset', 'Liability'].includes(milestoneType)) {
+            updatedMilestone.payment = parseFloat(form.find('[name="payment"]').val()) || null;
+        }
         
         if (disbursementType) {
             updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
