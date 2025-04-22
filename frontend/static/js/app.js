@@ -115,8 +115,12 @@ function createDefaultMilestones() {
             data: JSON.stringify({
                 name: 'Current',
                 age_at_occurrence: currentAge,
-                expense_type: 'lump_sum',
-                amount: 0
+                milestone_type: 'Expense',
+                disbursement_type: 'Fixed Duration',
+                amount: 0,
+                occurrence: 'Yearly',
+                duration: 1,
+                rate_of_return: 0.0
             })
         }),
         // Create Inheritance milestone
@@ -127,8 +131,12 @@ function createDefaultMilestones() {
             data: JSON.stringify({
                 name: 'Inheritance',
                 age_at_occurrence: 100,
-                expense_type: 'lump_sum',
-                amount: 10000
+                milestone_type: 'Income',
+                disbursement_type: 'Fixed Duration',
+                amount: 10000,
+                occurrence: 'Yearly',
+                duration: 1,
+                rate_of_return: 0.0
             })
         })
     ])
@@ -166,8 +174,7 @@ function addNewMilestone() {
         name: 'New Milestone',
         age_at_occurrence: currentAge + 5,
         milestone_type: 'Expense',
-        expense_type: 'Fixed Duration',
-        income_type: null,
+        disbursement_type: 'Fixed Duration',
         amount: 0,
         occurrence: 'Yearly',
         duration: 1,
@@ -221,36 +228,29 @@ function createMilestoneForm(milestone) {
                         <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
                     </select>
                 </div>
-                <div class="mb-3 expense-fields" style="display: ${milestone.milestone_type === 'Expense' ? 'block' : 'none'}">
-                    <label class="form-label">Expense Type</label>
-                    <select class="form-control" name="expense_type">
-                        <option value="Fixed Duration" ${milestone.expense_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
-                        <option value="Perpetuity" ${milestone.expense_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
-                    </select>
-                </div>
-                <div class="mb-3 income-fields" style="display: ${milestone.milestone_type === 'Income' ? 'block' : 'none'}">
-                    <label class="form-label">Income Type</label>
-                    <select class="form-control" name="income_type">
-                        <option value="Fixed Duration" ${milestone.income_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
-                        <option value="Perpetuity" ${milestone.income_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
+                <div class="mb-3">
+                    <label class="form-label">Disbursement Type</label>
+                    <select class="form-control" name="disbursement_type">
+                        <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
+                        <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Amount</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type) || (milestone.milestone_type === 'Income' && milestone.income_type) ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Occurrence</label>
                     <select class="form-control" name="occurrence">
                         <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
                 </div>
-                <div class="mb-3 annuity-fields duration-field" style="display: ${((milestone.milestone_type === 'Expense' && milestone.expense_type === 'Fixed Duration') || (milestone.milestone_type === 'Income' && milestone.income_type === 'Fixed Duration')) ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
                     <label class="form-label">Duration</label>
                     <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type) || (milestone.milestone_type === 'Income' && milestone.income_type) ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Rate of Return (%)</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
@@ -264,14 +264,11 @@ function createMilestoneForm(milestone) {
     
     // Add event listener for milestone type changes
     form.find('[name="milestone_type"]').on('change', function() {
-        const isExpense = $(this).val() === 'Expense';
-        form.find('.expense-fields').toggle(isExpense);
-        form.find('.income-fields').toggle(!isExpense);
         updateAnnuityFieldsVisibility(form);
     });
     
-    // Add event listener for expense/income type changes
-    form.find('[name="expense_type"], [name="income_type"]').on('change', function() {
+    // Add event listener for disbursement type changes
+    form.find('[name="disbursement_type"]').on('change', function() {
         updateAnnuityFieldsVisibility(form);
     });
     
@@ -281,19 +278,14 @@ function createMilestoneForm(milestone) {
 }
 
 function updateAnnuityFieldsVisibility(form) {
-    const milestoneType = form.find('[name="milestone_type"]').val();
-    const expenseType = form.find('[name="expense_type"]').val();
-    const incomeType = form.find('[name="income_type"]').val();
+    const disbursementType = form.find('[name="disbursement_type"]').val();
     
-    const showAnnuityFields = (milestoneType === 'Expense' && expenseType) || 
-                            (milestoneType === 'Income' && incomeType);
-    
-    // Show all annuity fields by default
+    // Show all annuity fields if disbursement type is selected
+    const showAnnuityFields = disbursementType !== null;
     form.find('.annuity-fields').toggle(showAnnuityFields);
     
     // Hide duration field if type is Perpetuity
-    if ((milestoneType === 'Expense' && expenseType === 'Perpetuity') || 
-        (milestoneType === 'Income' && incomeType === 'Perpetuity')) {
+    if (disbursementType === 'Perpetuity') {
         form.find('.duration-field').hide();
     } else if (showAnnuityFields) {
         form.find('.duration-field').show();
@@ -307,50 +299,28 @@ function handleMilestoneUpdate(e) {
     const milestone = milestones.find(m => m.id === milestoneId);
     
     if (milestone) {
-        const milestoneType = form.find('[name="milestone_type"]').val();
+        const disbursementType = form.find('[name="disbursement_type"]').val();
         const updatedMilestone = {
             name: form.find('[name="name"]').val(),
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
-            milestone_type: milestoneType,
+            milestone_type: form.find('[name="milestone_type"]').val(),
+            disbursement_type: disbursementType,
             amount: parseFloat(form.find('[name="amount"]').val())
         };
         
-        if (milestoneType === 'Expense') {
-            const expenseType = form.find('[name="expense_type"]').val();
-            updatedMilestone.expense_type = expenseType;
-            updatedMilestone.income_type = null;
+        if (disbursementType) {
+            updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
+            updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
             
-            if (expenseType === 'Fixed Duration') {
+            if (disbursementType === 'Fixed Duration') {
                 updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
-            } else {
+            } else {  // Perpetuity
                 updatedMilestone.duration = null;
             }
-            
-            if (expenseType === 'Perpetuity') {
-                updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
-                updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
-            } else {
-                updatedMilestone.occurrence = null;
-                updatedMilestone.rate_of_return = null;
-            }
-        } else {  // Income
-            const incomeType = form.find('[name="income_type"]').val();
-            updatedMilestone.expense_type = null;
-            updatedMilestone.income_type = incomeType;
-            
-            if (incomeType === 'Fixed Duration') {
-                updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
-            } else {
-                updatedMilestone.duration = null;
-            }
-            
-            if (incomeType === 'Perpetuity') {
-                updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
-                updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
-            } else {
-                updatedMilestone.occurrence = null;
-                updatedMilestone.rate_of_return = null;
-            }
+        } else {
+            updatedMilestone.occurrence = null;
+            updatedMilestone.duration = null;
+            updatedMilestone.rate_of_return = null;
         }
         
         $.ajax({

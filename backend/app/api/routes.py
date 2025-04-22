@@ -50,10 +50,12 @@ def create_milestone():
     milestone = Milestone(
         name=data['name'],
         age_at_occurrence=data['age_at_occurrence'],
-        expense_type=data['expense_type'],
+        milestone_type=data['milestone_type'],
+        disbursement_type=data['disbursement_type'],
         amount=data['amount'],
-        duration_years=data.get('duration_years'),
-        monthly_income=data.get('monthly_income')
+        occurrence=data.get('occurrence'),
+        duration=data.get('duration'),
+        rate_of_return=data.get('rate_of_return')
     )
     
     db.session.add(milestone)

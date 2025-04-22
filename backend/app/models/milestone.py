@@ -9,8 +9,7 @@ class Milestone(db.Model):
     name = db.Column(db.String(100), nullable=False)
     age_at_occurrence = db.Column(db.Integer, nullable=False)
     milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income' or 'Expense'
-    expense_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
-    income_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
+    disbursement_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
     amount = db.Column(db.Float, nullable=False)
     duration_years = db.Column(db.Integer)  # Only for annuity type
     monthly_income = db.Column(db.Float)  # Only for retirement milestone
@@ -20,40 +19,24 @@ class Milestone(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, milestone_type='Expense', expense_type=None, income_type=None, amount=0, duration_years=None, monthly_income=None, occurrence=None, duration=None, rate_of_return=None):
+    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, duration_years=None, monthly_income=None, occurrence=None, duration=None, rate_of_return=None):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
+        self.disbursement_type = disbursement_type
         self.amount = amount
         
-        if milestone_type == 'Expense':
-            self.expense_type = expense_type
-            self.income_type = None
-            if expense_type in ['Fixed Duration', 'Perpetuity']:
-                self.occurrence = occurrence or 'Yearly'
-                self.rate_of_return = rate_of_return or 0.0
-                if expense_type == 'Fixed Duration':
-                    self.duration = duration or 1
-                else:  # Perpetuity
-                    self.duration = None
-            else:
-                self.occurrence = None
+        if disbursement_type in ['Fixed Duration', 'Perpetuity']:
+            self.occurrence = occurrence or 'Yearly'
+            self.rate_of_return = rate_of_return or 0.0
+            if disbursement_type == 'Fixed Duration':
+                self.duration = duration or 1
+            else:  # Perpetuity
                 self.duration = None
-                self.rate_of_return = None
-        else:  # Income
-            self.expense_type = None
-            self.income_type = income_type
-            if income_type in ['Fixed Duration', 'Perpetuity']:
-                self.occurrence = occurrence or 'Yearly'
-                self.rate_of_return = rate_of_return or 0.0
-                if income_type == 'Fixed Duration':
-                    self.duration = duration or 1
-                else:  # Perpetuity
-                    self.duration = None
-            else:
-                self.occurrence = None
-                self.duration = None
-                self.rate_of_return = None
+        else:
+            self.occurrence = None
+            self.duration = None
+            self.rate_of_return = None
         
         self.duration_years = duration_years
         self.monthly_income = monthly_income
@@ -65,8 +48,7 @@ class Milestone(db.Model):
             'name': self.name,
             'age_at_occurrence': self.age_at_occurrence,
             'milestone_type': self.milestone_type,
-            'expense_type': self.expense_type,
-            'income_type': self.income_type,
+            'disbursement_type': self.disbursement_type,
             'amount': self.amount,
             'duration_years': self.duration_years,
             'monthly_income': self.monthly_income,
