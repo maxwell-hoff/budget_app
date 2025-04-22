@@ -450,6 +450,8 @@ function handleMilestoneUpdate(e, form) {
             success: function(response) {
                 Object.assign(milestone, response);
                 updateTimeline();
+                // Refresh the page to update milestone headers
+                window.location.reload();
             },
             error: function(error) {
                 console.error('Error updating milestone:', error);
