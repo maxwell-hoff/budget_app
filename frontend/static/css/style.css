@@ -587,7 +587,7 @@ body {
 
 .npv-bar {
     position: absolute;
-    height: 20px;
+    height: 6px; /* Match the new bar height */
     transition: width 0.3s ease;
 }
 
@@ -612,6 +612,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     left: -151px;
+    top: -6px; /* Adjusted to align with the bar */
 }
 
 .npv-label.bold {

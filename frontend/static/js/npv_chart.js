@@ -4,8 +4,8 @@ class NPVChart {
         this.chartContent = document.getElementById('npv-chart-content');
         this.chartBars = document.getElementById('npv-chart-bars');
         this.chartXAxis = document.getElementById('npv-chart-x-axis');
-        this.verticalSpacing = 30; // pixels between bars
-        this.barHeight = 20; // height of each bar
+        this.verticalSpacing = 30; // Match timeline's vertical spacing
+        this.barHeight = 6; // Reduced from 20 to match timeline marker height
         this.padding = 20; // padding around the chart
     }
 
@@ -119,7 +119,7 @@ class NPVChart {
         const label = document.createElement('div');
         label.className = `npv-label ${npv.isTotal ? 'bold' : ''}`;
         label.textContent = npv.name;
-        label.style.top = `${top}px`;
+        label.style.top = `${top - 13}px`; // Position label slightly above the bar
         this.chartBars.appendChild(label);
     }
 
