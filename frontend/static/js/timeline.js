@@ -215,7 +215,7 @@ class Timeline {
         label.setAttribute('data-id', milestoneId);
         label.textContent = name;
         label.style.position = 'absolute';
-        label.style.top = `${verticalPosition}px`;
+        label.style.top = `${verticalPosition - 12}px`;  // Move label up by 5px
         
         // Add hover functionality to label
         label.addEventListener('mouseenter', () => {

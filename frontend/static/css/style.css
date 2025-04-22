@@ -180,7 +180,6 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     left: -151px;
-    /* top: 5px; */
     transition: all 0.3s ease;
 }
 
