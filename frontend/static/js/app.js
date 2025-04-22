@@ -217,7 +217,11 @@ function createMilestoneForm(milestone) {
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
-                <i class="fas fa-chevron-down toggle-icon"></i>
+                <div class="milestone-header-buttons">
+                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    <button type="button" class="btn btn-danger btn-sm delete-milestone">Delete</button>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
             </div>
             <form class="milestone-form-content">
                 <div class="mb-3">
@@ -273,8 +277,6 @@ function createMilestoneForm(milestone) {
                     <label class="form-label">Rate of Return (%)</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-                <button type="button" class="btn btn-danger delete-milestone">Delete</button>
             </form>
         </div>
     `);
@@ -349,8 +351,8 @@ function createMilestoneForm(milestone) {
     
     // Add click handler for the header to toggle the form
     header.on('click', function(e) {
-        // Only toggle if not dragging
-        if (e.type === 'click' && !form.hasClass('dragging')) {
+        // Only toggle if not dragging and not clicking buttons
+        if (e.type === 'click' && !form.hasClass('dragging') && !$(e.target).is('button')) {
             form.toggleClass('expanded');
             form.find('.toggle-icon').toggleClass('expanded');
         }

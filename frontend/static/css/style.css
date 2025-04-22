@@ -426,26 +426,37 @@ body {
 }
 
 .milestone-header {
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
 }
 
 .milestone-header h3 {
     margin: 0;
-    font-size: 1.2em;
+    font-size: 1.1rem;
 }
 
-.milestone-header .toggle-icon {
-    color: #6c757d;
+.milestone-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.milestone-header-buttons button {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+}
+
+.milestone-header-buttons .toggle-icon {
+    margin-left: 8px;
     transition: transform 0.3s ease;
 }
 
-.milestone-header .toggle-icon.expanded {
+.milestone-header-buttons .toggle-icon.expanded {
     transform: rotate(180deg);
 }
 
