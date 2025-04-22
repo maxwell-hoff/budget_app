@@ -52,23 +52,45 @@ body {
     background-color: #f8f9fa;
 }
 
-.sidebar.hidden .sidebar-header {
-    position: fixed;
-    right: 20px;
+/* Show button styles */
+.show-sidebar-button {
+    display: none;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    cursor: pointer;
+    z-index: 2000;
+    background-color: #fff;
+    padding: 5px;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.sidebar.hidden .toggle-icon {
+.show-sidebar-button .toggle-icon {
+    font-size: 1.2em;
+    color: #666;
     transform: rotate(180deg);
+}
+
+.show-sidebar-button:hover .toggle-icon {
+    color: #333;
+}
+
+.sidebar.hidden + .main-content .show-sidebar-button {
+    display: block;
 }
 
 .main-content {
     width: 75%;
     float: left;
     transition: width 0.3s ease;
+    padding-left: 0;
+    position: relative;
 }
 
 .main-content.expanded {
     width: 100%;
+    padding-left: 40px;
 }
 
 #timeline {
@@ -97,6 +119,7 @@ body {
     width: 100%;
     overflow: visible;
     position: relative;
+    z-index: 1;
 }
 
 .timeline-controls {

@@ -529,9 +529,15 @@ function handleError(error) {
 function setupSidebarToggle() {
     const sidebar = $('.sidebar');
     const mainContent = $('.main-content');
-    const toggleIcon = $('.sidebar-header .toggle-icon');
+    const hideButton = $('.sidebar-header .toggle-icon');
+    const showButton = $('.show-sidebar-button');
     
-    toggleIcon.on('click', function() {
+    hideButton.on('click', function() {
+        sidebar.toggleClass('hidden');
+        mainContent.toggleClass('expanded');
+    });
+    
+    showButton.on('click', function() {
         sidebar.toggleClass('hidden');
         mainContent.toggleClass('expanded');
     });
