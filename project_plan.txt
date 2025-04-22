@@ -1,0 +1,108 @@
+Personal Finance App - Project Plan
+
+Phase 1: Setup and Basic Infrastructure (Week 1)
+- Set up project structure
+- Create requirements.txt with exact versions
+- Set up SQLite database schema
+- Create basic Python backend structure
+- Set up testing framework
+- Create basic HTML/JavaScript frontend structure
+
+Phase 2: Backend Development (Weeks 2-3)
+- Implement DCF calculation engine
+  - Time value of money calculations
+  - Present value calculations
+  - Annuity calculations
+- Implement bank statement parser
+  - CSV parsing for Chase format
+  - Transaction categorization
+  - Balance sheet calculations
+- Create database models
+  - User profile
+  - Milestones
+  - Transactions
+  - Balance sheet
+- Implement RESTful API endpoints
+- Write comprehensive unit tests
+
+Phase 3: Frontend Development (Weeks 4-5)
+- Implement timeline visualization
+  - Interactive timeline
+  - Milestone markers
+  - Drag-and-drop functionality
+- Create milestone management interface
+  - Parameter input forms
+  - Real-time updates
+- Implement DCF display
+  - Present value calculations
+  - Nominal value display
+- Create bank statement upload interface
+- Implement responsive design
+
+Phase 4: Integration and Testing (Week 6)
+- Integrate frontend and backend
+- End-to-end testing
+- Performance optimization
+- Bug fixes
+- User acceptance testing
+
+Phase 5: Documentation and Deployment (Week 7)
+- Write user documentation
+- Create API documentation
+- Set up deployment environment
+- Final testing
+- Production deployment
+
+Project Structure:
+```
+budget_app/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── milestone.py
+│   │   │   ├── transaction.py
+│   │   │   └── balance_sheet.py
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── dcf_calculator.py
+│   │   │   └── statement_parser.py
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── routes.py
+│   │   │   └── schemas.py
+│   │   └── database.py
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── test_models/
+│   │   ├── test_services/
+│   │   └── test_api/
+│   └── requirements.txt
+├── frontend/
+│   ├── static/
+│   │   ├── css/
+│   │   ├── js/
+│   │   └── images/
+│   ├── templates/
+│   └── index.html
+├── docs/
+│   ├── api.md
+│   └── user_guide.md
+└── README.md
+```
+
+Dependencies:
+- Python 3.8+
+- Flask
+- SQLAlchemy
+- pandas
+- numpy
+- pytest
+- Flask-SQLAlchemy
+- Flask-Marshmallow
+- Flask-CORS
+- Timeline.js
+- jQuery
+- Bootstrap

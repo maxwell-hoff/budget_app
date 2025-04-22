@@ -1,0 +1,526 @@
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+.container-fluid {
+    padding: 20px;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: calc(100vh - 40px); /* Account for container padding */
+    position: sticky;
+    top: 20px;
+    transition: all 0.3s ease;
+    width: 25%;
+    float: left;
+    margin-right: 20px;
+    overflow-y: auto; /* Enable scrolling within sidebar if content overflows */
+}
+
+.sidebar.hidden {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    position: sticky;
+    top: 0;
+    right: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    background-color: #fff;
+    padding: 10px 0;
+    margin-bottom: 10px;
+}
+
+.sidebar-header .toggle-icon {
+    font-size: 1.2em;
+    color: #666;
+    transition: transform 0.3s ease;
+    background-color: #fff;
+    padding: 5px;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header .toggle-icon:hover {
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* Show button styles */
+.show-sidebar-button {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    cursor: pointer;
+    z-index: 2000;
+    background-color: #fff;
+    width: 40px;
+    height: calc(100vh - 40px);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 20px;
+    border-radius: 8px;
+}
+
+.show-sidebar-button .toggle-icon {
+    font-size: 1.2em;
+    color: #666;
+}
+
+.show-sidebar-button:hover {
+    background-color: #f8f9fa;
+}
+
+.show-sidebar-button:hover .toggle-icon {
+    color: #333;
+}
+
+/* Hide the show button when sidebar is visible */
+.sidebar:not(.hidden) + .main-content .show-sidebar-button {
+    display: none;
+}
+
+/* Show the show button when sidebar is hidden */
+.sidebar.hidden + .main-content .show-sidebar-button {
+    display: flex;
+}
+
+/* Adjust main content padding when sidebar is hidden */
+.sidebar.hidden + .main-content {
+    padding-left: 60px;
+}
+
+/* Remove the old padding from expanded class since we're handling it above */
+.main-content.expanded {
+    width: calc(100% - 20px);
+}
+
+.main-content {
+    width: calc(75% - 20px);
+    float: left;
+    transition: width 0.3s ease;
+    padding-left: 0;
+    position: relative;
+    padding-top: 20px;
+    min-height: 100vh; /* Ensure main content takes full height */
+}
+
+#timeline {
+    transition: width 0.3s ease, margin-left 0.3s ease;
+}
+
+.sidebar.hidden + .main-content #timeline {
+    width: calc(100% - 170px);
+    margin-left: 170px;
+}
+
+/* Clear floats */
+.container-fluid::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Timeline Styles */
+.timeline-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 100%;
+    overflow: visible;
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+
+.timeline-controls {
+    margin-bottom: 20px;
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    z-index: 101;
+}
+
+#timeline {
+    height: auto;
+    min-height: 75px;
+    position: relative;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin: 20px 0;
+    width: calc(100% - 170px);
+    margin-left: 170px;
+    overflow: visible;
+    padding-bottom: 20px;
+}
+
+#timeline-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #666;
+    font-size: 1.2em;
+    text-align: center;
+    z-index: 1;
+}
+
+#timeline-content {
+    height: 100%;
+    position: relative;
+    display: none;
+    width: 100%;
+}
+
+#timeline-line {
+    position: absolute;
+    top: 30px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #333;
+    width: 100%;
+    z-index: 1;
+}
+
+#timeline-markers {
+    position: absolute;
+    top: 25px;
+    left: 20px;
+    right: 0;
+    height: 100%;
+    width: calc(100% - 20px);
+    z-index: 1;
+}
+
+#timeline-labels {
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 0;
+    height: 20px;
+    width: calc(100% - 20px);
+    z-index: 2;
+}
+
+#timeline-milestones {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    width: 100%;
+}
+
+.age-marker {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 12px;
+    background-color: #666;
+    z-index: 1;
+}
+
+.age-label {
+    position: absolute;
+    top: 0;
+    transform: translate(-50%, 0);
+    font-size: 0.8em;
+    color: #666;
+    z-index: 2;
+}
+
+.milestone-marker {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #007bff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.milestone-marker.end-marker {
+    width: 6px;
+    height: 6px;
+    background-color: #007bff;
+}
+
+.milestone-line {
+    position: absolute;
+    height: 2px;
+    background-color: #007bff;
+    opacity: 0.5;
+    z-index: 0;
+    transform: translateY(-50%);
+}
+
+.milestone-marker.highlighted {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+.milestone-marker.end-marker.highlighted {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+.milestone-line.highlighted {
+    background-color: #007bff;
+    opacity: 0.8;
+}
+
+.milestone-label {
+    position: absolute;
+    font-size: 0.9em;
+    color: #333;
+    white-space: nowrap;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-align: left;
+    width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    left: -151px;
+    transition: all 0.3s ease;
+}
+
+.milestone-label.highlighted {
+    border: 2px solid #007bff;
+    padding: 0 3px;
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.current-marker,
+.inheritance-marker {
+    background-color: #007bff;
+}
+
+/* Bank Statement Styles */
+#balanceSheet {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.balance-sheet-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Tooltip Styles */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+
+.info-icon {
+    color: #6c757d;
+    cursor: help;
+    margin-left: 5px;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 0.9em;
+}
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        height: auto;
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .container-fluid {
+        padding: 10px;
+    }
+}
+
+.bank-statements {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.balance-amount {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2ecc71;
+    margin: 10px 0;
+}
+
+#latest-balance {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #2ecc71;
+}
+
+/* Milestone Form Styles */
+.milestone-form {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+    cursor: move;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.milestone-form.dragging {
+    opacity: 0.5;
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.milestone-form:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+}
+
+.milestone-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.milestone-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.milestone-header-buttons button {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+}
+
+.milestone-header-buttons .toggle-icon {
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+}
+
+.milestone-header-buttons .toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.milestone-form-content {
+    padding: 20px;
+    display: none;
+}
+
+.milestone-form.expanded .milestone-form-content {
+    display: block;
+}
+
+.milestone-form.highlighted {
+    border: 2px solid #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Sidebar Toggle */
+.sidebar-toggle {
+    display: none;
+}
+
+/* Adjust timeline positioning when sidebar is hidden */
+.sidebar.hidden + .main-content .timeline-container {
+    padding-left: 0;
+}
+
+.sidebar.hidden + .main-content #timeline {
+    width: calc(100% - 170px);
+    margin-left: 170px;
+}
+
+.sidebar.hidden + .main-content #timeline-labels {
+    left: 20px;
+    width: calc(100% - 20px);
+}
+
+.sidebar.hidden + .main-content #timeline-markers {
+    left: 20px;
+    width: calc(100% - 20px);
+}
+
+/* Milestone Details Section */
+#milestoneDetails {
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+/* Ensure milestone forms have proper spacing */
+#milestoneForms {
+    margin-top: 20px;
+}
+
+/* Add some spacing between milestone forms */
+.milestone-form {
+    margin-bottom: 20px;
+} 

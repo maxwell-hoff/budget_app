@@ -1,0 +1,86 @@
+Personal Finance App - Product Requirements Document
+
+1. Overview
+The personal finance app will help users plan for major life events and retirement by converting future expenses into today's dollars using time value of money calculations. The app will also track current spending through bank statement analysis.
+
+2. Core Features
+
+2.1 Timeline Visualization
+- Interactive timeline showing major life events/milestones
+- Timeline should be blank by default with message "Select birthday to populate timeline"
+- Once birthday is selected, timeline shows:
+  - Age-based markers every 10 years (20, 30, 40, 50, etc.)
+  - Two default milestones:
+    - "Current" point showing user's current age
+    - "Inheritance" point at age 100 (default lump sum of $10,000)
+- Visual elements:
+  - Vertical dashes for age markers
+  - Age labels below the timeline line
+  - Milestone names above the timeline line
+  - Current age marker labeled as "Current"
+- Ability to add/remove additional milestones
+- Drag-and-drop functionality to adjust milestone timing
+- Visual representation of age at each milestone
+
+2.2 Milestone Management
+- Each milestone can be configured with:
+  - Name
+  - Age at occurrence
+  - Expense type (annuity vs lump sum)
+  - Amount
+  - Duration (for annuity-type expenses)
+  - Monthly income (for retirement milestone)
+- Parameters should be adjustable in real-time
+- Changes should immediately update the DCF calculations
+
+2.3 DCF Calculations
+- Convert future expenses to present value
+- Use user's birthday as reference point
+- Support for both annuity and lump sum calculations
+- Real-time updates as parameters change
+- Display both nominal and present value amounts
+
+2.4 Bank Statement Analysis
+- Parse CSV bank statements
+- Categorize transactions
+- Calculate current balance sheet
+- Track spending patterns
+- Support for multiple bank statement formats (future enhancement)
+
+3. Technical Requirements
+
+3.1 Frontend
+- HTML/JavaScript web interface
+- Responsive design
+- Interactive timeline using a JavaScript library (e.g., Timeline.js)
+- Real-time calculations and updates
+- Clean, intuitive UI
+
+3.2 Backend
+- Python-based server
+- SQLite database
+- Object-oriented design
+- Test-driven development
+- RESTful API endpoints
+
+3.3 Data Model
+- User profile (birthday, current age)
+- Milestones (name, age, type, amount, duration)
+- Transactions (date, amount, category, description)
+- Balance sheet (assets, liabilities, net worth)
+
+4. Future Enhancements
+- Multiple bank statement format support
+- Investment portfolio integration
+- Tax planning features
+- Multiple currency support
+- Export/import functionality
+- Mobile app version
+
+5. Success Metrics
+- Accurate DCF calculations
+- Real-time parameter updates
+- Intuitive milestone management
+- Reliable bank statement parsing
+- Responsive UI
+- Comprehensive test coverage
