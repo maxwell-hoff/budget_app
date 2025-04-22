@@ -218,8 +218,12 @@ function createMilestoneForm(milestone) {
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
-                    <button type="button" class="btn btn-primary btn-sm save-milestone">Save</button>
-                    <button type="button" class="btn btn-danger btn-sm delete-milestone">Delete</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm delete-milestone">
+                        <i class="fas fa-trash"></i>
+                    </button>
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
             </div>
