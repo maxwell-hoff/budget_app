@@ -6,6 +6,7 @@ let milestones = [];
 $(document).ready(function() {
     initializeEventListeners();
     loadProfile();
+    setupSidebarToggle();
 });
 
 // Event Listeners
@@ -523,4 +524,15 @@ function displayBalanceSheet(data) {
 function handleError(error) {
     console.error('Error:', error);
     alert('An error occurred. Please try again.');
+}
+
+function setupSidebarToggle() {
+    const sidebar = $('.sidebar');
+    const mainContent = $('.main-content');
+    const toggleIcon = $('.sidebar-header .toggle-icon');
+    
+    toggleIcon.on('click', function() {
+        sidebar.toggleClass('hidden');
+        mainContent.toggleClass('expanded');
+    });
 } 

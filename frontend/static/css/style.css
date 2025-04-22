@@ -18,6 +18,72 @@ body {
     height: 100vh;
     position: sticky;
     top: 20px;
+    transition: all 0.3s ease;
+    width: 25%;
+    float: left;
+}
+
+.sidebar.hidden {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.sidebar-header .toggle-icon {
+    font-size: 1.2em;
+    color: #666;
+    transition: transform 0.3s ease;
+    background-color: #fff;
+    padding: 5px;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header .toggle-icon:hover {
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+.sidebar.hidden .sidebar-header {
+    right: -40px;
+}
+
+.sidebar.hidden .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.main-content {
+    width: 75%;
+    float: left;
+    transition: width 0.3s ease;
+}
+
+.main-content.expanded {
+    width: 100%;
+}
+
+#timeline {
+    transition: width 0.3s ease, margin-left 0.3s ease;
+}
+
+.sidebar.hidden + .main-content #timeline {
+    width: calc(100% - 40px);
+    margin-left: 20px;
+}
+
+/* Clear floats */
+.container-fluid::after {
+    content: "";
+    display: table;
+    clear: both;
 }
 
 /* Timeline Styles */
@@ -350,4 +416,9 @@ body {
 .milestone-form.highlighted {
     border: 2px solid #007bff;
     box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+/* Sidebar Toggle */
+.sidebar-toggle {
+    display: none;
 } 
