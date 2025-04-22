@@ -311,26 +311,26 @@ function createMilestoneForm(milestone) {
             milestones.splice(dropIndex, 0, draggedMilestone);
             
             // Update order for all milestones
-            milestones.forEach((milestone, index) => {
+            const updatePromises = milestones.map((milestone, index) => {
                 milestone.order = index;
                 // Send update to server
-                $.ajax({
+                return $.ajax({
                     url: `/api/milestones/${milestone.id}`,
                     method: 'PUT',
                     contentType: 'application/json',
-                    data: JSON.stringify({ order: index }),
-                    error: function(error) {
-                        console.error('Error updating milestone order:', error);
-                    }
+                    data: JSON.stringify({ order: index })
                 });
             });
             
-            // Reorder the forms
-            if (draggedForm.index() < dropForm.index()) {
-                dropForm.after(draggedForm);
-            } else {
-                dropForm.before(draggedForm);
-            }
+            // Wait for all updates to complete, then refresh the page
+            Promise.all(updatePromises)
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error updating milestone order:', error);
+                    alert('Error updating milestone order. Please try again.');
+                });
         }
     });
     
@@ -463,9 +463,8 @@ function handleMilestoneDelete(e) {
         url: `/api/milestones/${milestoneId}`,
         method: 'DELETE',
         success: function() {
-            milestones = milestones.filter(m => m.id !== milestoneId);
-            form.remove();
-            updateTimeline();
+            // Refresh the page to reset timeline spacing
+            window.location.reload();
         },
         error: function(error) {
             console.error('Error deleting milestone:', error);
