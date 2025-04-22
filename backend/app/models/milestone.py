@@ -15,6 +15,7 @@ class Milestone(db.Model):
     occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
+    order = db.Column(db.Integer, nullable=False, default=0)  # Order of the milestone
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -51,6 +52,7 @@ class Milestone(db.Model):
             'occurrence': self.occurrence,
             'duration': self.duration,
             'rate_of_return': self.rate_of_return,
+            'order': self.order,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         } 

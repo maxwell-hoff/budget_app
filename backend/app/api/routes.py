@@ -39,7 +39,7 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
-    milestones = Milestone.query.all()
+    milestones = Milestone.query.order_by(Milestone.order).all()
     return jsonify([milestone.to_dict() for milestone in milestones])
 
 @api_bp.route('/milestones', methods=['POST'])

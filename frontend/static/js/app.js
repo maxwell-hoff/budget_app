@@ -155,12 +155,13 @@ function loadMilestones() {
         url: '/api/milestones',
         method: 'GET',
         success: function(response) {
-            milestones = response;
+            // Sort milestones by order
+            milestones = response.sort((a, b) => a.order - b.order);
             updateTimeline();
             
             // Clear existing milestone forms before creating new ones
             $('#milestoneForms').empty();
-            response.forEach(createMilestoneForm);
+            milestones.forEach(createMilestoneForm);
         },
         error: function(error) {
             console.error('Error loading milestones:', error);
@@ -179,7 +180,8 @@ function addNewMilestone() {
         payment: null,
         occurrence: 'Yearly',
         duration: 1,
-        rate_of_return: 0.0
+        rate_of_return: 0.0,
+        order: milestones.length  // Set order to be after all existing milestones
     };
     
     $.ajax({
@@ -306,6 +308,21 @@ function createMilestoneForm(milestone) {
             
             const [draggedMilestone] = milestones.splice(draggedIndex, 1);
             milestones.splice(dropIndex, 0, draggedMilestone);
+            
+            // Update order for all milestones
+            milestones.forEach((milestone, index) => {
+                milestone.order = index;
+                // Send update to server
+                $.ajax({
+                    url: `/api/milestones/${milestone.id}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ order: index }),
+                    error: function(error) {
+                        console.error('Error updating milestone order:', error);
+                    }
+                });
+            });
             
             // Reorder the forms
             if (draggedForm.index() < dropForm.index()) {
