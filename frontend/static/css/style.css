@@ -149,7 +149,7 @@ body {
     overflow: visible;
     position: sticky;
     top: 20px;
-    z-index: 100;
+    z-index: 101;
 }
 
 .timeline-controls {
@@ -534,6 +534,9 @@ body {
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
+    position: sticky;
+    top: 395px;
+    z-index: 100;
 }
 
 #npv-chart {
