@@ -247,7 +247,7 @@ function createMilestoneForm(milestone) {
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
                 </div>
-                <div class="mb-3 annuity-fields" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type === 'annuity') || (milestone.milestone_type === 'Income' && milestone.income_type !== 'Lump Sum') ? 'block' : 'none'}">
+                <div class="mb-3 annuity-fields duration-field" style="display: ${(milestone.milestone_type === 'Expense' && milestone.expense_type === 'annuity') || (milestone.milestone_type === 'Income' && milestone.income_type === 'Fixed Duration') ? 'block' : 'none'}">
                     <label class="form-label">Duration</label>
                     <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
                 </div>
@@ -289,7 +289,15 @@ function updateAnnuityFieldsVisibility(form) {
     const showAnnuityFields = (milestoneType === 'Expense' && expenseType === 'annuity') || 
                             (milestoneType === 'Income' && incomeType !== 'Lump Sum');
     
+    // Show all annuity fields by default
     form.find('.annuity-fields').toggle(showAnnuityFields);
+    
+    // Hide duration field if income type is Perpetuity
+    if (milestoneType === 'Income' && incomeType === 'Perpetuity') {
+        form.find('.duration-field').hide();
+    } else if (showAnnuityFields) {
+        form.find('.duration-field').show();
+    }
 }
 
 function handleMilestoneUpdate(e) {
@@ -328,8 +336,14 @@ function handleMilestoneUpdate(e) {
             
             if (incomeType !== 'Lump Sum') {
                 updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
-                updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
                 updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
+                
+                // Only set duration for Fixed Duration income type
+                if (incomeType === 'Fixed Duration') {
+                    updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
+                } else {  // Perpetuity
+                    updatedMilestone.duration = null;
+                }
             } else {
                 updatedMilestone.occurrence = null;
                 updatedMilestone.duration = null;
