@@ -7,6 +7,8 @@ body {
 
 .container-fluid {
     padding: 20px;
+    min-height: 100vh;
+    position: relative;
 }
 
 /* Sidebar Styles */
@@ -15,13 +17,14 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    height: 100vh;
+    height: calc(100vh - 40px); /* Account for container padding */
     position: sticky;
     top: 20px;
     transition: all 0.3s ease;
     width: 25%;
     float: left;
     margin-right: 20px;
+    overflow-y: auto; /* Enable scrolling within sidebar if content overflows */
 }
 
 .sidebar.hidden {
@@ -31,11 +34,14 @@ body {
 }
 
 .sidebar-header {
-    position: absolute;
-    top: 20px;
+    position: sticky;
+    top: 0;
     right: 20px;
     cursor: pointer;
     z-index: 1000;
+    background-color: #fff;
+    padding: 10px 0;
+    margin-bottom: 10px;
 }
 
 .sidebar-header .toggle-icon {
@@ -113,6 +119,7 @@ body {
     padding-left: 0;
     position: relative;
     padding-top: 20px;
+    min-height: 100vh; /* Ensure main content takes full height */
 }
 
 #timeline {
