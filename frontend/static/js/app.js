@@ -114,7 +114,7 @@ function createDefaultMilestones() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: 'Current Assets',
+                name: 'Current Liquid Assets',
                 age_at_occurrence: currentAge,
                 milestone_type: 'Asset',
                 disbursement_type: 'Perpetuity',
@@ -122,7 +122,7 @@ function createDefaultMilestones() {
                 payment: 5000,
                 occurrence: 'Yearly',
                 rate_of_return: 0.07,  // 7%
-                order: 0
+                order: 2
             })
         }),
         // Create Current Liabilities milestone (order 1)
@@ -131,7 +131,7 @@ function createDefaultMilestones() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: 'Current Liabilities',
+                name: 'Current Debt',
                 age_at_occurrence: currentAge,
                 milestone_type: 'Liability',
                 disbursement_type: 'Fixed Duration',
@@ -139,7 +139,8 @@ function createDefaultMilestones() {
                 payment: 500,
                 occurrence: 'Monthly',
                 rate_of_return: 0.07,  // 7%
-                order: 1
+                duration: 120,
+                order: 3
             })
         }),
         // Create Current Income milestone (order 1)
@@ -148,7 +149,7 @@ function createDefaultMilestones() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: 'Current Income',
+                name: 'Current Salary (incl. Bonus, Side Hustle, etc.)',
                 age_at_occurrence: currentAge,
                 milestone_type: 'Income',
                 disbursement_type: 'Fixed Duration',
@@ -156,7 +157,7 @@ function createDefaultMilestones() {
                 occurrence: 'Yearly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.02,  // 2%
-                order: 2
+                order: 0
             })
         }),
         // Create Current Expense milestone (order 1)
@@ -165,7 +166,7 @@ function createDefaultMilestones() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: 'Current Expenses',
+                name: 'Current Average Expenses',
                 age_at_occurrence: currentAge,
                 milestone_type: 'Expense',
                 disbursement_type: 'Fixed Duration',
@@ -173,7 +174,24 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.03,  // 2%
-                order: 3
+                order: 1
+            })
+        }),
+        // Create Retirement milestone (order 2)
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Retirement',
+                age_at_occurrence: 70,
+                milestone_type: 'Expense',
+                disbursement_type: 'Fixed Duration',
+                amount: 6000,
+                occurrence: 'Yearly',
+                duration: 30,  // 4 years
+                rate_of_return: 0.06,  // 4%
+                order: 4
             })
         }),
         // Create Long Term Care (self) milestone (order 2)
@@ -190,7 +208,7 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 duration: 48,  // 4 years
                 rate_of_return: 0.04,  // 4%
-                order: 4
+                order: 5
             })
         }),
         // Create Inheritance milestone (order 3)
@@ -207,7 +225,7 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 duration: 1,
                 rate_of_return: 0.0,
-                order: 5
+                order: 6
             })
         })
     ])
