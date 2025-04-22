@@ -113,13 +113,41 @@ class NPVChart {
             bar.style.width = `${barWidth}px`;
         }
         
+        // Add data-id attribute if not the total row
+        if (!npv.isTotal) {
+            bar.setAttribute('data-id', npv.id);
+            
+            // Add hover functionality
+            bar.addEventListener('mouseenter', () => {
+                highlightMilestone(npv.id);
+            });
+            
+            bar.addEventListener('mouseleave', () => {
+                unhighlightMilestone(npv.id);
+            });
+        }
+        
         this.chartBars.appendChild(bar);
 
         // Create label
         const label = document.createElement('div');
         label.className = `npv-label ${npv.isTotal ? 'bold' : ''}`;
         label.textContent = npv.name;
-        label.style.top = `${top - 13}px`; // Position label slightly above the bar
+        label.style.top = `${top - 13}px`;
+        
+        // Add data-id attribute and hover functionality if not the total row
+        if (!npv.isTotal) {
+            label.setAttribute('data-id', npv.id);
+            
+            label.addEventListener('mouseenter', () => {
+                highlightMilestone(npv.id);
+            });
+            
+            label.addEventListener('mouseleave', () => {
+                unhighlightMilestone(npv.id);
+            });
+        }
+        
         this.chartBars.appendChild(label);
     }
 
@@ -162,7 +190,8 @@ class NPVChart {
 
             return {
                 name: milestone.name,
-                value: npv
+                value: npv,
+                id: milestone.id // Add milestone ID to the NPV object
             };
         });
     }

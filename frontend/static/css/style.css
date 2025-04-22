@@ -590,8 +590,8 @@ body {
 
 .npv-bar {
     position: absolute;
-    height: 6px; /* Match the new bar height */
-    transition: width 0.3s ease;
+    height: 6px;
+    transition: width 0.3s ease, opacity 0.3s ease;
 }
 
 .npv-bar.positive {
@@ -600,6 +600,11 @@ body {
 
 .npv-bar.negative {
     background-color: #dc3545;
+}
+
+.npv-bar[data-id].highlighted {
+    opacity: 0.8;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .npv-label {
@@ -615,7 +620,14 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     left: -151px;
-    top: -6px; /* Adjusted to align with the bar */
+    top: -13px;
+    transition: all 0.3s ease;
+}
+
+.npv-label[data-id].highlighted {
+    background-color: rgba(0, 123, 255, 0.1);
+    border: 2px solid #007bff;
+    padding: 0 3px;
 }
 
 .npv-label.bold {
