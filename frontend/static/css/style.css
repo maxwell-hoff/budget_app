@@ -84,20 +84,22 @@ body {
 
 #timeline-markers {
     position: absolute;
-    top: 0;
+    top: 25px;
     left: 0;
     right: 0;
     height: 100%;
     width: 100%;
+    z-index: 1;
 }
 
 #timeline-labels {
     position: absolute;
-    bottom: 150px;
+    top: 0;
     left: 0;
     right: 0;
     height: 20px;
     width: 100%;
+    z-index: 2;
 }
 
 #timeline-milestones {
@@ -111,21 +113,20 @@ body {
 
 .age-marker {
     position: absolute;
-    top: 32px;
+    top: 0;
     width: 2px;
     height: 12px;
     background-color: #666;
-    transform: translateY(-50%);
     z-index: 1;
 }
 
 .age-label {
     position: absolute;
-    top: 25px;
-    transform: translate(-50%, -100%);
+    top: 0;
+    transform: translate(-50%, 0);
     font-size: 0.8em;
     color: #666;
-    z-index: 1;
+    z-index: 2;
 }
 
 .milestone-marker {

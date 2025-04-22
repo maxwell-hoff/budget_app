@@ -118,6 +118,7 @@ class Timeline {
             label.textContent = age;
             label.style.position = 'absolute';
             label.style.left = `${position}px`;
+            label.style.top = '0';
             this.timelineLabels.appendChild(label);
         }
     }
