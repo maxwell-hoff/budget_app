@@ -218,7 +218,7 @@ function createMilestoneForm(milestone) {
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
-                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    <button type="button" class="btn btn-primary btn-sm save-milestone">Save</button>
                     <button type="button" class="btn btn-danger btn-sm delete-milestone">Delete</button>
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
@@ -369,7 +369,9 @@ function createMilestoneForm(milestone) {
     });
     
     // Add event listeners for the new form
-    form.find('.milestone-form-content').on('submit', handleMilestoneUpdate);
+    form.find('.save-milestone').on('click', function() {
+        handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
+    });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
 }
 
@@ -404,9 +406,8 @@ function updateAnnuityFieldsVisibility(form) {
     }
 }
 
-function handleMilestoneUpdate(e) {
+function handleMilestoneUpdate(e, form) {
     e.preventDefault();
-    const form = $(e.target);
     const milestoneId = form.closest('.milestone-form').data('id');
     const milestone = milestones.find(m => m.id === milestoneId);
     
