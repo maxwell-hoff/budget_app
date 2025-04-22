@@ -130,8 +130,8 @@ body {
 
 .milestone-marker {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: 6px;
+    height: 6px;
     background-color: #007bff;
     border-radius: 50%;
     transform: translate(-50%, -50%);
@@ -139,32 +139,32 @@ body {
     transition: all 0.3s ease;
 }
 
-.milestone-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
-}
-
 .milestone-marker.end-marker {
-    background-color: #6c757d;
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
+    background-color: #007bff;
 }
 
 .milestone-line {
     position: absolute;
     height: 2px;
-    background-color: #6c757d;
+    background-color: #007bff;
     opacity: 0.5;
     z-index: 0;
     transform: translateY(-50%);
 }
 
-.milestone-line.highlighted {
-    background-color: #007bff;
-    opacity: 0.8;
+.milestone-marker.highlighted {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
 }
 
 .milestone-marker.end-marker.highlighted {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+.milestone-line.highlighted {
+    background-color: #007bff;
+    opacity: 0.8;
 }
 
 .milestone-label {
@@ -180,22 +180,18 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     left: -90px;
+    transition: all 0.3s ease;
 }
 
-.current-marker {
-    background-color: #28a745;
+.milestone-label.highlighted {
+    border: 2px solid #007bff;
+    padding: 0 3px;
+    background-color: rgba(0, 123, 255, 0.1);
 }
 
-.current-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.5);
-}
-
+.current-marker,
 .inheritance-marker {
-    background-color: #dc3545;
-}
-
-.inheritance-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.5);
+    background-color: #007bff;
 }
 
 /* Bank Statement Styles */
