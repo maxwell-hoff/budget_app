@@ -29,7 +29,7 @@ class NPVChart {
         
         // Add total NPV as first row
         npvs.unshift({
-            name: 'Total Net Present Value',
+            name: 'Net Present Value',
             value: totalNPV,
             isTotal: true
         });
@@ -69,6 +69,11 @@ class NPVChart {
         // Create markers and labels
         const chartWidth = this.chart.offsetWidth;
         const center = chartWidth / 2;
+        
+        // Add x-axis line
+        const line = document.createElement('div');
+        line.className = 'x-axis-line';
+        this.chartXAxis.appendChild(line);
         
         for (let value = -roundedMax; value <= roundedMax; value += interval) {
             const position = center + (value / roundedMax) * (chartWidth / 2);

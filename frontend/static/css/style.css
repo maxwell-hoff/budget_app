@@ -572,7 +572,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 20px;
+    height: 30px; /* Increased height to accommodate markers and labels */
     z-index: 2;
 }
 
@@ -581,7 +581,7 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    bottom: 20px;
+    bottom: 30px; /* Increased bottom margin to accommodate x-axis */
     z-index: 1;
 }
 
@@ -618,9 +618,19 @@ body {
     font-weight: bold;
 }
 
+.x-axis-line {
+    position: absolute;
+    bottom: 20px; /* Position above markers */
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #666;
+    z-index: 1;
+}
+
 .x-axis-marker {
     position: absolute;
-    top: 0;
+    bottom: 20px; /* Position at the line */
     width: 1px;
     height: 8px;
     background-color: #666;
@@ -628,7 +638,7 @@ body {
 
 .x-axis-label {
     position: absolute;
-    top: 10px;
+    bottom: 0; /* Position at the bottom */
     transform: translateX(-50%);
     font-size: 0.8em;
     color: #666;
