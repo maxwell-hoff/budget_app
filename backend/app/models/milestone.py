@@ -19,13 +19,14 @@ class Milestone(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None):
+    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
         self.disbursement_type = disbursement_type
         self.amount = amount
         self.payment = payment
+        self.order = order  # Ensure order is set in constructor
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'

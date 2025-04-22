@@ -46,6 +46,7 @@ def get_milestones():
 def create_milestone():
     """Create a new milestone."""
     data = request.get_json()
+    print(f"Creating milestone with data: {data}")  # Debug log
     
     milestone = Milestone(
         name=data['name'],
@@ -55,12 +56,14 @@ def create_milestone():
         amount=data['amount'],
         occurrence=data.get('occurrence'),
         duration=data.get('duration'),
-        rate_of_return=data.get('rate_of_return')
+        rate_of_return=data.get('rate_of_return'),
+        order=data.get('order', 0)  # Ensure order is set
     )
     
     db.session.add(milestone)
     db.session.commit()
     
+    print(f"Created milestone: {milestone.to_dict()}")  # Debug log
     return jsonify(milestone.to_dict()), 201
 
 @api_bp.route('/milestones/<int:milestone_id>', methods=['PUT'])

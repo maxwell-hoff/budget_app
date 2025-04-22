@@ -122,10 +122,10 @@ function createDefaultMilestones() {
                 payment: 5000,
                 occurrence: 'Yearly',
                 rate_of_return: 0.07,  // 7%
-                order: 2
+                order: 0
             })
         }),
-        // Create Current Liabilities milestone (order 1)
+        // Create Current Debt milestone (order 1)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -140,10 +140,10 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 rate_of_return: 0.07,  // 7%
                 duration: 120,
-                order: 3
+                order: 1
             })
         }),
-        // Create Current Income milestone (order 1)
+        // Create Current Income milestone (order 2)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -157,10 +157,10 @@ function createDefaultMilestones() {
                 occurrence: 'Yearly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.02,  // 2%
-                order: 0
+                order: 2
             })
         }),
-        // Create Current Expense milestone (order 1)
+        // Create Current Expense milestone (order 3)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -174,10 +174,10 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.03,  // 2%
-                order: 1
+                order: 3
             })
         }),
-        // Create Retirement milestone (order 2)
+        // Create Retirement milestone (order 4)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -194,7 +194,7 @@ function createDefaultMilestones() {
                 order: 4
             })
         }),
-        // Create Long Term Care (self) milestone (order 2)
+        // Create Long Term Care (self) milestone (order 5)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -211,7 +211,7 @@ function createDefaultMilestones() {
                 order: 5
             })
         }),
-        // Create Inheritance milestone (order 3)
+        // Create Inheritance milestone (order 6)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -244,8 +244,11 @@ function loadMilestones() {
         url: '/api/milestones',
         method: 'GET',
         success: function(response) {
-            // Sort milestones by order
-            milestones = response.sort((a, b) => a.order - b.order);
+            // Log the received milestones and their order
+            console.log('Received milestones:', response.map(m => ({ name: m.name, order: m.order })));
+            
+            // Use the order from the backend response
+            milestones = response;
             updateTimeline();
             
             // Clear existing milestone forms before creating new ones
