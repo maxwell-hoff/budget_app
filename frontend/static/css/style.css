@@ -620,25 +620,25 @@ body {
 
 .x-axis-line {
     position: absolute;
-    bottom: 20px; /* Position above markers */
+    bottom: -20px; 
     left: 0;
     right: 0;
-    height: 1px;
+    height: 3px;
     background-color: #666;
     z-index: 1;
 }
 
 .x-axis-marker {
     position: absolute;
-    bottom: 20px; /* Position at the line */
-    width: 1px;
-    height: 8px;
+    bottom: -24px; 
+    width: 2px;
+    height: 10px;
     background-color: #666;
 }
 
 .x-axis-label {
     position: absolute;
-    bottom: 0; /* Position at the bottom */
+    bottom: -50px; 
     transform: translateX(-50%);
     font-size: 0.8em;
     color: #666;
