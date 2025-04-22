@@ -21,6 +21,7 @@ body {
     transition: all 0.3s ease;
     width: 25%;
     float: left;
+    margin-right: 20px;
 }
 
 .sidebar.hidden {
@@ -55,15 +56,20 @@ body {
 /* Show button styles */
 .show-sidebar-button {
     display: none;
-    position: absolute;
-    top: 20px;
-    left: 7px;
+    position: fixed;
+    top: 0;
+    left: 0;
     cursor: pointer;
     z-index: 2000;
     background-color: #fff;
-    padding: 5px;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 40px;
+    height: 100vh;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 20px;
 }
 
 .show-sidebar-button .toggle-icon {
@@ -71,25 +77,40 @@ body {
     color: #666;
 }
 
+.show-sidebar-button:hover {
+    background-color: #f8f9fa;
+}
+
 .show-sidebar-button:hover .toggle-icon {
     color: #333;
 }
 
+/* Hide the show button when sidebar is visible */
+.sidebar:not(.hidden) + .main-content .show-sidebar-button {
+    display: none;
+}
+
+/* Show the show button when sidebar is hidden */
 .sidebar.hidden + .main-content .show-sidebar-button {
-    display: block;
+    display: flex;
+}
+
+/* Adjust main content padding when sidebar is hidden */
+.sidebar.hidden + .main-content {
+    padding-left: 40px;
+}
+
+/* Remove the old padding from expanded class since we're handling it above */
+.main-content.expanded {
+    width: calc(100% - 20px);
 }
 
 .main-content {
-    width: 75%;
+    width: calc(75% - 20px);
     float: left;
     transition: width 0.3s ease;
     padding-left: 0;
     position: relative;
-}
-
-.main-content.expanded {
-    width: 100%;
-    padding-left: 40px;
 }
 
 #timeline {
