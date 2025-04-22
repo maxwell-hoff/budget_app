@@ -95,7 +95,8 @@ function handleProfileSubmit(e) {
         success: function(response) {
             // After saving profile, create default milestones
             createDefaultMilestones();
-            loadMilestones();
+            // Refresh the page to ensure proper ordering of milestone markers and labels
+            window.location.reload();
         },
         error: function(error) {
             console.error('Error saving profile:', error);
@@ -122,7 +123,7 @@ function createDefaultMilestones() {
                 payment: 5000,
                 occurrence: 'Yearly',
                 rate_of_return: 0.07,  // 7%
-                order: 0
+                order: 2
             })
         }),
         // Create Current Debt milestone (order 1)
@@ -140,7 +141,7 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 rate_of_return: 0.07,  // 7%
                 duration: 120,
-                order: 1
+                order: 3
             })
         }),
         // Create Current Income milestone (order 2)
@@ -157,7 +158,7 @@ function createDefaultMilestones() {
                 occurrence: 'Yearly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.02,  // 2%
-                order: 2
+                order: 0
             })
         }),
         // Create Current Expense milestone (order 3)
@@ -174,7 +175,7 @@ function createDefaultMilestones() {
                 occurrence: 'Monthly',
                 duration: 70 - currentAge,  // Auto-calculate duration
                 rate_of_return: 0.03,  // 2%
-                order: 3
+                order: 1
             })
         }),
         // Create Retirement milestone (order 4)
