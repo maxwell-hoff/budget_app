@@ -211,7 +211,7 @@ function updateTimeline() {
 
 function createMilestoneForm(milestone) {
     const form = $(`
-        <div class="milestone-form" data-id="${milestone.id}">
+        <div class="milestone-form" data-id="${milestone.id}" draggable="true">
             <div class="milestone-header">
                 <h3>${milestone.name}</h3>
                 <i class="fas fa-chevron-down toggle-icon"></i>
@@ -277,6 +277,44 @@ function createMilestoneForm(milestone) {
     `);
     
     $('#milestoneForms').append(form);
+    
+    // Add drag and drop event listeners
+    form.on('dragstart', function(e) {
+        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('id'));
+        $(this).addClass('dragging');
+    });
+    
+    form.on('dragend', function() {
+        $(this).removeClass('dragging');
+    });
+    
+    form.on('dragover', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'move';
+    });
+    
+    form.on('drop', function(e) {
+        e.preventDefault();
+        const draggedId = e.originalEvent.dataTransfer.getData('text/plain');
+        const draggedForm = $(`.milestone-form[data-id="${draggedId}"]`);
+        const dropForm = $(this);
+        
+        if (draggedId !== dropForm.data('id')) {
+            // Reorder the milestones array
+            const draggedIndex = milestones.findIndex(m => m.id === parseInt(draggedId));
+            const dropIndex = milestones.findIndex(m => m.id === dropForm.data('id'));
+            
+            const [draggedMilestone] = milestones.splice(draggedIndex, 1);
+            milestones.splice(dropIndex, 0, draggedMilestone);
+            
+            // Reorder the forms
+            if (draggedForm.index() < dropForm.index()) {
+                dropForm.after(draggedForm);
+            } else {
+                dropForm.before(draggedForm);
+            }
+        }
+    });
     
     // Add hover handlers for the entire milestone form
     form.hover(
