@@ -108,23 +108,7 @@ function handleProfileSubmit(e) {
 function createDefaultMilestones() {
     // Create all milestones in parallel and wait for all to complete
     Promise.all([
-        // Create Current Income milestone
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Income',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Income',
-                disbursement_type: 'Fixed Duration',
-                amount: 50000,
-                occurrence: 'Yearly',
-                duration: 70 - currentAge,  // Auto-calculate duration
-                rate_of_return: 0.02  // 2%
-            })
-        }),
-        // Create Current Assets milestone
+        // Create Current Assets milestone (order 0)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -137,10 +121,28 @@ function createDefaultMilestones() {
                 amount: 30000,
                 payment: 5000,
                 occurrence: 'Yearly',
-                rate_of_return: 0.07  // 7%
+                rate_of_return: 0.07,  // 7%
+                order: 0
             })
         }),
-        // Create Long Term Care (self) milestone
+        // Create Current Income milestone (order 1)
+        $.ajax({
+            url: '/api/milestones',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: 'Current Income',
+                age_at_occurrence: currentAge,
+                milestone_type: 'Income',
+                disbursement_type: 'Fixed Duration',
+                amount: 50000,
+                occurrence: 'Yearly',
+                duration: 70 - currentAge,  // Auto-calculate duration
+                rate_of_return: 0.02,  // 2%
+                order: 1
+            })
+        }),
+        // Create Long Term Care (self) milestone (order 2)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -153,10 +155,11 @@ function createDefaultMilestones() {
                 amount: 6000,
                 occurrence: 'Monthly',
                 duration: 48,  // 4 years
-                rate_of_return: 0.04  // 4%
+                rate_of_return: 0.04,  // 4%
+                order: 2
             })
         }),
-        // Create Inheritance milestone
+        // Create Inheritance milestone (order 3)
         $.ajax({
             url: '/api/milestones',
             method: 'POST',
@@ -169,7 +172,8 @@ function createDefaultMilestones() {
                 amount: 10000,
                 occurrence: 'Monthly',
                 duration: 1,
-                rate_of_return: 0.0
+                rate_of_return: 0.0,
+                order: 3
             })
         })
     ])
