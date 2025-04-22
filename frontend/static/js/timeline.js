@@ -20,7 +20,13 @@ class Timeline {
         this.setupEventListeners();
         
         // Add window resize listener
-        window.addEventListener('resize', () => this.updateTimeline());
+        window.addEventListener('resize', () => {
+            // Add a small delay to prevent multiple refreshes during continuous resizing
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = setTimeout(() => {
+                window.location.reload();
+            }, 250);
+        });
     }
 
     setupEventListeners() {
