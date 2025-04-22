@@ -213,8 +213,8 @@ function updateTimeline() {
 
 function createMilestoneForm(milestone) {
     const form = $(`
-        <div class="milestone-form" data-id="${milestone.id}" draggable="true">
-            <div class="milestone-header">
+        <div class="milestone-form" data-id="${milestone.id}">
+            <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <i class="fas fa-chevron-down toggle-icon"></i>
             </div>
@@ -280,14 +280,15 @@ function createMilestoneForm(milestone) {
     
     $('#milestoneForms').append(form);
     
-    // Add drag and drop event listeners
-    form.on('dragstart', function(e) {
-        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('id'));
-        $(this).addClass('dragging');
+    // Add drag and drop event listeners to the header
+    const header = form.find('.milestone-header');
+    header.on('dragstart', function(e) {
+        e.originalEvent.dataTransfer.setData('text/plain', form.data('id'));
+        form.addClass('dragging');
     });
     
-    form.on('dragend', function() {
-        $(this).removeClass('dragging');
+    header.on('dragend', function() {
+        form.removeClass('dragging');
     });
     
     form.on('dragover', function(e) {
@@ -346,9 +347,12 @@ function createMilestoneForm(milestone) {
     );
     
     // Add click handler for the header to toggle the form
-    form.find('.milestone-header').on('click', function() {
-        form.toggleClass('expanded');
-        form.find('.toggle-icon').toggleClass('expanded');
+    header.on('click', function(e) {
+        // Only toggle if not dragging
+        if (e.type === 'click' && !form.hasClass('dragging')) {
+            form.toggleClass('expanded');
+            form.find('.toggle-icon').toggleClass('expanded');
+        }
     });
     
     // Add event listener for milestone type changes
