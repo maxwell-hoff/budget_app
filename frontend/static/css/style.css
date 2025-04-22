@@ -53,7 +53,8 @@ body {
 }
 
 .sidebar.hidden .sidebar-header {
-    right: -40px;
+    position: fixed;
+    right: 20px;
 }
 
 .sidebar.hidden .toggle-icon {
@@ -75,8 +76,8 @@ body {
 }
 
 .sidebar.hidden + .main-content #timeline {
-    width: calc(100% - 40px);
-    margin-left: 20px;
+    width: calc(100% - 170px);
+    margin-left: 170px;
 }
 
 /* Clear floats */
@@ -113,8 +114,8 @@ body {
     border-radius: 4px;
     border: 1px solid #ddd;
     margin: 20px 0;
-    width: calc(100% - 150px);
-    margin-left: 150px;
+    width: calc(100% - 170px);
+    margin-left: 170px;
     overflow: visible;
     padding-bottom: 20px;
 }
@@ -151,20 +152,20 @@ body {
 #timeline-markers {
     position: absolute;
     top: 25px;
-    left: 0;
+    left: 20px;
     right: 0;
     height: 100%;
-    width: 100%;
+    width: calc(100% - 20px);
     z-index: 1;
 }
 
 #timeline-labels {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 20px;
     right: 0;
     height: 20px;
-    width: 100%;
+    width: calc(100% - 20px);
     z-index: 2;
 }
 
@@ -421,4 +422,24 @@ body {
 /* Sidebar Toggle */
 .sidebar-toggle {
     display: none;
+}
+
+/* Adjust timeline positioning when sidebar is hidden */
+.sidebar.hidden + .main-content .timeline-container {
+    padding-left: 0;
+}
+
+.sidebar.hidden + .main-content #timeline {
+    width: calc(100% - 170px);
+    margin-left: 170px;
+}
+
+.sidebar.hidden + .main-content #timeline-labels {
+    left: 20px;
+    width: calc(100% - 20px);
+}
+
+.sidebar.hidden + .main-content #timeline-markers {
+    left: 20px;
+    width: calc(100% - 20px);
 } 
