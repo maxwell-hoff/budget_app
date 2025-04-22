@@ -278,6 +278,18 @@ function createMilestoneForm(milestone) {
     
     $('#milestoneForms').append(form);
     
+    // Add hover handlers for the entire milestone form
+    form.hover(
+        function() { // mouseenter
+            const milestoneId = $(this).data('id');
+            highlightMilestone(milestoneId);
+        },
+        function() { // mouseleave
+            const milestoneId = $(this).data('id');
+            unhighlightMilestone(milestoneId);
+        }
+    );
+    
     // Add click handler for the header to toggle the form
     form.find('.milestone-header').on('click', function() {
         form.toggleClass('expanded');
@@ -297,6 +309,16 @@ function createMilestoneForm(milestone) {
     // Add event listeners for the new form
     form.find('.milestone-form-content').on('submit', handleMilestoneUpdate);
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+}
+
+function highlightMilestone(milestoneId) {
+    $(`.milestone-marker[data-id="${milestoneId}"]`).addClass('highlighted');
+    $(`.milestone-label[data-id="${milestoneId}"]`).addClass('highlighted');
+}
+
+function unhighlightMilestone(milestoneId) {
+    $(`.milestone-marker[data-id="${milestoneId}"]`).removeClass('highlighted');
+    $(`.milestone-label[data-id="${milestoneId}"]`).removeClass('highlighted');
 }
 
 function updateAnnuityFieldsVisibility(form) {

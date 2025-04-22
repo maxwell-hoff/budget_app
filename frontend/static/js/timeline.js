@@ -131,13 +131,14 @@ class Timeline {
         const endAge = 100;
         const position = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add left margin
         
-        this.createMilestoneMarker(milestone.name, position, milestone.name === 'Current' ? 'current' : 'inheritance');
+        this.createMilestoneMarker(milestone.name, position, milestone.name === 'Current' ? 'current' : 'inheritance', milestone.id);
     }
 
-    createMilestoneMarker(name, position, type) {
+    createMilestoneMarker(name, position, type, milestoneId) {
         // Create marker
         const marker = document.createElement('div');
         marker.className = `milestone-marker ${type}-marker`;
+        marker.setAttribute('data-id', milestoneId);
         marker.style.position = 'absolute';
         marker.style.top = '50%';
         marker.style.left = `${position}px`;
@@ -152,6 +153,7 @@ class Timeline {
         // Create label
         const label = document.createElement('div');
         label.className = 'milestone-label';
+        label.setAttribute('data-id', milestoneId);
         label.textContent = name;
         label.style.position = 'absolute';
         label.style.top = '-20px';
