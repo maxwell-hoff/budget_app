@@ -9,8 +9,8 @@ class Milestone(db.Model):
     name = db.Column(db.String(100), nullable=False)
     age_at_occurrence = db.Column(db.Integer, nullable=False)
     milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income' or 'Expense'
-    expense_type = db.Column(db.String(20), nullable=True)  # 'annuity' or 'lump_sum'
-    income_type = db.Column(db.String(20), nullable=True)  # 'Lump Sum', 'Fixed Duration', or 'Perpetuity'
+    expense_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
+    income_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
     amount = db.Column(db.Float, nullable=False)
     duration_years = db.Column(db.Integer)  # Only for annuity type
     monthly_income = db.Column(db.Float)  # Only for retirement milestone
@@ -29,10 +29,13 @@ class Milestone(db.Model):
         if milestone_type == 'Expense':
             self.expense_type = expense_type
             self.income_type = None
-            if expense_type == 'annuity':
+            if expense_type in ['Fixed Duration', 'Perpetuity']:
                 self.occurrence = occurrence or 'Yearly'
-                self.duration = duration or 1
                 self.rate_of_return = rate_of_return or 0.0
+                if expense_type == 'Fixed Duration':
+                    self.duration = duration or 1
+                else:  # Perpetuity
+                    self.duration = None
             else:
                 self.occurrence = None
                 self.duration = None
@@ -42,9 +45,12 @@ class Milestone(db.Model):
             self.income_type = income_type
             if income_type in ['Fixed Duration', 'Perpetuity']:
                 self.occurrence = occurrence or 'Yearly'
-                self.duration = duration or 1
                 self.rate_of_return = rate_of_return or 0.0
-            else:  # Lump Sum
+                if income_type == 'Fixed Duration':
+                    self.duration = duration or 1
+                else:  # Perpetuity
+                    self.duration = None
+            else:
                 self.occurrence = None
                 self.duration = None
                 self.rate_of_return = None
