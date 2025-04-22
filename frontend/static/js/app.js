@@ -243,7 +243,13 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
                 <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
-                    <label class="form-label">Payment (enter negative value for asset withdrawals / enter positive value for liability payments)</label>
+                    <label class="form-label">
+                        Payment
+                        <span class="tooltip-container">
+                            <i class="fas fa-info-circle info-icon"></i>
+                            <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
+                        </span>
+                    </label>
                     <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
