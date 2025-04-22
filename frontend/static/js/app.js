@@ -314,11 +314,13 @@ function createMilestoneForm(milestone) {
 function highlightMilestone(milestoneId) {
     $(`.milestone-marker[data-id="${milestoneId}"]`).addClass('highlighted');
     $(`.milestone-label[data-id="${milestoneId}"]`).addClass('highlighted');
+    $(`.milestone-form[data-id="${milestoneId}"]`).addClass('highlighted');
 }
 
 function unhighlightMilestone(milestoneId) {
     $(`.milestone-marker[data-id="${milestoneId}"]`).removeClass('highlighted');
     $(`.milestone-label[data-id="${milestoneId}"]`).removeClass('highlighted');
+    $(`.milestone-form[data-id="${milestoneId}"]`).removeClass('highlighted');
 }
 
 function updateAnnuityFieldsVisibility(form) {

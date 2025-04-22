@@ -36,7 +36,7 @@ body {
 }
 
 #timeline {
-    height: 200px;
+    height: 75px;
     position: relative;
     background-color: #f8f9fa;
     border-radius: 4px;
@@ -151,6 +151,7 @@ body {
 .milestone-label.highlighted {
     border: 2px solid #007bff;
     padding: 0 3px;
+    background-color: rgba(0, 123, 255, 0.1);
 }
 
 .current-marker {
@@ -306,4 +307,9 @@ body {
 
 .milestone-form.expanded .milestone-form-content {
     display: block;
+}
+
+.milestone-form.highlighted {
+    border: 2px solid #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
 } 
