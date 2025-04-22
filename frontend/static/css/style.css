@@ -523,4 +523,113 @@ body {
 /* Add some spacing between milestone forms */
 .milestone-form {
     margin-bottom: 20px;
+}
+
+/* NPV Chart Styles */
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 100%;
+    overflow: visible;
+}
+
+#npv-chart {
+    height: auto;
+    min-height: 100px;
+    position: relative;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin: 20px 0;
+    width: calc(100% - 170px);
+    margin-left: 170px;
+    overflow: visible;
+    padding-bottom: 20px;
+}
+
+#npv-chart-content {
+    height: 100%;
+    position: relative;
+    width: 100%;
+}
+
+#npv-chart-y-axis {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+    width: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: translateX(-50%);
+    z-index: 1;
+}
+
+#npv-chart-x-axis {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    z-index: 2;
+}
+
+#npv-chart-bars {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 20px;
+    z-index: 1;
+}
+
+.npv-bar {
+    position: absolute;
+    height: 20px;
+    transition: width 0.3s ease;
+}
+
+.npv-bar.positive {
+    background-color: #28a745;
+}
+
+.npv-bar.negative {
+    background-color: #dc3545;
+}
+
+.npv-label {
+    position: absolute;
+    font-size: 0.9em;
+    color: #333;
+    white-space: nowrap;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-align: left;
+    width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    left: -151px;
+}
+
+.npv-label.bold {
+    font-weight: bold;
+}
+
+.x-axis-marker {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 8px;
+    background-color: #666;
+}
+
+.x-axis-label {
+    position: absolute;
+    top: 10px;
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    color: #666;
 } 

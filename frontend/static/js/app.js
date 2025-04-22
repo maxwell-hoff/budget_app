@@ -188,7 +188,7 @@ function createDefaultMilestones() {
                 age_at_occurrence: 70,
                 milestone_type: 'Expense',
                 disbursement_type: 'Fixed Duration',
-                amount: 6000,
+                amount: 60000,
                 occurrence: 'Yearly',
                 duration: 30,  // 4 years
                 rate_of_return: 0.06,  // 4%
@@ -251,6 +251,9 @@ function loadMilestones() {
             // Use the order from the backend response
             milestones = response;
             updateTimeline();
+            
+            // Update the NPV chart
+            window.npvChart.updateChart(milestones);
             
             // Clear existing milestone forms before creating new ones
             $('#milestoneForms').empty();
@@ -546,6 +549,8 @@ function handleMilestoneUpdate(e, form) {
             success: function(response) {
                 Object.assign(milestone, response);
                 updateTimeline();
+                // Update the NPV chart
+                window.npvChart.updateChart(milestones);
                 // Refresh the page to update milestone headers
                 window.location.reload();
             },
@@ -565,6 +570,10 @@ function handleMilestoneDelete(e) {
         url: `/api/milestones/${milestoneId}`,
         method: 'DELETE',
         success: function() {
+            // Remove the milestone from the local array
+            milestones = milestones.filter(m => m.id !== milestoneId);
+            // Update the NPV chart
+            window.npvChart.updateChart(milestones);
             // Refresh the page to reset timeline spacing
             window.location.reload();
         },
