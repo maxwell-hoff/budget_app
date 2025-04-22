@@ -212,7 +212,10 @@ function updateTimeline() {
 function createMilestoneForm(milestone) {
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
-            <h3>${milestone.name}</h3>
+            <div class="milestone-header">
+                <h3>${milestone.name}</h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
             <form class="milestone-form-content">
                 <div class="mb-3">
                     <label class="form-label">Name</label>
@@ -274,6 +277,12 @@ function createMilestoneForm(milestone) {
     `);
     
     $('#milestoneForms').append(form);
+    
+    // Add click handler for the header to toggle the form
+    form.find('.milestone-header').on('click', function() {
+        form.toggleClass('expanded');
+        form.find('.toggle-icon').toggleClass('expanded');
+    });
     
     // Add event listener for milestone type changes
     form.find('[name="milestone_type"]').on('change', function() {

@@ -245,4 +245,46 @@ body {
     padding: 15px;
     border-radius: 6px;
     border-left: 4px solid #2ecc71;
+}
+
+/* Milestone Form Styles */
+.milestone-form {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.milestone-header {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.milestone-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.milestone-header .toggle-icon {
+    color: #6c757d;
+    transition: transform 0.3s ease;
+}
+
+.milestone-header .toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.milestone-form-content {
+    padding: 20px;
+    display: none;
+}
+
+.milestone-form.expanded .milestone-form-content {
+    display: block;
 } 
