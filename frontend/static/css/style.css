@@ -73,7 +73,7 @@ body {
 
 #timeline-line {
     position: absolute;
-    top: 25px;
+    top: 30px;
     left: 0;
     right: 0;
     height: 3px;
@@ -111,7 +111,7 @@ body {
 
 .age-marker {
     position: absolute;
-    top: 27px;
+    top: 32px;
     width: 2px;
     height: 12px;
     background-color: #666;
@@ -121,7 +121,7 @@ body {
 
 .age-label {
     position: absolute;
-    top: 20px;
+    top: 25px;
     transform: translate(-50%, -100%);
     font-size: 0.8em;
     color: #666;
@@ -176,7 +176,7 @@ body {
     padding: 2px 5px;
     border-radius: 3px;
     text-align: left;
-    width: 100px;
+    width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     left: -105px;
