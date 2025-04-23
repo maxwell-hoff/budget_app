@@ -655,4 +655,28 @@ function setupSidebarToggle() {
         sidebar.toggleClass('hidden');
         mainContent.toggleClass('expanded');
     });
-} 
+}
+
+function updateCharts() {
+    // Update NPV chart
+    fetch('/api/milestones')
+        .then(response => response.json())
+        .then(milestones => {
+            window.npvChart.updateChart(milestones);
+        });
+    
+    // Update net worth chart
+    fetch('/api/net-worth')
+        .then(response => response.json())
+        .then(netWorthData => {
+            window.netWorthChart.updateChart(netWorthData);
+        });
+}
+
+// Add event listeners for milestone changes
+document.addEventListener('milestoneCreated', updateCharts);
+document.addEventListener('milestoneUpdated', updateCharts);
+document.addEventListener('milestoneDeleted', updateCharts);
+
+// Initial chart update
+updateCharts(); 

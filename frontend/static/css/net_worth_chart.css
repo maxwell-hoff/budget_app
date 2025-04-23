@@ -1,0 +1,127 @@
+#net-worth-chart {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 20px;
+    overflow: hidden;
+    transition: height 0.3s ease;
+}
+
+#net-worth-chart.collapsed {
+    height: 40px;
+}
+
+#net-worth-chart-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+}
+
+#net-worth-chart-bars {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#net-worth-chart-x-axis {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+}
+
+#net-worth-chart-y-axis {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 100%;
+}
+
+.net-worth-toggle-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    z-index: 1;
+}
+
+.net-worth-toggle-button .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.net-worth-toggle-button .toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.net-worth-bar {
+    position: absolute;
+    background-color: #4CAF50;
+    transition: height 0.3s ease;
+}
+
+.net-worth-bar.positive {
+    background-color: #4CAF50;
+}
+
+.net-worth-bar.negative {
+    background-color: #f44336;
+}
+
+.x-axis-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #000;
+}
+
+.y-axis-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+    background-color: #000;
+}
+
+.x-axis-marker {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 5px;
+    background-color: #000;
+}
+
+.y-axis-marker {
+    position: absolute;
+    left: 0;
+    width: 5px;
+    height: 1px;
+    background-color: #000;
+}
+
+.x-axis-label {
+    position: absolute;
+    bottom: 5px;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #666;
+}
+
+.y-axis-label {
+    position: absolute;
+    left: 5px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #666;
+} 

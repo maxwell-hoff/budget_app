@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from ..database import db
 from ..models.milestone import Milestone
 from ..models.user import User
+from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
 from ..services.dcf_calculator import DCFCalculator
+from ..services.net_worth_calculator import NetWorthCalculator
 from ..services.statement_parser import StatementParser
 from werkzeug.utils import secure_filename
 import os
@@ -63,6 +65,12 @@ def create_milestone():
     db.session.add(milestone)
     db.session.commit()
     
+    # Recalculate net worth after creating milestone
+    user = User.query.first()
+    if user:
+        calculator = NetWorthCalculator(current_age=user.birthday.year)
+        calculator.recalculate_all()
+    
     print(f"Created milestone: {milestone.to_dict()}")  # Debug log
     return jsonify(milestone.to_dict()), 201
 
@@ -76,6 +84,13 @@ def update_milestone(milestone_id):
         setattr(milestone, key, value)
     
     db.session.commit()
+    
+    # Recalculate net worth after updating milestone
+    user = User.query.first()
+    if user:
+        calculator = NetWorthCalculator(current_age=user.birthday.year)
+        calculator.recalculate_all()
+    
     return jsonify(milestone.to_dict())
 
 @api_bp.route('/milestones/<int:milestone_id>', methods=['DELETE'])
@@ -84,6 +99,13 @@ def delete_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
     db.session.delete(milestone)
     db.session.commit()
+    
+    # Recalculate net worth after deleting milestone
+    user = User.query.first()
+    if user:
+        calculator = NetWorthCalculator(current_age=user.birthday.year)
+        calculator.recalculate_all()
+    
     return '', 204
 
 @api_bp.route('/calculate-dcf', methods=['POST'])
@@ -146,4 +168,22 @@ def parse_statement():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 400 
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/net-worth', methods=['GET'])
+def get_net_worth():
+    """Get net worth values for all ages."""
+    net_worth_values = NetWorthByAge.query.order_by(NetWorthByAge.age).all()
+    return jsonify([value.to_dict() for value in net_worth_values])
+
+@api_bp.route('/net-worth/recalculate', methods=['POST'])
+def recalculate_net_worth():
+    """Recalculate net worth values."""
+    user = User.query.first()
+    if not user:
+        return jsonify({'error': 'No user profile found'}), 404
+    
+    calculator = NetWorthCalculator(current_age=user.birthday.year)
+    calculator.recalculate_all()
+    
+    return jsonify({'message': 'Net worth recalculated successfully'}) 

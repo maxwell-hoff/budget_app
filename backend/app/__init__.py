@@ -3,6 +3,7 @@ from flask_cors import CORS
 from .database import init_db
 from .models.milestone import Milestone
 from .models.user import User
+from .models.net_worth import MilestoneValueByAge, NetWorthByAge
 
 def create_app():
     """Create and configure the Flask application."""
