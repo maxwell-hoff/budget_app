@@ -658,4 +658,38 @@ body {
     transform: translateX(-50%);
     font-size: 0.8em;
     color: #666;
+}
+
+.npv-total-container {
+    position: absolute;
+    top: -40px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.npv-total-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.npv-total-value {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.npv-total-value.positive {
+    color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.npv-total-value.negative {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
 } 

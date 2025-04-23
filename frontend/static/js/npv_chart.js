@@ -27,9 +27,31 @@ class NPVChart {
         // Calculate total NPV
         const totalNPV = npvs.reduce((sum, npv) => sum + npv.value, 0);
         
+        // Create total container if it doesn't exist
+        if (!this.totalContainer) {
+            this.totalContainer = document.createElement('div');
+            this.totalContainer.className = 'npv-total-container';
+            
+            const label = document.createElement('span');
+            label.className = 'npv-total-label';
+            label.textContent = 'Present Value Surplus / Shortfall:';
+            
+            const value = document.createElement('span');
+            value.className = 'npv-total-value';
+            
+            this.totalContainer.appendChild(label);
+            this.totalContainer.appendChild(value);
+            this.chart.appendChild(this.totalContainer);
+        }
+        
+        // Update total value
+        const valueElement = this.totalContainer.querySelector('.npv-total-value');
+        valueElement.textContent = this.formatValue(totalNPV);
+        valueElement.className = `npv-total-value ${totalNPV >= 0 ? 'positive' : 'negative'}`;
+        
         // Add total NPV as first row
         npvs.unshift({
-            name: 'Present Surplus / Shortfall',
+            name: 'Net Present Value',
             value: totalNPV,
             isTotal: true
         });
