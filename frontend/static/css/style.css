@@ -663,7 +663,7 @@ body {
 .npv-total-container {
     position: absolute;
     top: -40px;
-    right: 20px;
+    left: 20px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -692,4 +692,41 @@ body {
 .npv-total-value.negative {
     color: #dc3545;
     background-color: rgba(220, 53, 69, 0.1);
+}
+
+.npv-toggle-button {
+    position: absolute;
+    top: -40px;
+    right: 20px;
+    padding: 4px 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.npv-toggle-button:hover {
+    background-color: #e9ecef;
+}
+
+.npv-toggle-button .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.npv-toggle-button .toggle-icon.expanded {
+    transform: rotate(-180deg);
+}
+
+#npv-chart.collapsed {
+    background-color: transparent;
+    border: none;
+    height: auto !important;
+    min-height: 0;
+}
+
+#npv-chart.collapsed #npv-chart-content {
+    display: none !important;
 } 

@@ -4,9 +4,33 @@ class NPVChart {
         this.chartContent = document.getElementById('npv-chart-content');
         this.chartBars = document.getElementById('npv-chart-bars');
         this.chartXAxis = document.getElementById('npv-chart-x-axis');
-        this.verticalSpacing = 30; // Match timeline's vertical spacing
+        this.verticalSpacing = 32; // Match timeline's vertical spacing
         this.barHeight = 6; // Reduced from 20 to match timeline marker height
         this.padding = 20; // padding around the chart
+        
+        // Create toggle button
+        this.toggleButton = document.createElement('button');
+        this.toggleButton.className = 'npv-toggle-button';
+        this.toggleButton.innerHTML = '<i class="fas fa-chevron-up toggle-icon"></i>';
+        this.toggleButton.addEventListener('click', () => this.toggleChart());
+        this.chart.appendChild(this.toggleButton);
+        
+        // Initialize chart state
+        this.isExpanded = true;
+    }
+
+    toggleChart() {
+        this.isExpanded = !this.isExpanded;
+        
+        if (this.isExpanded) {
+            // If expanding, refresh the page
+            window.location.reload();
+        } else {
+            // If collapsing, just update the UI
+            this.chart.classList.add('collapsed');
+            this.toggleButton.querySelector('.toggle-icon').classList.add('expanded');
+            this.chart.style.height = 'auto';
+        }
     }
 
     updateChart(milestones) {
@@ -19,7 +43,7 @@ class NPVChart {
             return;
         }
 
-        this.chartContent.style.display = 'block';
+        this.chartContent.style.display = this.isExpanded ? 'block' : 'none';
 
         // Calculate NPVs for all milestones
         const npvs = this.calculateNPVs(milestones);
@@ -34,7 +58,7 @@ class NPVChart {
             
             const label = document.createElement('span');
             label.className = 'npv-total-label';
-            label.textContent = 'Present Value Surplus / Shortfall:';
+            label.textContent = 'Planned Present Value Surplus / Shortfall:';
             
             const value = document.createElement('span');
             value.className = 'npv-total-value';
@@ -67,9 +91,13 @@ class NPVChart {
             this.createBar(npv, index, maxAbsValue);
         });
 
-        // Adjust chart height based on number of bars
-        const requiredHeight = (npvs.length * (this.barHeight + this.verticalSpacing)) + this.padding;
-        this.chart.style.height = `${requiredHeight}px`;
+        // Adjust chart height based on number of bars and expanded state
+        if (this.isExpanded) {
+            const requiredHeight = (npvs.length * (this.barHeight + this.verticalSpacing)) + this.padding;
+            this.chart.style.height = `${requiredHeight}px`;
+        } else {
+            this.chart.style.height = 'auto';
+        }
     }
 
     createXAxis(maxAbsValue) {
