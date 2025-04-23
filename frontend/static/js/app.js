@@ -669,7 +669,12 @@ function updateCharts() {
     fetch('/api/net-worth')
         .then(response => response.json())
         .then(netWorthData => {
-            window.netWorthChart.updateChart(netWorthData);
+            if (window.netWorthChart) {
+                window.netWorthChart.updateChart(netWorthData);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching net worth data:', error);
         });
 }
 
@@ -679,4 +684,6 @@ document.addEventListener('milestoneUpdated', updateCharts);
 document.addEventListener('milestoneDeleted', updateCharts);
 
 // Initial chart update
-updateCharts(); 
+document.addEventListener('DOMContentLoaded', () => {
+    updateCharts();
+}); 

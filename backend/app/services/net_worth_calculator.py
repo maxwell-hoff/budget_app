@@ -46,19 +46,19 @@ class NetWorthCalculator:
                     remaining_periods = periods - (years_elapsed * 12)
                     
                     if rate == 0:
-                        return milestone.amount - (milestone.payment * remaining_periods)
+                        return milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
                         return milestone.amount * (1 + rate) ** remaining_periods - \
-                               milestone.payment * ((1 + rate) ** remaining_periods - 1) / rate
+                               (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
                 else:  # Yearly
                     rate = milestone.rate_of_return
                     remaining_periods = milestone.duration - years_elapsed
                     
                     if rate == 0:
-                        return milestone.amount - (milestone.payment * remaining_periods)
+                        return milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
                         return milestone.amount * (1 + rate) ** remaining_periods - \
-                               milestone.payment * ((1 + rate) ** remaining_periods - 1) / rate
+                               (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
             else:  # Perpetuity
                 if milestone.occurrence == 'Monthly':
                     rate = milestone.rate_of_return / 12
