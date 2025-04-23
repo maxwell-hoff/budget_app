@@ -149,7 +149,7 @@ body {
     overflow: visible;
     position: sticky;
     top: 20px;
-    z-index: 100;
+    z-index: 101;
 }
 
 .timeline-controls {
@@ -523,4 +523,210 @@ body {
 /* Add some spacing between milestone forms */
 .milestone-form {
     margin-bottom: 20px;
+}
+
+/* NPV Chart Styles */
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 100%;
+    overflow: visible;
+    position: sticky;
+    top: 460px;
+    z-index: 100;
+}
+
+#npv-chart {
+    height: auto;
+    min-height: 100px;
+    position: relative;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin: 20px 0;
+    width: calc(100% - 170px);
+    margin-left: 170px;
+    overflow: visible;
+    padding-bottom: 20px;
+}
+
+#npv-chart-content {
+    height: 100%;
+    position: relative;
+    width: 100%;
+}
+
+#npv-chart-y-axis {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+    width: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: translateX(-50%);
+    z-index: 1;
+}
+
+#npv-chart-x-axis {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px; /* Increased height to accommodate markers and labels */
+    z-index: 2;
+}
+
+#npv-chart-bars {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 30px; /* Increased bottom margin to accommodate x-axis */
+    z-index: 1;
+}
+
+.npv-bar {
+    position: absolute;
+    height: 6px;
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.npv-bar.positive {
+    background-color: #28a745;
+}
+
+.npv-bar.negative {
+    background-color: #dc3545;
+}
+
+.npv-bar[data-id].highlighted {
+    opacity: 0.8;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.npv-label {
+    position: absolute;
+    font-size: 0.9em;
+    color: #333;
+    white-space: nowrap;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-align: left;
+    width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    left: -151px;
+    top: -13px;
+    transition: all 0.3s ease;
+}
+
+.npv-label[data-id].highlighted {
+    background-color: rgba(0, 123, 255, 0.1);
+    border: 2px solid #007bff;
+    padding: 0 3px;
+}
+
+.npv-label.bold {
+    font-weight: bold;
+}
+
+.x-axis-line {
+    position: absolute;
+    bottom: -20px; 
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #666;
+    z-index: 1;
+}
+
+.x-axis-marker {
+    position: absolute;
+    bottom: -24px; 
+    width: 2px;
+    height: 10px;
+    background-color: #666;
+}
+
+.x-axis-label {
+    position: absolute;
+    bottom: -50px; 
+    transform: translateX(-50%);
+    font-size: 0.8em;
+    color: #666;
+}
+
+.npv-total-container {
+    position: absolute;
+    top: -40px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.npv-total-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.npv-total-value {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.npv-total-value.positive {
+    color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.npv-total-value.negative {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.npv-toggle-button {
+    position: absolute;
+    top: -40px;
+    right: 20px;
+    padding: 4px 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.npv-toggle-button:hover {
+    background-color: #e9ecef;
+}
+
+.npv-toggle-button .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.npv-toggle-button .toggle-icon.expanded {
+    transform: rotate(-180deg);
+}
+
+#npv-chart.collapsed {
+    background-color: transparent;
+    border: none;
+    height: auto !important;
+    min-height: 0;
+}
+
+#npv-chart.collapsed #npv-chart-content {
+    display: none !important;
 } 
