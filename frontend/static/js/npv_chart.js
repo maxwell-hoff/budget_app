@@ -29,7 +29,7 @@ class NPVChart {
         
         // Add total NPV as first row
         npvs.unshift({
-            name: 'Net Present Value',
+            name: 'Present Surplus / Shortfall',
             value: totalNPV,
             isTotal: true
         });
@@ -133,7 +133,7 @@ class NPVChart {
         const label = document.createElement('div');
         label.className = `npv-label ${npv.isTotal ? 'bold' : ''}`;
         label.textContent = npv.name;
-        label.style.top = `${top - 13}px`;
+        label.style.top = `${top - 10}px`;
         
         // Add data-id attribute and hover functionality if not the total row
         if (!npv.isTotal) {
