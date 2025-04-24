@@ -40,7 +40,36 @@ The personal finance app will help users plan for major life events and retireme
 - Real-time updates as parameters change
 - Display both nominal and present value amounts
 
-2.4 Bank Statement Analysis
+2.4 Net Worth Calculation
+- Calculate net worth at each age by:
+  1. For Assets and Liabilities:
+     - Fixed Duration:
+       - Calculate remaining balance at each age based on:
+         - Initial amount
+         - Rate of return
+         - Payments made
+         - Time remaining
+     - Perpetuity:
+       - Balance is the initial amount, adjusted for payments made
+       - No time value of money calculations needed
+  2. For Income and Expenses:
+     - Calculate cumulative impact on current liquid assets
+     - If income > expenses, add to current liquid assets
+     - If expenses > income, subtract from current liquid assets
+     - If current liquid assets would go negative, add excess to current debt
+  3. For Current Liquid Assets:
+     - Start with initial amount
+     - Add/subtract income/expense impact
+     - Apply rate of return to remaining balance
+  4. For Current Debt:
+     - Start with initial amount
+     - Add any excess expenses that would make liquid assets negative
+     - Apply interest rate to remaining balance
+     - Subtract payments made
+- Display net worth over time in a chart
+- Update calculations in real-time as parameters change
+
+2.5 Bank Statement Analysis
 - Parse CSV bank statements
 - Categorize transactions
 - Calculate current balance sheet

@@ -34,12 +34,12 @@ class NetWorthCalculator:
         years_elapsed = target_age - milestone.age_at_occurrence
         
         if milestone.milestone_type in ['Asset', 'Liability']:
-            # For assets and liabilities, calculate future value
+            # For assets and liabilities, calculate remaining balance
             if milestone.disbursement_type == 'Fixed Duration':
                 if years_elapsed >= milestone.duration:
                     return 0.0
                     
-                # Calculate remaining value based on rate of return
+                # Calculate remaining balance based on rate of return
                 if milestone.occurrence == 'Monthly':
                     rate = milestone.rate_of_return / 12
                     periods = milestone.duration * 12
@@ -48,8 +48,10 @@ class NetWorthCalculator:
                     if rate == 0:
                         return milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
-                        return milestone.amount * (1 + rate) ** remaining_periods - \
-                               (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        # Calculate remaining balance
+                        remaining_balance = milestone.amount * (1 + rate) ** remaining_periods - \
+                                         (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        return remaining_balance
                 else:  # Yearly
                     rate = milestone.rate_of_return
                     remaining_periods = milestone.duration - years_elapsed
@@ -57,21 +59,17 @@ class NetWorthCalculator:
                     if rate == 0:
                         return milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
-                        return milestone.amount * (1 + rate) ** remaining_periods - \
-                               (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        # Calculate remaining balance
+                        remaining_balance = milestone.amount * (1 + rate) ** remaining_periods - \
+                                         (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        return remaining_balance
             else:  # Perpetuity
+                # For perpetuity, balance is initial amount adjusted for payments
                 if milestone.occurrence == 'Monthly':
-                    rate = milestone.rate_of_return / 12
-                    if rate == 0:
-                        return milestone.amount
-                    else:
-                        return milestone.amount / rate
+                    payments_made = (milestone.payment or 0) * years_elapsed * 12
                 else:  # Yearly
-                    rate = milestone.rate_of_return
-                    if rate == 0:
-                        return milestone.amount
-                    else:
-                        return milestone.amount / rate
+                    payments_made = (milestone.payment or 0) * years_elapsed
+                return milestone.amount - payments_made
                         
         elif milestone.milestone_type in ['Income', 'Expense']:
             # For income and expenses, calculate cumulative impact
@@ -115,19 +113,41 @@ class NetWorthCalculator:
         # Clear existing net worth values
         NetWorthByAge.query.delete()
         
+        # Get all milestones
+        milestones = Milestone.query.all()
+        
         # Calculate net worth for each age
         for age in range(self.current_age, self.max_age + 1):
-            # Get all milestone values for this age
-            milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
+            # Initialize current liquid assets and debt
+            current_liquid_assets = 0.0
+            current_debt = 0.0
+            
+            # First pass: Calculate asset and liability values
+            for milestone in milestones:
+                if milestone.milestone_type in ['Asset', 'Liability']:
+                    value = self.calculate_milestone_value_at_age(milestone, age)
+                    if milestone.milestone_type == 'Asset':
+                        current_liquid_assets += value
+                    else:  # Liability
+                        current_debt += value
+            
+            # Second pass: Calculate income/expense impact
+            for milestone in milestones:
+                if milestone.milestone_type in ['Income', 'Expense']:
+                    value = self.calculate_milestone_value_at_age(milestone, age)
+                    if milestone.milestone_type == 'Income':
+                        current_liquid_assets += value
+                    else:  # Expense
+                        if current_liquid_assets >= value:
+                            current_liquid_assets -= value
+                        else:
+                            # If expenses exceed liquid assets, add excess to debt
+                            excess = value - current_liquid_assets
+                            current_liquid_assets = 0
+                            current_debt += excess
             
             # Calculate net worth
-            net_worth = 0.0
-            for value in milestone_values:
-                milestone = value.milestone
-                if milestone.milestone_type in ['Asset', 'Income']:
-                    net_worth += value.value
-                else:  # Liability or Expense
-                    net_worth -= value.value
+            net_worth = current_liquid_assets - current_debt
             
             # Create net worth record
             net_worth_record = NetWorthByAge(age=age, net_worth=net_worth)
