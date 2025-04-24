@@ -1,10 +1,20 @@
 class NetWorthChart {
     constructor() {
+        console.log('Initializing NetWorthChart');
         this.chart = document.getElementById('net-worth-chart');
         this.chartContent = document.getElementById('net-worth-chart-content');
         this.chartBars = document.getElementById('net-worth-chart-bars');
         this.chartXAxis = document.getElementById('net-worth-chart-x-axis');
         this.chartYAxis = document.getElementById('net-worth-chart-y-axis');
+        
+        console.log('Chart elements:', {
+            chart: this.chart,
+            content: this.chartContent,
+            bars: this.chartBars,
+            xAxis: this.chartXAxis,
+            yAxis: this.chartYAxis
+        });
+        
         this.verticalSpacing = 30;
         this.barWidth = 20;
         this.padding = 20;
@@ -35,22 +45,28 @@ class NetWorthChart {
     }
 
     updateChart(netWorthData) {
+        console.log('Updating net worth chart with data:', netWorthData);
+        
         // Clear existing content
         this.chartBars.innerHTML = '';
         this.chartXAxis.innerHTML = '';
         this.chartYAxis.innerHTML = '';
         
         if (!netWorthData || netWorthData.length === 0) {
+            console.log('No net worth data, hiding chart content');
             this.chartContent.style.display = 'none';
             return;
         }
 
+        console.log('Showing chart content');
         this.chartContent.style.display = this.isExpanded ? 'block' : 'none';
 
         // Find max and min values for scaling
         const maxValue = Math.max(...netWorthData.map(d => d.net_worth));
         const minValue = Math.min(...netWorthData.map(d => d.net_worth));
         const maxAbsValue = Math.max(Math.abs(maxValue), Math.abs(minValue));
+        
+        console.log('Chart values:', { maxValue, minValue, maxAbsValue });
         
         // Create y-axis
         this.createYAxis(maxAbsValue);
@@ -166,5 +182,6 @@ class NetWorthChart {
 
 // Initialize chart when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, creating NetWorthChart instance');
     window.netWorthChart = new NetWorthChart();
 }); 
