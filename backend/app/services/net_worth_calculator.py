@@ -46,30 +46,44 @@ class NetWorthCalculator:
                     remaining_periods = periods - (years_elapsed * 12)
                     
                     if rate == 0:
-                        return milestone.amount - (milestone.payment or 0) * remaining_periods
+                        balance = milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
                         # Calculate remaining balance
-                        remaining_balance = milestone.amount * (1 + rate) ** remaining_periods - \
-                                         (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
-                        return remaining_balance
+                        balance = milestone.amount * (1 + rate) ** remaining_periods - \
+                                (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                    
+                    # For liabilities, ensure balance doesn't go negative
+                    if milestone.milestone_type == 'Liability':
+                        return max(0, balance)
+                    return balance
                 else:  # Yearly
                     rate = milestone.rate_of_return
                     remaining_periods = milestone.duration - years_elapsed
                     
                     if rate == 0:
-                        return milestone.amount - (milestone.payment or 0) * remaining_periods
+                        balance = milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
                         # Calculate remaining balance
-                        remaining_balance = milestone.amount * (1 + rate) ** remaining_periods - \
-                                         (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
-                        return remaining_balance
+                        balance = milestone.amount * (1 + rate) ** remaining_periods - \
+                                (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                    
+                    # For liabilities, ensure balance doesn't go negative
+                    if milestone.milestone_type == 'Liability':
+                        return max(0, balance)
+                    return balance
             else:  # Perpetuity
                 # For perpetuity, balance is initial amount adjusted for payments
                 if milestone.occurrence == 'Monthly':
                     payments_made = (milestone.payment or 0) * years_elapsed * 12
                 else:  # Yearly
                     payments_made = (milestone.payment or 0) * years_elapsed
-                return milestone.amount - payments_made
+                
+                balance = milestone.amount - payments_made
+                
+                # For liabilities, ensure balance doesn't go negative
+                if milestone.milestone_type == 'Liability':
+                    return max(0, balance)
+                return balance
                         
         elif milestone.milestone_type in ['Income', 'Expense']:
             # For income and expenses, calculate cumulative impact
