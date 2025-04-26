@@ -181,7 +181,7 @@ class NetWorthChart {
             
             // Add hover effect
             line.addEventListener('mouseover', (e) => {
-                valueDisplay.textContent = this.formatValue(currentData.net_worth);
+                valueDisplay.textContent = `${this.formatValue(currentData.net_worth)} (Age ${currentData.age})`;
                 valueDisplay.className = `net-worth-total-value ${currentData.net_worth >= 0 ? 'positive' : 'negative'}`;
             });
             
