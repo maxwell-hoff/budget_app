@@ -16,7 +16,6 @@ class NetWorthChart {
         });
         
         this.verticalSpacing = 30;
-        this.barWidth = 20;
         this.padding = 20;
         this.chartHeight = 150; // Half of the original 300px height
         
@@ -75,8 +74,8 @@ class NetWorthChart {
         // Create x-axis
         this.createXAxis(netWorthData);
         
-        // Create bars
-        this.createBars(netWorthData, maxAbsValue);
+        // Create line
+        this.createLine(netWorthData, maxAbsValue);
         
         // Adjust chart height based on expanded state
         if (this.isExpanded) {
@@ -132,7 +131,7 @@ class NetWorthChart {
         
         // Create markers and labels for each age
         netWorthData.forEach((data, index) => {
-            const position = index * (this.barWidth + 10) + this.padding;
+            const position = (index / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
             
             // Create marker
             const marker = document.createElement('div');
@@ -140,34 +139,51 @@ class NetWorthChart {
             marker.style.left = `${position}px`;
             this.chartXAxis.appendChild(marker);
             
-            // Create label
-            const label = document.createElement('div');
-            label.className = 'x-axis-label';
-            label.textContent = data.age;
-            label.style.left = `${position}px`;
-            this.chartXAxis.appendChild(label);
+            // Only create label if age is divisible by 5
+            if (data.age % 5 === 0) {
+                const label = document.createElement('div');
+                label.className = 'x-axis-label';
+                label.textContent = data.age;
+                label.style.left = `${position}px`;
+                this.chartXAxis.appendChild(label);
+            }
         });
     }
 
-    createBars(netWorthData, maxAbsValue) {
-        netWorthData.forEach((data, index) => {
-            const position = index * (this.barWidth + 10) + this.padding;
-            const height = Math.abs(data.net_worth / maxAbsValue) * (this.chartHeight/2); // Half of chart height
-            const top = data.net_worth >= 0 ? this.chartHeight/2 - height : this.chartHeight/2; // Half of chart height
-            
-            // Create bar
-            const bar = document.createElement('div');
-            bar.className = `net-worth-bar ${data.net_worth >= 0 ? 'positive' : 'negative'}`;
-            bar.style.left = `${position}px`;
-            bar.style.top = `${top}px`;
-            bar.style.width = `${this.barWidth}px`;
-            bar.style.height = `${height}px`;
-            
-            // Add tooltip
-            bar.title = `Age ${data.age}: ${this.formatValue(data.net_worth)}`;
-            
-            this.chartBars.appendChild(bar);
+    createLine(netWorthData, maxAbsValue) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        
+        // Create path for the line
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const points = netWorthData.map((data, index) => {
+            const x = (index / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
+            const y = this.chartHeight/2 - (data.net_worth / maxAbsValue) * (this.chartHeight/2);
+            return `${x},${y}`;
         });
+        
+        path.setAttribute('d', `M ${points.join(' L ')}`);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', netWorthData[0].net_worth >= 0 ? '#4CAF50' : '#f44336');
+        path.setAttribute('stroke-width', '2');
+        
+        // Add hover effect
+        path.addEventListener('mouseover', (e) => {
+            const rect = svg.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const index = Math.round((x - this.padding) / (this.chart.offsetWidth - 2 * this.padding) * (netWorthData.length - 1));
+            if (index >= 0 && index < netWorthData.length) {
+                const data = netWorthData[index];
+                path.title = `Age ${data.age}: ${this.formatValue(data.net_worth)}`;
+            }
+        });
+        
+        svg.appendChild(path);
+        this.chartBars.appendChild(svg);
     }
 
     formatValue(value) {
