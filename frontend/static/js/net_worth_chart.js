@@ -18,6 +18,7 @@ class NetWorthChart {
         this.verticalSpacing = 30;
         this.barWidth = 20;
         this.padding = 20;
+        this.chartHeight = 150; // Half of the original 300px height
         
         // Create toggle button
         this.toggleButton = document.createElement('button');
@@ -79,8 +80,7 @@ class NetWorthChart {
         
         // Adjust chart height based on expanded state
         if (this.isExpanded) {
-            const requiredHeight = 300; // Fixed height for the chart
-            this.chart.style.height = `${requiredHeight}px`;
+            this.chart.style.height = `${this.chartHeight}px`;
         } else {
             this.chart.style.height = 'auto';
         }
@@ -107,7 +107,7 @@ class NetWorthChart {
         
         // Create markers and labels
         for (let value = -roundedMax; value <= roundedMax; value += interval) {
-            const position = 150 - (value / roundedMax) * 150; // 150 is half the chart height
+            const position = this.chartHeight/2 - (value / roundedMax) * (this.chartHeight/2); // Half of chart height
             
             // Create marker
             const marker = document.createElement('div');
@@ -152,8 +152,8 @@ class NetWorthChart {
     createBars(netWorthData, maxAbsValue) {
         netWorthData.forEach((data, index) => {
             const position = index * (this.barWidth + 10) + this.padding;
-            const height = Math.abs(data.net_worth / maxAbsValue) * 150; // 150 is half the chart height
-            const top = data.net_worth >= 0 ? 150 - height : 150; // 150 is half the chart height
+            const height = Math.abs(data.net_worth / maxAbsValue) * (this.chartHeight/2); // Half of chart height
+            const top = data.net_worth >= 0 ? this.chartHeight/2 - height : this.chartHeight/2; // Half of chart height
             
             // Create bar
             const bar = document.createElement('div');
