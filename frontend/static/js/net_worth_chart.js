@@ -158,31 +158,32 @@ class NetWorthChart {
         svg.style.top = '0';
         svg.style.left = '0';
         
-        // Create path for the line
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const points = netWorthData.map((data, index) => {
-            const x = (index / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            const y = this.chartHeight/2 - (data.net_worth / maxAbsValue) * (this.chartHeight/2);
-            return `${x},${y}`;
-        });
+        // Create line segments
+        for (let i = 0; i < netWorthData.length - 1; i++) {
+            const currentData = netWorthData[i];
+            const nextData = netWorthData[i + 1];
+            
+            const x1 = (i / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
+            const y1 = this.chartHeight/2 - (currentData.net_worth / maxAbsValue) * (this.chartHeight/2);
+            const x2 = ((i + 1) / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
+            const y2 = this.chartHeight/2 - (nextData.net_worth / maxAbsValue) * (this.chartHeight/2);
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', currentData.net_worth >= 0 ? '#4CAF50' : '#f44336');
+            line.setAttribute('stroke-width', '2');
+            
+            // Add hover effect
+            line.addEventListener('mouseover', (e) => {
+                line.title = `Age ${currentData.age}: ${this.formatValue(currentData.net_worth)}`;
+            });
+            
+            svg.appendChild(line);
+        }
         
-        path.setAttribute('d', `M ${points.join(' L ')}`);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', netWorthData[0].net_worth >= 0 ? '#4CAF50' : '#f44336');
-        path.setAttribute('stroke-width', '2');
-        
-        // Add hover effect
-        path.addEventListener('mouseover', (e) => {
-            const rect = svg.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const index = Math.round((x - this.padding) / (this.chart.offsetWidth - 2 * this.padding) * (netWorthData.length - 1));
-            if (index >= 0 && index < netWorthData.length) {
-                const data = netWorthData[index];
-                path.title = `Age ${data.age}: ${this.formatValue(data.net_worth)}`;
-            }
-        });
-        
-        svg.appendChild(path);
         this.chartBars.appendChild(svg);
     }
 
