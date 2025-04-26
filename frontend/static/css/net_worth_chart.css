@@ -8,8 +8,8 @@
     margin-top: 40px;
     overflow: visible;
     transition: height 0.3s ease;
-    width: calc(100% - 20px);
-    margin-left: 20px;
+    width: calc(100% - 50px);
+    margin-left: 50px;
 }
 
 #net-worth-chart.collapsed {
@@ -128,7 +128,7 @@
 
 .y-axis-label {
     position: absolute;
-    left: 5px;
+    left: -50px;
     transform: translateY(-50%);
     font-size: 12px;
     color: #666;
