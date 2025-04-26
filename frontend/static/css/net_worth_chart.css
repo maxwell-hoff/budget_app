@@ -1,15 +1,15 @@
 #net-worth-chart {
     position: relative;
     width: 100%;
-    height: 300px;
+    height: 75px;
     background-color: #f8f9fa;
     border: 1px solid #ddd;
     border-radius: 4px;
-    margin-top: 20px;
-    overflow: hidden;
+    margin-top: 40px;
+    overflow: visible;
     transition: height 0.3s ease;
-    width: calc(100% - 170px);
-    margin-left: 170px;
+    width: calc(100% - 20px);
+    margin-left: 20px;
 }
 
 #net-worth-chart.collapsed {
@@ -47,8 +47,8 @@
 
 .net-worth-toggle-button {
     position: absolute;
-    top: 5px;
-    right: 5px;
+    top: -50px;
+    right: 20px;
     background: none;
     border: none;
     cursor: pointer;
@@ -138,6 +138,24 @@
     width: 100%;
     overflow: visible;
     position: sticky;
-    top: 460px;
+    top: 75px;
     z-index: 100;
+}
+
+/* Add header styles to match NPV chart */
+.net-worth-total-container {
+    position: absolute;
+    top: -40px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    z-index: 2;
+}
+
+.net-worth-total-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
 } 
