@@ -158,6 +158,9 @@ class NetWorthChart {
         svg.style.top = '0';
         svg.style.left = '0';
         
+        // Get the value display element
+        const valueDisplay = this.chart.querySelector('.net-worth-total-value');
+        
         // Create line segments
         for (let i = 0; i < netWorthData.length - 1; i++) {
             const currentData = netWorthData[i];
@@ -178,7 +181,8 @@ class NetWorthChart {
             
             // Add hover effect
             line.addEventListener('mouseover', (e) => {
-                line.title = `Age ${currentData.age}: ${this.formatValue(currentData.net_worth)}`;
+                valueDisplay.textContent = this.formatValue(currentData.net_worth);
+                valueDisplay.className = `net-worth-total-value ${currentData.net_worth >= 0 ? 'positive' : 'negative'}`;
             });
             
             svg.appendChild(line);

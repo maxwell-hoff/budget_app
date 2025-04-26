@@ -164,4 +164,22 @@
     font-size: 16px;
     font-weight: 500;
     color: #333;
+}
+
+.net-worth-total-value {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.net-worth-total-value.positive {
+    color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.net-worth-total-value.negative {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
 } 
