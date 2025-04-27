@@ -59,8 +59,19 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
-    milestones = Milestone.query.order_by(Milestone.order).all()
-    return jsonify([milestone.to_dict() for milestone in milestones])
+    # Get parent milestones (those without a parent)
+    parent_milestones = Milestone.query.filter_by(parent_milestone_id=None).order_by(Milestone.order).all()
+    
+    # Get all milestones for the response
+    all_milestones = Milestone.query.order_by(Milestone.order).all()
+    
+    return jsonify([milestone.to_dict() for milestone in all_milestones])
+
+@api_bp.route('/milestones/<int:milestone_id>/sub-milestones', methods=['GET'])
+def get_sub_milestones(milestone_id):
+    """Get all sub-milestones for a parent milestone."""
+    sub_milestones = Milestone.query.filter_by(parent_milestone_id=milestone_id).order_by(Milestone.order).all()
+    return jsonify([milestone.to_dict() for milestone in sub_milestones])
 
 @api_bp.route('/milestones', methods=['POST'])
 def create_milestone():
@@ -77,7 +88,8 @@ def create_milestone():
         occurrence=data.get('occurrence'),
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
-        order=data.get('order', 0)  # Ensure order is set
+        order=data.get('order', 0),
+        parent_milestone_id=data.get('parent_milestone_id')
     )
     
     db.session.add(milestone)
@@ -95,8 +107,17 @@ def update_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
     data = request.get_json()
     
+    # Handle parent name update
+    if 'parent_name' in data:
+        # Update the name of the parent milestone
+        parent = Milestone.query.get(milestone.parent_milestone_id or milestone_id)
+        if parent:
+            parent.name = data['parent_name']
+            db.session.commit()
+    
     for key, value in data.items():
-        setattr(milestone, key, value)
+        if key != 'parent_name':  # Skip parent_name as it's handled above
+            setattr(milestone, key, value)
     
     db.session.commit()
     

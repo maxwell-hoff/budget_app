@@ -729,4 +729,56 @@ body {
 
 #npv-chart.collapsed #npv-chart-content {
     display: none !important;
+}
+
+/* Sub-Milestone Styles */
+.sub-milestones-container {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.parent-name-field {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.milestone-form.has-sub-milestones .milestone-header {
+    background-color: #e9ecef;
+}
+
+.milestone-form.has-sub-milestones .milestone-header h3 {
+    font-weight: 600;
+}
+
+.sub-milestone-form {
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    position: relative;
+}
+
+.sub-milestone-form:last-child {
+    margin-bottom: 0;
+}
+
+.sub-milestone-form .milestone-header {
+    padding: 5px 10px;
+    background-color: #f8f9fa;
+}
+
+.sub-milestone-form .milestone-header h3 {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.sub-milestone-form .milestone-form-content {
+    padding: 10px;
 } 

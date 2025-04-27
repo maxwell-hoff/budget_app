@@ -313,6 +313,9 @@ function createMilestoneForm(milestone) {
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
+                    <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
+                        <i class="fas fa-plus"></i>
+                    </button>
                     <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
                         <i class="fas fa-save"></i>
                     </button>
@@ -322,65 +325,80 @@ function createMilestoneForm(milestone) {
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
             </div>
-            <form class="milestone-form-content">
-                <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    <input type="text" class="form-control" name="name" value="${milestone.name}">
+            <div class="milestone-form-content">
+                <div class="parent-name-field" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label">Parent Name</label>
+                        <input type="text" class="form-control" name="parent_name" value="${milestone.name}">
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Age at Occurrence</label>
-                    <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                <div class="sub-milestones-container">
+                    <form class="milestone-form-content">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" name="name" value="${milestone.name}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Age at Occurrence</label>
+                            <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Milestone Type</label>
+                            <select class="form-control" name="milestone_type">
+                                <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
+                                <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
+                                <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
+                                <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Disbursement Type</label>
+                            <select class="form-control" name="disbursement_type">
+                                <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
+                                <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                        </div>
+                        <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
+                            <label class="form-label">
+                                Payment
+                                <span class="tooltip-container">
+                                    <i class="fas fa-info-circle info-icon"></i>
+                                    <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
+                        </div>
+                        <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
+                            <label class="form-label">Occurrence</label>
+                            <select class="form-control" name="occurrence">
+                                <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                                <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
+                            <label class="form-label">Duration</label>
+                            <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
+                        </div>
+                        <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
+                            <label class="form-label">Rate of Return (%)</label>
+                            <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
+                        </div>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Milestone Type</label>
-                    <select class="form-control" name="milestone_type">
-                        <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
-                        <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
-                        <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
-                        <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Disbursement Type</label>
-                    <select class="form-control" name="disbursement_type">
-                        <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
-                        <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Amount</label>
-                    <input type="number" class="form-control" name="amount" value="${milestone.amount}">
-                </div>
-                <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
-                    <label class="form-label">
-                        Payment
-                        <span class="tooltip-container">
-                            <i class="fas fa-info-circle info-icon"></i>
-                            <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
-                        </span>
-                    </label>
-                    <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
-                </div>
-                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Occurrence</label>
-                    <select class="form-control" name="occurrence">
-                        <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
-                        <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
-                    </select>
-                </div>
-                <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
-                    <label class="form-label">Duration</label>
-                    <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
-                </div>
-                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Rate of Return (%)</label>
-                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
-                </div>
-            </form>
+            </div>
         </div>
     `);
     
     $('#milestoneForms').append(form);
+    
+    // Add event listeners
+    form.find('.add-sub-milestone').on('click', function() {
+        addSubMilestone(form);
+    });
     
     // Add drag and drop event listeners to the header
     const header = form.find('.milestone-header');
@@ -472,6 +490,55 @@ function createMilestoneForm(milestone) {
         handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
     });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+}
+
+function addSubMilestone(parentForm) {
+    const parentId = parentForm.data('id');
+    const parentMilestone = milestones.find(m => m.id === parentId);
+    
+    // Show parent name field
+    parentForm.find('.parent-name-field').show();
+    
+    // Create new sub-milestone
+    const subMilestone = {
+        name: 'New Sub-Milestone',
+        age_at_occurrence: parentMilestone.age_at_occurrence,
+        milestone_type: 'Expense',
+        disbursement_type: 'Fixed Duration',
+        amount: 0,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: 1,
+        rate_of_return: 0.0,
+        order: milestones.length,
+        parent_milestone_id: parentId
+    };
+    
+    $.ajax({
+        url: '/api/milestones',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(subMilestone),
+        success: function(response) {
+            milestones.push(response);
+            // Convert existing milestone to sub-milestone if it's the first one
+            if (!parentMilestone.parent_milestone_id) {
+                parentMilestone.parent_milestone_id = parentId;
+                $.ajax({
+                    url: `/api/milestones/${parentId}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ parent_milestone_id: parentId })
+                });
+            }
+            // Refresh the page to show new structure
+            window.location.reload();
+        },
+        error: function(error) {
+            console.error('Error creating sub-milestone:', error);
+            alert('Error creating sub-milestone. Please try again.');
+        }
+    });
 }
 
 function highlightMilestone(milestoneId) {

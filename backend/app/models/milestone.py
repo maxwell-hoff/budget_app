@@ -16,17 +16,22 @@ class Milestone(db.Model):
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
     order = db.Column(db.Integer, nullable=False, default=0)  # Order of the milestone
+    parent_milestone_id = db.Column(db.Integer, db.ForeignKey('milestones.id'), nullable=True)  # Reference to parent milestone
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0):
+    # Relationship with parent milestone
+    parent = db.relationship('Milestone', remote_side=[id], backref=db.backref('sub_milestones', lazy=True))
+    
+    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0, parent_milestone_id=None):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
         self.disbursement_type = disbursement_type
         self.amount = amount
         self.payment = payment
-        self.order = order  # Ensure order is set in constructor
+        self.order = order
+        self.parent_milestone_id = parent_milestone_id
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -54,6 +59,7 @@ class Milestone(db.Model):
             'duration': self.duration,
             'rate_of_return': self.rate_of_return,
             'order': self.order,
+            'parent_milestone_id': self.parent_milestone_id,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         } 
