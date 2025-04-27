@@ -21,8 +21,233 @@ The personal finance app will help users plan for major life events and retireme
 - Ability to add/remove additional milestones
 - Drag-and-drop functionality to adjust milestone timing
 - Visual representation of age at each milestone
+- Parent milestones shown on timeline with min/max age range from sub-milestones
 
-2.2 Milestone Management
+2.2 Chart Formatting Specifications
+
+2.2.1 Timeline Chart
+- Container:
+  - Width: calc(100% - 170px)
+  - Margin-left: 170px
+  - Background: #f8f9fa
+  - Border: 1px solid #ddd
+  - Border-radius: 4px
+  - Padding: 20px
+  - Dynamic height based on number of milestones
+- Timeline Line:
+  - Position: absolute
+  - Top: 30px
+  - Left: 0
+  - Right: 0
+  - Height: 3px
+  - Background-color: #333
+  - Width: 100%
+- Age Markers:
+  - Position: absolute
+  - Width: 2px
+  - Height: 12px
+  - Background-color: #666
+  - Z-index: 1
+- Age Labels:
+  - Position: absolute
+  - Transform: translate(-50%, 0)
+  - Font-size: 0.8em
+  - Color: #666
+  - Z-index: 2
+- Milestone Markers:
+  - Position: absolute
+  - Width: 6px
+  - Height: 6px
+  - Background-color: #007bff
+  - Border-radius: 50%
+  - Transform: translate(-50%, -50%)
+  - Cursor: pointer
+  - Transition: all 0.3s ease
+- Milestone Labels:
+  - Position: absolute
+  - Font-size: 0.9em
+  - Color: #333
+  - White-space: nowrap
+  - Background-color: rgba(255, 255, 255, 0.9)
+  - Padding: 2px 5px
+  - Border-radius: 3px
+  - Text-align: left
+  - Width: 150px
+  - Overflow: hidden
+  - Text-overflow: ellipsis
+  - Left: -151px
+  - Transition: all 0.3s ease
+- Highlighting:
+  - Milestone markers: box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5)
+  - Milestone labels: border: 2px solid #007bff, padding: 0 3px, background-color: rgba(0, 123, 255, 0.1)
+
+2.2.2 NPV Chart
+- Container:
+  - Width: calc(100% - 170px)
+  - Margin-left: 170px
+  - Background: #f8f9fa
+  - Border: 1px solid #ddd
+  - Border-radius: 4px
+  - Padding: 20px
+  - Dynamic height based on number of milestones
+- Chart Content:
+  - Position: relative
+  - Width: 100%
+  - Height: 100%
+- Bars:
+  - Position: absolute
+  - Height: 6px
+  - Transition: width 0.3s ease, opacity 0.3s ease
+  - Positive: background-color: #28a745
+  - Negative: background-color: #dc3545
+- Labels:
+  - Position: absolute
+  - Font-size: 0.9em
+  - Color: #333
+  - White-space: nowrap
+  - Background-color: rgba(255, 255, 255, 0.9)
+  - Padding: 2px 5px
+  - Border-radius: 3px
+  - Text-align: left
+  - Width: 150px
+  - Overflow: hidden
+  - Text-overflow: ellipsis
+  - Left: -151px
+  - Top: -13px
+  - Transition: all 0.3s ease
+- X-axis:
+  - Position: absolute
+  - Bottom: -20px
+  - Left: 0
+  - Right: 0
+  - Height: 3px
+  - Background-color: #666
+- X-axis Markers:
+  - Position: absolute
+  - Bottom: -24px
+  - Width: 2px
+  - Height: 10px
+  - Background-color: #666
+- X-axis Labels:
+  - Position: absolute
+  - Bottom: -50px
+  - Transform: translateX(-50%)
+  - Font-size: 0.8em
+  - Color: #666
+- Total Container:
+  - Position: absolute
+  - Top: -40px
+  - Left: 20px
+  - Display: flex
+  - Align-items: center
+  - Gap: 10px
+- Total Label:
+  - Font-size: 16px
+  - Font-weight: 500
+  - Color: #333
+- Total Value:
+  - Font-size: 20px
+  - Font-weight: 600
+  - Padding: 4px 8px
+  - Border-radius: 4px
+  - Transition: all 0.3s ease
+  - Positive: color: #28a745, background-color: rgba(40, 167, 69, 0.1)
+  - Negative: color: #dc3545, background-color: rgba(220, 53, 69, 0.1)
+
+2.2.3 Net Worth Chart
+- Container:
+  - Width: calc(100% - 170px)
+  - Margin-left: 170px
+  - Background: #f8f9fa
+  - Border: 1px solid #ddd
+  - Border-radius: 4px
+  - Padding: 20px
+  - Height: 300px
+- Chart Content:
+  - Position: relative
+  - Width: 100%
+  - Height: 100%
+- Line:
+  - SVG element
+  - Position: absolute
+  - Top: 0
+  - Left: 0
+  - Width: 100%
+  - Height: 100%
+  - Stroke-width: 2
+  - Positive: stroke: #4CAF50
+  - Negative: stroke: #f44336
+- Y-axis:
+  - Position: absolute
+  - Top: 0
+  - Left: 0
+  - Width: 20px
+  - Height: 100%
+- Y-axis Line:
+  - Position: absolute
+  - Top: 0
+  - Left: 0
+  - Width: 1px
+  - Height: 100%
+  - Background-color: #000
+- Y-axis Markers:
+  - Position: absolute
+  - Left: 0
+  - Width: 5px
+  - Height: 1px
+  - Background-color: #000
+- Y-axis Labels:
+  - Position: absolute
+  - Left: -50px
+  - Transform: translateY(-50%)
+  - Font-size: 12px
+  - Color: #666
+- X-axis:
+  - Position: absolute
+  - Bottom: 0
+  - Left: 0
+  - Width: 100%
+  - Height: 20px
+- X-axis Line:
+  - Position: absolute
+  - Bottom: 0
+  - Left: 0
+  - Width: 100%
+  - Height: 1px
+  - Background-color: #000
+- X-axis Markers:
+  - Position: absolute
+  - Bottom: 0
+  - Width: 1px
+  - Height: 5px
+  - Background-color: #000
+- X-axis Labels:
+  - Position: absolute
+  - Bottom: -20px
+  - Transform: translateX(-50%)
+  - Font-size: 12px
+  - Color: #666
+- Total Container:
+  - Position: absolute
+  - Top: -40px
+  - Left: 20px
+  - Display: flex
+  - Align-items: center
+  - Gap: 10px
+- Total Label:
+  - Font-size: 16px
+  - Font-weight: 500
+  - Color: #333
+- Total Value:
+  - Font-size: 20px
+  - Font-weight: 600
+  - Padding: 4px 8px
+  - Border-radius: 4px
+  - Transition: all 0.3s ease
+  - Positive: color: #28a745, background-color: rgba(40, 167, 69, 0.1)
+  - Negative: color: #dc3545, background-color: rgba(220, 53, 69, 0.1)
+
+2.3 Milestone Management
 - Each milestone can be configured with:
   - Name
   - Age at occurrence
@@ -32,15 +257,23 @@ The personal finance app will help users plan for major life events and retireme
   - Monthly income (for retirement milestone)
 - Parameters should be adjustable in real-time
 - Changes should immediately update the DCF calculations
+- Sub-milestone functionality:
+  - Ability to add sub-milestones to any milestone
+  - Parent milestone name field appears when multiple sub-milestones exist
+  - Sub-milestones shown as containers within parent milestone
+  - Drag-and-drop reordering of sub-milestones
+  - Single sub-milestone case shows as regular milestone
+  - Transition handling between single and multiple sub-milestone states
 
-2.3 DCF Calculations
+2.4 DCF Calculations
 - Convert future expenses to present value
 - Use user's birthday as reference point
 - Support for both annuity and lump sum calculations
 - Real-time updates as parameters change
 - Display both nominal and present value amounts
+- NPV chart shows individual sub-milestones
 
-2.4 Net Worth Calculation
+2.5 Net Worth Calculation
 - Calculate net worth at each age by:
   1. For Assets and Liabilities:
      - Fixed Duration:
@@ -68,8 +301,9 @@ The personal finance app will help users plan for major life events and retireme
      - Subtract payments made
 - Display net worth over time in a chart
 - Update calculations in real-time as parameters change
+- Net worth calculations use sub-milestones for accurate tracking
 
-2.5 Bank Statement Analysis
+2.6 Bank Statement Analysis
 - Parse CSV bank statements
 - Categorize transactions
 - Calculate current balance sheet
@@ -84,6 +318,12 @@ The personal finance app will help users plan for major life events and retireme
 - Interactive timeline using a JavaScript library (e.g., Timeline.js)
 - Real-time calculations and updates
 - Clean, intuitive UI
+- Sub-milestone UI components:
+  - Parent milestone container
+  - Sub-milestone containers
+  - Add/remove sub-milestone buttons
+  - Parent name field
+  - Drag-and-drop functionality
 
 3.2 Backend
 - Python-based server
@@ -91,10 +331,15 @@ The personal finance app will help users plan for major life events and retireme
 - Object-oriented design
 - Test-driven development
 - RESTful API endpoints
+- Sub-milestone data model:
+  - Parent milestone ID field
+  - Sub-milestone relationships
+  - Order tracking for sub-milestones
 
 3.3 Data Model
 - User profile (birthday, current age)
 - Milestones (name, age, type, amount, duration)
+- Sub-milestones (parent milestone ID, order)
 - Transactions (date, amount, category, description)
 - Balance sheet (assets, liabilities, net worth)
 
@@ -105,6 +350,10 @@ The personal finance app will help users plan for major life events and retireme
 - Multiple currency support
 - Export/import functionality
 - Mobile app version
+- Enhanced sub-milestone features:
+  - Nested sub-milestones
+  - Sub-milestone templates
+  - Bulk sub-milestone operations
 
 5. Success Metrics
 - Accurate DCF calculations
@@ -113,3 +362,5 @@ The personal finance app will help users plan for major life events and retireme
 - Reliable bank statement parsing
 - Responsive UI
 - Comprehensive test coverage
+- Smooth sub-milestone transitions
+- Accurate parent/child relationships
