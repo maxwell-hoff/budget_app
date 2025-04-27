@@ -1,0 +1,185 @@
+#net-worth-chart {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 40px;
+    overflow: visible;
+    transition: height 0.3s ease;
+    width: calc(100% - 50px);
+    margin-left: 50px;
+}
+
+#net-worth-chart.collapsed {
+    height: 40px;
+}
+
+#net-worth-chart-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+    padding-bottom: 0px;
+}
+
+#net-worth-chart-bars {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#net-worth-chart-bars svg {
+    z-index: 2;
+}
+
+#net-worth-chart-x-axis {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    z-index: 1;
+}
+
+#net-worth-chart-y-axis {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 100%;
+}
+
+.net-worth-toggle-button {
+    position: absolute;
+    top: -50px;
+    right: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    z-index: 1;
+}
+
+.net-worth-toggle-button .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.net-worth-toggle-button .toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.net-worth-bar {
+    position: absolute;
+    background-color: #4CAF50;
+    transition: height 0.3s ease;
+}
+
+.net-worth-bar.positive {
+    background-color: #4CAF50;
+}
+
+.net-worth-bar.negative {
+    background-color: #f44336;
+}
+
+.x-axis-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #000;
+}
+
+.y-axis-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+    background-color: #000;
+}
+
+.x-axis-marker {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 5px;
+    background-color: #000;
+}
+
+.y-axis-marker {
+    position: absolute;
+    left: 0;
+    width: 5px;
+    height: 1px;
+    background-color: #000;
+}
+
+.x-axis-label {
+    position: absolute;
+    bottom: -20px;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #666;
+}
+
+.y-axis-label {
+    position: absolute;
+    left: -50px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #666;
+}
+
+/* Add container styles to match other charts */
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    width: 100%;
+    overflow: visible;
+    position: sticky;
+    top: 75px;
+    z-index: 100;
+}
+
+/* Add header styles to match NPV chart */
+.net-worth-total-container {
+    position: absolute;
+    top: -40px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    z-index: 2;
+}
+
+.net-worth-total-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.net-worth-total-value {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.net-worth-total-value.positive {
+    color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.net-worth-total-value.negative {
+    color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+} 

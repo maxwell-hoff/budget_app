@@ -655,4 +655,40 @@ function setupSidebarToggle() {
         sidebar.toggleClass('hidden');
         mainContent.toggleClass('expanded');
     });
-} 
+}
+
+function updateCharts() {
+    // Update NPV chart
+    fetch('/api/milestones')
+        .then(response => response.json())
+        .then(milestones => {
+            window.npvChart.updateChart(milestones);
+        });
+    
+    // Update net worth chart
+    fetch('/api/net-worth')
+        .then(response => response.json())
+        .then(netWorthData => {
+            console.log('Net worth data:', netWorthData);
+            if (window.netWorthChart) {
+                console.log('Updating net worth chart with data');
+                window.netWorthChart.updateChart(netWorthData);
+            } else {
+                console.error('Net worth chart not initialized');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching net worth data:', error);
+        });
+}
+
+// Add event listeners for milestone changes
+document.addEventListener('milestoneCreated', updateCharts);
+document.addEventListener('milestoneUpdated', updateCharts);
+document.addEventListener('milestoneDeleted', updateCharts);
+
+// Initial chart update
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing charts');
+    updateCharts();
+}); 
