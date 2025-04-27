@@ -119,7 +119,8 @@ body {
     padding-left: 0;
     position: relative;
     padding-top: 20px;
-    min-height: 100vh; /* Ensure main content takes full height */
+    min-height: 100vh;
+    overflow: visible;
 }
 
 #timeline {
@@ -147,9 +148,8 @@ body {
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
-    position: sticky;
-    top: 20px;
-    z-index: 101;
+    position: relative;
+    z-index: 99;
 }
 
 .timeline-controls {
@@ -422,6 +422,8 @@ body {
     overflow: hidden;
     cursor: move;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    z-index: 103;
 }
 
 .milestone-form.dragging {
@@ -511,18 +513,38 @@ body {
 
 /* Milestone Details Section */
 #milestoneDetails {
-    margin-top: 20px;
-    padding-top: 20px;
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 101;
+}
+
+#milestoneDetails h3 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
 }
 
 /* Ensure milestone forms have proper spacing */
 #milestoneForms {
     margin-top: 20px;
+    position: relative;
+    z-index: 102;
 }
 
 /* Add some spacing between milestone forms */
 .milestone-form {
     margin-bottom: 20px;
+    position: relative;
+    z-index: 103;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
 }
 
 /* NPV Chart Styles */
@@ -534,8 +556,7 @@ body {
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
-    position: sticky;
-    top: 400px;
+    position: relative;
     z-index: 100;
 }
 
