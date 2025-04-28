@@ -264,7 +264,9 @@ function loadMilestones() {
             });
             
             // Update the timeline with the loaded milestones
-            updateTimeline();
+            if (window.timeline) {
+                window.timeline.updateTimeline();
+            }
             
             // Update the NPV chart
             window.npvChart.updateChart(milestones);

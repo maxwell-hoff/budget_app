@@ -14,9 +14,9 @@ class Timeline {
         this.milestonePositions = new Map();
         this.verticalSpacing = 30; // pixels between milestone rows
         this.labelOffset = 100; // pixels from left edge for labels
+        this.padding = 20; // Padding around the timeline
         
         // Initialize the timeline
-        this.showPlaceholder();
         this.setupEventListeners();
         
         // Add window resize listener
@@ -47,222 +47,159 @@ class Timeline {
     }
 
     updateTimeline() {
-        const birthday = this.birthdayInput.value;
-        if (!birthday) {
-            this.showPlaceholder();
-            return;
-        }
-
-        const currentAge = this.calculateAge(birthday);
-        this.currentAgeInput.value = currentAge;
+        console.log('Updating timeline...');
+        console.log('Current milestones:', milestones);
         
-        this.clearTimeline();
-        this.createTimelineLine(currentAge);
-        this.createAgeMarkers(currentAge);
-        
-        // Redraw all milestones
-        if (window.milestones) {
-            window.milestones.forEach(milestone => {
-                this.addMilestone(milestone);
-            });
-        }
-        
-        // Show timeline content and hide placeholder
-        this.timelineContent.style.display = 'block';
-        this.timelinePlaceholder.style.display = 'none';
-    }
-
-    clearTimeline() {
+        // Clear existing content
         this.timelineMarkers.innerHTML = '';
         this.timelineLabels.innerHTML = '';
         this.timelineMilestones.innerHTML = '';
-        this.timelineLine.innerHTML = '';
-        this.milestonePositions.clear();
-        this.timeline.style.height = '75px'; // Reset to minimum height
+        
+        // Get parent milestones (those without a parent)
+        const parentMilestones = milestones.filter(m => !m.parent_milestone_id);
+        console.log('Parent milestones:', parentMilestones);
+        
+        if (!parentMilestones || parentMilestones.length === 0) {
+            console.log('No parent milestones, showing placeholder');
+            this.timelineContent.style.display = 'none';
+            this.timelinePlaceholder.style.display = 'block';
+            return;
+        }
+
+        console.log('Showing timeline content');
+        this.timelineContent.style.display = 'block';
+        this.timelinePlaceholder.style.display = 'none';
+        
+        // Calculate timeline dimensions
+        const timelineWidth = this.timeline.offsetWidth - 2 * this.padding;
+        const timelineHeight = parentMilestones.length * this.verticalSpacing + this.padding;
+        
+        // Set timeline height
+        this.timeline.style.height = `${timelineHeight}px`;
+        
+        // Create age markers and labels
+        this.createAgeMarkers(timelineWidth);
+        
+        // Add each parent milestone to the timeline
+        parentMilestones.forEach((milestone, index) => {
+            this.addParentMilestone(milestone, index, timelineWidth);
+        });
     }
 
-    createTimelineLine(currentAge) {
-        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
-        const startAge = currentAge;
-        const endAge = 100;
-        
-        // Calculate the position of the current age marker
-        const startPosition = 0;  // Let CSS handle the margin
-        const endPosition = timelineWidth;  // End at the right edge of the timeline
-        
-        const line = document.createElement('div');
-        line.className = 'timeline-line';
-        line.style.position = 'absolute';
-        line.style.top = '50%';
-        line.style.left = `${startPosition}px`;
-        line.style.width = `${endPosition}px`;
-        line.style.height = '2px';
-        line.style.backgroundColor = '#333';
-        line.style.transform = 'translateY(-50%)';
-        this.timelineLine.appendChild(line);
-    }
-
-    createAgeMarkers(currentAge) {
-        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
-        const startAge = currentAge;
-        const endAge = 100;
-        const step = 10;
-
-        for (let age = startAge; age <= endAge; age += step) {
-            const position = ((age - startAge) / (endAge - startAge)) * timelineWidth;  // Let CSS handle the margin
+    createAgeMarkers(timelineWidth) {
+        // Create age markers every 10 years from 20 to 100
+        for (let age = 20; age <= 100; age += 10) {
+            const position = (age / 100) * timelineWidth;
             
             // Create marker
             const marker = document.createElement('div');
             marker.className = 'age-marker';
-            marker.style.position = 'absolute';
             marker.style.left = `${position}px`;
             this.timelineMarkers.appendChild(marker);
-
+            
             // Create label
             const label = document.createElement('div');
             label.className = 'age-label';
             label.textContent = age;
-            label.style.position = 'absolute';
             label.style.left = `${position}px`;
-            label.style.top = '0';
             this.timelineLabels.appendChild(label);
         }
     }
 
-    addMilestone(milestone) {
-        const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
-        const currentAge = this.calculateAge(this.birthdayInput.value);
-        const startAge = currentAge;
-        const endAge = 100;  // Maximum age shown on timeline
+    addParentMilestone(milestone, index, timelineWidth) {
+        // Get all sub-milestones for this parent
+        const subMilestones = milestones.filter(m => m.parent_milestone_id === milestone.id);
         
-        // Calculate start position using the same formula as age markers
-        const startPosition = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add margin for milestone markers
+        // Calculate min and max age for this parent milestone
+        let minAge = milestone.age_at_occurrence;
+        let maxAge = milestone.age_at_occurrence;
         
-        // Calculate end position based on disbursement type
-        let endPosition = null;
-        if (milestone.disbursement_type === 'Fixed Duration' && milestone.duration) {
-            // Calculate end age based on occurrence and duration
-            let milestoneEndAge;
-            if (milestone.occurrence === 'Monthly') {
-                // For monthly, duration is in months, so convert to years
-                milestoneEndAge = milestone.age_at_occurrence + (milestone.duration / 12);
-            } else { // Yearly
-                milestoneEndAge = milestone.age_at_occurrence + milestone.duration;
-            }
-            // Calculate position using the same formula as age markers
-            endPosition = ((milestoneEndAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
-        } else if (milestone.disbursement_type === 'Perpetuity') {
-            // For perpetuity, use inheritance age (100)
-            endPosition = ((endAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
+        if (subMilestones.length > 0) {
+            minAge = Math.min(...subMilestones.map(m => m.age_at_occurrence));
+            maxAge = Math.max(...subMilestones.map(m => m.age_at_occurrence));
         }
         
-        // Calculate vertical position for this milestone
-        const verticalPosition = this.calculateVerticalPosition(milestone.id);
+        // Calculate positions
+        const minPosition = (minAge / 100) * timelineWidth;
+        const maxPosition = (maxAge / 100) * timelineWidth;
+        const top = index * this.verticalSpacing + this.padding;
         
-        this.createMilestoneMarker(
-            milestone.name,
-            startPosition,
-            milestone.name === 'Current' ? 'current' : 'inheritance',
-            milestone.id,
-            endPosition,
-            verticalPosition
-        );
-    }
-
-    calculateVerticalPosition(milestoneId) {
-        // If we already have a position for this milestone, use it
-        if (this.milestonePositions.has(milestoneId)) {
-            return this.milestonePositions.get(milestoneId);
-        }
-        
-        // Find the next available vertical position
-        // Start below the timeline line (20px) plus spacing
-        let nextPosition = 20 + this.verticalSpacing;
-        const existingPositions = Array.from(this.milestonePositions.values());
-        
-        while (existingPositions.includes(nextPosition)) {
-            nextPosition += this.verticalSpacing;
-        }
-        
-        // Store the position for this milestone
-        this.milestonePositions.set(milestoneId, nextPosition);
-        
-        // Update timeline height if needed
-        const requiredHeight = nextPosition + this.verticalSpacing + 20; // Add padding
-        if (this.timeline.offsetHeight < requiredHeight) {
-            this.timeline.style.height = `${requiredHeight}px`;
-        }
-        
-        return nextPosition;
-    }
-
-    createMilestoneMarker(name, position, type, milestoneId, endPosition = null, verticalPosition) {
         // Create start marker
-        const marker = document.createElement('div');
-        marker.className = `milestone-marker ${type}-marker`;
-        marker.setAttribute('data-id', milestoneId);
-        marker.style.position = 'absolute';
-        marker.style.top = `${verticalPosition}px`;
-        marker.style.left = `${position}px`;
+        const startMarker = document.createElement('div');
+        startMarker.className = 'milestone-marker';
+        startMarker.style.left = `${minPosition}px`;
+        startMarker.style.top = `${top}px`;
+        startMarker.setAttribute('data-id', milestone.id);
+        startMarker.setAttribute('data-type', 'start');
         
-        // Add hover functionality to marker
-        marker.addEventListener('mouseenter', () => {
-            highlightMilestone(milestoneId);
+        // Add hover functionality
+        startMarker.addEventListener('mouseenter', () => {
+            highlightMilestone(milestone.id);
         });
         
-        marker.addEventListener('mouseleave', () => {
-            unhighlightMilestone(milestoneId);
+        startMarker.addEventListener('mouseleave', () => {
+            unhighlightMilestone(milestone.id);
         });
         
-        this.timelineMilestones.appendChild(marker);
-
-        // Create start label
-        const label = document.createElement('div');
-        label.className = 'milestone-label';
-        label.setAttribute('data-id', milestoneId);
-        label.textContent = name;
-        label.style.position = 'absolute';
-        label.style.top = `${verticalPosition - 12}px`;  // Move label up by 5px
+        this.timelineMilestones.appendChild(startMarker);
         
-        // Add hover functionality to label
-        label.addEventListener('mouseenter', () => {
-            highlightMilestone(milestoneId);
-        });
-        
-        label.addEventListener('mouseleave', () => {
-            unhighlightMilestone(milestoneId);
-        });
-        
-        this.timelineMilestones.appendChild(label);
-
-        // Create end marker if needed
-        if (endPosition && Math.abs(endPosition - position) > 5) { // Only create if positions are different enough
+        // Create end marker if different from start
+        if (maxAge !== minAge) {
             const endMarker = document.createElement('div');
-            endMarker.className = `milestone-marker ${type}-marker end-marker`;
-            endMarker.setAttribute('data-id', milestoneId);
-            endMarker.style.position = 'absolute';
-            endMarker.style.top = `${verticalPosition}px`;
-            endMarker.style.left = `${endPosition}px`;
+            endMarker.className = 'milestone-marker end-marker';
+            endMarker.style.left = `${maxPosition}px`;
+            endMarker.style.top = `${top}px`;
+            endMarker.setAttribute('data-id', milestone.id);
+            endMarker.setAttribute('data-type', 'end');
             
-            // Add hover functionality to end marker
+            // Add hover functionality
             endMarker.addEventListener('mouseenter', () => {
-                highlightMilestone(milestoneId);
+                highlightMilestone(milestone.id);
             });
             
             endMarker.addEventListener('mouseleave', () => {
-                unhighlightMilestone(milestoneId);
+                unhighlightMilestone(milestone.id);
             });
             
             this.timelineMilestones.appendChild(endMarker);
-
-            // Create connecting line
+        }
+        
+        // Create milestone label
+        const label = document.createElement('div');
+        label.className = 'milestone-label';
+        label.textContent = milestone.name;
+        label.style.left = `${minPosition}px`;
+        label.style.top = `${top - 20}px`;
+        label.setAttribute('data-id', milestone.id);
+        
+        // Add hover functionality
+        label.addEventListener('mouseenter', () => {
+            highlightMilestone(milestone.id);
+        });
+        
+        label.addEventListener('mouseleave', () => {
+            unhighlightMilestone(milestone.id);
+        });
+        
+        this.timelineMilestones.appendChild(label);
+        
+        // If there are sub-milestones, create a line connecting them
+        if (subMilestones.length > 0) {
             const line = document.createElement('div');
             line.className = 'milestone-line';
-            line.setAttribute('data-id', milestoneId);
-            line.style.position = 'absolute';
-            line.style.top = `${verticalPosition}px`;
-            line.style.left = `${position}px`;
-            line.style.width = `${endPosition - position}px`;
+            line.style.left = `${minPosition}px`;
+            line.style.width = `${maxPosition - minPosition}px`;
+            line.style.top = `${top}px`;
+            line.setAttribute('data-id', milestone.id);
+            
+            // Add hover functionality
+            line.addEventListener('mouseenter', () => {
+                highlightMilestone(milestone.id);
+            });
+            
+            line.addEventListener('mouseleave', () => {
+                unhighlightMilestone(milestone.id);
+            });
             
             this.timelineMilestones.appendChild(line);
         }
@@ -276,5 +213,16 @@ class Timeline {
 
 // Initialize timeline when the document is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing timeline');
     window.timeline = new Timeline();
+    
+    // Check if we have a birthday and milestones loaded
+    const birthdayInput = document.getElementById('birthday');
+    if (birthdayInput.value && window.milestones) {
+        console.log('Birthday and milestones found, updating timeline');
+        window.timeline.updateTimeline();
+    } else {
+        console.log('No birthday or milestones found, showing placeholder');
+        window.timeline.showPlaceholder();
+    }
 }); 
