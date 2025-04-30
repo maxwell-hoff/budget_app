@@ -4,7 +4,7 @@ class NPVChart {
         this.chartContent = document.getElementById('npv-chart-content');
         this.chartBars = document.getElementById('npv-chart-bars');
         this.chartXAxis = document.getElementById('npv-chart-x-axis');
-        this.verticalSpacing = 32; // Match timeline's vertical spacing
+        this.verticalSpacing = 30; // Match timeline's vertical spacing
         this.barHeight = 6; // Reduced from 20 to match timeline marker height
         this.padding = 20; // padding around the chart
         

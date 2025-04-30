@@ -107,136 +107,112 @@ function handleProfileSubmit(e) {
 
 // Milestone Functions
 function createDefaultMilestones() {
-    // Create all milestones in parallel and wait for all to complete
-    Promise.all([
-        // Create Current Assets milestone (order 0)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Liquid Assets',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Asset',
-                disbursement_type: 'Perpetuity',
-                amount: 30000,
-                payment: 5000,
-                occurrence: 'Yearly',
-                rate_of_return: 0.07,  // 7%
-                order: 2
-            })
+    // Check if default milestones already exist
+    const existingCurrentMilestone = milestones.find(m => m.name === 'Current');
+    const existingInheritanceMilestone = milestones.find(m => m.name === 'Inheritance');
+    
+    if (existingCurrentMilestone && existingInheritanceMilestone) {
+        console.log('Default milestones already exist');
+        return;
+    }
+    
+    const currentAge = parseInt($('#currentAge').val());
+    
+    // Create Current milestone
+    const newCurrentMilestone = {
+        name: 'Current',
+        age_at_occurrence: currentAge,
+        milestone_type: 'Asset',
+        disbursement_type: 'Perpetuity',
+        amount: 0,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: null,
+        rate_of_return: 0.0,
+        order: 0
+    };
+    
+    // Create Inheritance milestone
+    const newInheritanceMilestone = {
+        name: 'Inheritance',
+        age_at_occurrence: 100,
+        milestone_type: 'Asset',
+        disbursement_type: 'Perpetuity',
+        amount: 10000,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: null,
+        rate_of_return: 0.0,
+        order: 1
+    };
+    
+    // Create parent milestones first
+    $.ajax({
+        url: '/api/parent-milestones',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: newCurrentMilestone.name,
+            min_age: newCurrentMilestone.age_at_occurrence,
+            max_age: newCurrentMilestone.age_at_occurrence
         }),
-        // Create Current Debt milestone (order 1)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Debt',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Liability',
-                disbursement_type: 'Fixed Duration',
-                amount: 35000,
-                payment: 500,
-                occurrence: 'Monthly',
-                rate_of_return: 0.07,  // 7%
-                duration: 120,
-                order: 3
-            })
-        }),
-        // Create Current Income milestone (order 2)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Salary (incl. Bonus, Side Hustle, etc.)',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Income',
-                disbursement_type: 'Fixed Duration',
-                amount: 50000,
-                occurrence: 'Yearly',
-                duration: 70 - currentAge,  // Auto-calculate duration
-                rate_of_return: 0.02,  // 2%
-                order: 0
-            })
-        }),
-        // Create Current Expense milestone (order 3)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Average Expenses',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 3000,
-                occurrence: 'Monthly',
-                duration: 70 - currentAge,  // Auto-calculate duration
-                rate_of_return: 0.03,  // 2%
-                order: 1
-            })
-        }),
-        // Create Retirement milestone (order 4)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Retirement',
-                age_at_occurrence: 70,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 60000,
-                occurrence: 'Yearly',
-                duration: 30,  // 4 years
-                rate_of_return: 0.06,  // 4%
-                order: 4
-            })
-        }),
-        // Create Long Term Care (self) milestone (order 5)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Long Term Care (self)',
-                age_at_occurrence: 96,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 6000,
-                occurrence: 'Monthly',
-                duration: 48,  // 4 years
-                rate_of_return: 0.04,  // 4%
-                order: 5
-            })
-        }),
-        // Create Inheritance milestone (order 6)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Inheritance',
-                age_at_occurrence: 100,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 10000,
-                occurrence: 'Monthly',
-                duration: 1,
-                rate_of_return: 0.0,
-                order: 6
-            })
-        })
-    ])
-    .then(() => {
-        console.log('Created default milestones');
-        loadMilestones();
-    })
-    .catch(error => {
-        console.error('Error creating default milestones:', error);
-        alert('Error creating default milestones. Please try again.');
+        success: function(currentParentResponse) {
+            // Add parent milestone ID to current milestone
+            newCurrentMilestone.parent_milestone_id = currentParentResponse.id;
+            
+            // Create current milestone
+            $.ajax({
+                url: '/api/milestones',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newCurrentMilestone),
+                success: function(currentResponse) {
+                    // Create inheritance parent milestone
+                    $.ajax({
+                        url: '/api/parent-milestones',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            name: newInheritanceMilestone.name,
+                            min_age: newInheritanceMilestone.age_at_occurrence,
+                            max_age: newInheritanceMilestone.age_at_occurrence
+                        }),
+                        success: function(inheritanceParentResponse) {
+                            // Add parent milestone ID to inheritance milestone
+                            newInheritanceMilestone.parent_milestone_id = inheritanceParentResponse.id;
+                            
+                            // Create inheritance milestone
+                            $.ajax({
+                                url: '/api/milestones',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify(newInheritanceMilestone),
+                                success: function(inheritanceResponse) {
+                                    // Load milestones and update UI
+                                    loadMilestones();
+                                },
+                                error: function(error) {
+                                    console.error('Error creating inheritance milestone:', error);
+                                    alert('Error creating inheritance milestone. Please try again.');
+                                }
+                            });
+                        },
+                        error: function(error) {
+                            console.error('Error creating inheritance parent milestone:', error);
+                            alert('Error creating inheritance parent milestone. Please try again.');
+                        }
+                    });
+                },
+                error: function(error) {
+                    console.error('Error creating current milestone:', error);
+                    alert('Error creating current milestone. Please try again.');
+                }
+            });
+        },
+        error: function(error) {
+            console.error('Error creating current parent milestone:', error);
+            alert('Error creating current parent milestone. Please try again.');
+        }
     });
 }
 
@@ -250,14 +226,21 @@ function loadMilestones() {
             
             // Use the order from the backend response
             milestones = response;
+            
+            // Clear existing milestone forms
+            $('#milestoneForms').empty();
+            
+            // Create forms for all milestones
+            milestones.forEach(milestone => {
+                const form = createMilestoneForm(milestone);
+                $('#milestoneForms').append(form);
+            });
+            
+            // Update the timeline with the loaded milestones
             updateTimeline();
             
             // Update the NPV chart
             window.npvChart.updateChart(milestones);
-            
-            // Clear existing milestone forms before creating new ones
-            $('#milestoneForms').empty();
-            milestones.forEach(createMilestoneForm);
         },
         error: function(error) {
             console.error('Error loading milestones:', error);
@@ -267,6 +250,9 @@ function loadMilestones() {
 }
 
 function addNewMilestone() {
+    const currentAge = parseInt($('#currentAge').val());
+    
+    // Create new milestone
     const milestone = {
         name: 'New Milestone',
         age_at_occurrence: currentAge + 5,
@@ -280,19 +266,40 @@ function addNewMilestone() {
         order: milestones.length  // Set order to be after all existing milestones
     };
     
+    // Create parent milestone first
     $.ajax({
-        url: '/api/milestones',
+        url: '/api/parent-milestones',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify(milestone),
-        success: function(response) {
-            milestones.push(response);
-            updateTimeline();
-            createMilestoneForm(response);
+        data: JSON.stringify({
+            name: milestone.name,
+            min_age: milestone.age_at_occurrence,
+            max_age: milestone.age_at_occurrence
+        }),
+        success: function(parentResponse) {
+            // Add parent milestone ID to the milestone
+            milestone.parent_milestone_id = parentResponse.id;
+            
+            // Create the milestone
+            $.ajax({
+                url: '/api/milestones',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(milestone),
+                success: function(response) {
+                    milestones.push(response);
+                    updateTimeline();
+                    createMilestoneForm(response);
+                },
+                error: function(error) {
+                    console.error('Error creating milestone:', error);
+                    alert('Error creating milestone. Please try again.');
+                }
+            });
         },
         error: function(error) {
-            console.error('Error creating milestone:', error);
-            alert('Error creating milestone. Please try again.');
+            console.error('Error creating parent milestone:', error);
+            alert('Error creating parent milestone. Please try again.');
         }
     });
 }
@@ -301,9 +308,19 @@ function updateTimeline() {
     // Clear existing milestones
     $('#timeline-milestones').empty();
     
-    // Add each milestone to the timeline
-    milestones.forEach(milestone => {
-        window.timeline.addMilestone(milestone);
+    // Load parent milestones
+    $.ajax({
+        url: '/api/parent-milestones',
+        method: 'GET',
+        success: function(parentMilestones) {
+            // Add each parent milestone to the timeline
+            parentMilestones.forEach(milestone => {
+                window.timeline.addParentMilestone(milestone);
+            });
+        },
+        error: function(error) {
+            console.error('Error loading parent milestones:', error);
+        }
     });
 }
 
@@ -343,6 +360,7 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Disbursement Type</label>
                     <select class="form-control" name="disbursement_type">
+                        <option value="">None</option>
                         <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
                         <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
                     </select>
@@ -474,6 +492,192 @@ function createMilestoneForm(milestone) {
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
 }
 
+function addSubMilestone(parentForm) {
+    const parentId = parentForm.data('id');
+    const parentMilestone = milestones.find(m => m.id === parentId);
+    
+    // Create new sub-milestone
+    const subMilestone = {
+        name: 'New Sub-Milestone',
+        age_at_occurrence: parentMilestone.age_at_occurrence,
+        milestone_type: 'Expense',
+        disbursement_type: 'Fixed Duration',
+        amount: 0,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: 1,
+        rate_of_return: 0.0,
+        order: milestones.length,
+        parent_milestone_id: parentId
+    };
+    
+    $.ajax({
+        url: '/api/milestones',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(subMilestone),
+        success: function(response) {
+            milestones.push(response);
+            
+            // If this is the first sub-milestone, create a parent milestone
+            if (!parentMilestone.parent_milestone_id) {
+                // Create a parent milestone
+                $.ajax({
+                    url: '/api/parent-milestones',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: parentMilestone.name,
+                        min_age: parentMilestone.age_at_occurrence,
+                        max_age: parentMilestone.age_at_occurrence
+                    }),
+                    success: function(parentResponse) {
+                        // Update the parent milestone ID for both milestones
+                        $.ajax({
+                            url: `/api/milestones/${parentId}`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                parent_milestone_id: parentResponse.id
+                            }),
+                            success: function() {
+                                $.ajax({
+                                    url: `/api/milestones/${response.id}`,
+                                    method: 'PUT',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        parent_milestone_id: parentResponse.id
+                                    }),
+                                    success: function() {
+                                        // Refresh the page to show new structure
+                                        window.location.reload();
+                                    },
+                                    error: function(error) {
+                                        console.error('Error updating milestone:', error);
+                                        alert('Error updating milestone. Please try again.');
+                                    }
+                                });
+                            },
+                            error: function(error) {
+                                console.error('Error updating milestone:', error);
+                                alert('Error updating milestone. Please try again.');
+                            }
+                        });
+                    },
+                    error: function(error) {
+                        console.error('Error creating parent milestone:', error);
+                        alert('Error creating parent milestone. Please try again.');
+                    }
+                });
+            } else {
+                // Just refresh the page to show the new sub-milestone
+                window.location.reload();
+            }
+        },
+        error: function(error) {
+            console.error('Error creating sub-milestone:', error);
+            alert('Error creating sub-milestone. Please try again.');
+        }
+    });
+}
+
+function addSubMilestoneEventListeners(form) {
+    // Add hover handlers
+    form.hover(
+        function() { // mouseenter
+            const milestoneId = $(this).data('id');
+            highlightMilestone(milestoneId);
+        },
+        function() { // mouseleave
+            const milestoneId = $(this).data('id');
+            unhighlightMilestone(milestoneId);
+        }
+    );
+    
+    // Add click handler for the header to toggle the form
+    const header = form.find('.milestone-header');
+    header.on('click', function(e) {
+        // Only toggle if not dragging and not clicking buttons
+        if (e.type === 'click' && !form.hasClass('dragging') && !$(e.target).is('button')) {
+            form.toggleClass('expanded');
+            form.find('.toggle-icon').toggleClass('expanded');
+        }
+    });
+    
+    // Add event listener for milestone type changes
+    form.find('[name="milestone_type"]').on('change', function() {
+        updateAnnuityFieldsVisibility(form);
+    });
+    
+    // Add event listener for disbursement type changes
+    form.find('[name="disbursement_type"]').on('change', function() {
+        updateAnnuityFieldsVisibility(form);
+    });
+    
+    // Add event listeners for the new form
+    form.find('.save-milestone').on('click', function() {
+        handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
+    });
+    form.find('.delete-milestone').on('click', handleMilestoneDelete);
+    
+    // Add drag and drop event listeners
+    header.attr('draggable', 'true');
+    header.on('dragstart', function(e) {
+        e.originalEvent.dataTransfer.setData('text/plain', form.data('id'));
+        form.addClass('dragging');
+    });
+    
+    header.on('dragend', function() {
+        form.removeClass('dragging');
+    });
+    
+    form.on('dragover', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'move';
+    });
+    
+    form.on('drop', function(e) {
+        e.preventDefault();
+        const draggedId = e.originalEvent.dataTransfer.getData('text/plain');
+        const draggedForm = $(`.sub-milestone-form[data-id="${draggedId}"]`);
+        const dropForm = $(this);
+        
+        if (draggedId !== dropForm.data('id')) {
+            // Reorder the sub-milestones
+            const parentId = dropForm.closest('.milestone-form').data('id');
+            const subMilestones = milestones.filter(m => m.parent_milestone_id === parentId);
+            
+            const draggedIndex = subMilestones.findIndex(m => m.id === parseInt(draggedId));
+            const dropIndex = subMilestones.findIndex(m => m.id === dropForm.data('id'));
+            
+            const [draggedMilestone] = subMilestones.splice(draggedIndex, 1);
+            subMilestones.splice(dropIndex, 0, draggedMilestone);
+            
+            // Update order for all sub-milestones
+            const updatePromises = subMilestones.map((milestone, index) => {
+                milestone.order = index;
+                // Send update to server
+                return $.ajax({
+                    url: `/api/milestones/${milestone.id}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ order: index })
+                });
+            });
+            
+            // Wait for all updates to complete, then refresh the page
+            Promise.all(updatePromises)
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error updating sub-milestone order:', error);
+                    alert('Error updating sub-milestone order. Please try again.');
+                });
+        }
+    });
+}
+
 function highlightMilestone(milestoneId) {
     $(`.milestone-marker[data-id="${milestoneId}"]`).addClass('highlighted');
     $(`.milestone-label[data-id="${milestoneId}"]`).addClass('highlighted');
@@ -567,25 +771,118 @@ function handleMilestoneUpdate(e, form) {
 }
 
 function handleMilestoneDelete(e) {
-    const form = $(e.target).closest('.milestone-form');
+    const form = $(e.target).closest('.milestone-form, .sub-milestone-form');
     const milestoneId = form.data('id');
+    const milestone = milestones.find(m => m.id === milestoneId);
     
-    $.ajax({
-        url: `/api/milestones/${milestoneId}`,
-        method: 'DELETE',
-        success: function() {
-            // Remove the milestone from the local array
-            milestones = milestones.filter(m => m.id !== milestoneId);
-            // Update the NPV chart
-            window.npvChart.updateChart(milestones);
-            // Refresh the page to reset timeline spacing
-            window.location.reload();
-        },
-        error: function(error) {
-            console.error('Error deleting milestone:', error);
-            alert('Error deleting milestone. Please try again.');
+    // Check if this is a sub-milestone
+    if (milestone.parent_milestone_id) {
+        // Get the parent milestone
+        const parentId = milestone.parent_milestone_id;
+        const parentMilestone = milestones.find(m => m.id === parentId);
+        
+        // Get all sub-milestones for this parent
+        const subMilestones = milestones.filter(m => m.parent_milestone_id === parentId);
+        
+        // If this is the last sub-milestone, convert parent back to a regular milestone
+        if (subMilestones.length === 1) {
+            // Delete the sub-milestone
+            $.ajax({
+                url: `/api/milestones/${milestoneId}`,
+                method: 'DELETE',
+                success: function() {
+                    // Update the parent milestone to be a regular milestone
+                    $.ajax({
+                        url: `/api/milestones/${parentId}`,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            parent_milestone_id: null,
+                            name: parentMilestone.name
+                        }),
+                        success: function() {
+                            // Remove the milestone from the local array
+                            milestones = milestones.filter(m => m.id !== milestoneId);
+                            // Refresh the page to show new structure
+                            window.location.reload();
+                        },
+                        error: function(error) {
+                            console.error('Error updating parent milestone:', error);
+                            alert('Error updating parent milestone. Please try again.');
+                        }
+                    });
+                },
+                error: function(error) {
+                    console.error('Error deleting milestone:', error);
+                    alert('Error deleting milestone. Please try again.');
+                }
+            });
+        } else {
+            // Just delete the sub-milestone
+            $.ajax({
+                url: `/api/milestones/${milestoneId}`,
+                method: 'DELETE',
+                success: function() {
+                    // Remove the milestone from the local array
+                    milestones = milestones.filter(m => m.id !== milestoneId);
+                    // Refresh the page to show new structure
+                    window.location.reload();
+                },
+                error: function(error) {
+                    console.error('Error deleting milestone:', error);
+                    alert('Error deleting milestone. Please try again.');
+                }
+            });
         }
-    });
+    } else {
+        // This is a parent milestone, check if it has sub-milestones
+        const subMilestones = milestones.filter(m => m.parent_milestone_id === milestoneId);
+        
+        if (subMilestones.length > 0) {
+            // Delete all sub-milestones first
+            const deletePromises = subMilestones.map(subMilestone => {
+                return $.ajax({
+                    url: `/api/milestones/${subMilestone.id}`,
+                    method: 'DELETE'
+                });
+            });
+            
+            Promise.all(deletePromises)
+                .then(() => {
+                    // Then delete the parent milestone
+                    return $.ajax({
+                        url: `/api/milestones/${milestoneId}`,
+                        method: 'DELETE'
+                    });
+                })
+                .then(() => {
+                    // Remove all related milestones from the local array
+                    milestones = milestones.filter(m => m.id !== milestoneId && m.parent_milestone_id !== milestoneId);
+                    // Refresh the page to show new structure
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error deleting milestones:', error);
+                    alert('Error deleting milestones. Please try again.');
+                });
+        } else {
+            // Just delete the milestone
+            $.ajax({
+                url: `/api/milestones/${milestoneId}`,
+                method: 'DELETE',
+                success: function() {
+                    // Remove the milestone from the local array
+                    milestones = milestones.filter(m => m.id !== milestoneId);
+                    // Refresh the page to show new structure
+                    window.location.reload();
+                },
+                error: function(error) {
+                    console.error('Error deleting milestone:', error);
+                    alert('Error deleting milestone. Please try again.');
+                }
+            });
+        }
+    }
 }
 
 // Bank Statement Functions

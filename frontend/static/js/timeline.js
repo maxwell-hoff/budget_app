@@ -60,16 +60,24 @@ class Timeline {
         this.createTimelineLine(currentAge);
         this.createAgeMarkers(currentAge);
         
-        // Redraw all milestones
-        if (window.milestones) {
-            window.milestones.forEach(milestone => {
-                this.addMilestone(milestone);
-            });
-        }
-        
-        // Show timeline content and hide placeholder
-        this.timelineContent.style.display = 'block';
-        this.timelinePlaceholder.style.display = 'none';
+        // Load parent milestones
+        $.ajax({
+            url: '/api/parent-milestones',
+            method: 'GET',
+            success: (parentMilestones) => {
+                // Add each parent milestone to the timeline
+                parentMilestones.forEach(milestone => {
+                    this.addParentMilestone(milestone);
+                });
+                
+                // Show timeline content and hide placeholder
+                this.timelineContent.style.display = 'block';
+                this.timelinePlaceholder.style.display = 'none';
+            },
+            error: (error) => {
+                console.error('Error loading parent milestones:', error);
+            }
+        });
     }
 
     clearTimeline() {
@@ -129,32 +137,15 @@ class Timeline {
         }
     }
 
-    addMilestone(milestone) {
+    addParentMilestone(milestone) {
         const timelineWidth = this.timeline.offsetWidth - 170;  // Account for left margin and container padding
         const currentAge = this.calculateAge(this.birthdayInput.value);
         const startAge = currentAge;
         const endAge = 100;  // Maximum age shown on timeline
         
-        // Calculate start position using the same formula as age markers
-        const startPosition = ((milestone.age_at_occurrence - startAge) / (endAge - startAge)) * timelineWidth + 20;  // Add margin for milestone markers
-        
-        // Calculate end position based on disbursement type
-        let endPosition = null;
-        if (milestone.disbursement_type === 'Fixed Duration' && milestone.duration) {
-            // Calculate end age based on occurrence and duration
-            let milestoneEndAge;
-            if (milestone.occurrence === 'Monthly') {
-                // For monthly, duration is in months, so convert to years
-                milestoneEndAge = milestone.age_at_occurrence + (milestone.duration / 12);
-            } else { // Yearly
-                milestoneEndAge = milestone.age_at_occurrence + milestone.duration;
-            }
-            // Calculate position using the same formula as age markers
-            endPosition = ((milestoneEndAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
-        } else if (milestone.disbursement_type === 'Perpetuity') {
-            // For perpetuity, use inheritance age (100)
-            endPosition = ((endAge - startAge) / (endAge - startAge)) * timelineWidth + 20;
-        }
+        // Calculate positions based on min and max age
+        const startPosition = ((milestone.min_age - startAge) / (endAge - startAge)) * timelineWidth + 20;
+        const endPosition = ((milestone.max_age - startAge) / (endAge - startAge)) * timelineWidth + 20;
         
         // Calculate vertical position for this milestone
         const verticalPosition = this.calculateVerticalPosition(milestone.id);
@@ -162,7 +153,7 @@ class Timeline {
         this.createMilestoneMarker(
             milestone.name,
             startPosition,
-            milestone.name === 'Current' ? 'current' : 'inheritance',
+            'parent',
             milestone.id,
             endPosition,
             verticalPosition
