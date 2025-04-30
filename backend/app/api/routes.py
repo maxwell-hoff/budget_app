@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from ..database import db
-from ..models.milestone import Milestone
+from ..models.milestone import Milestone, ParentMilestone
 from ..models.user import User
 from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
 from ..services.dcf_calculator import DCFCalculator
@@ -31,6 +31,66 @@ def recalculate_net_worth():
         return True
     return False
 
+def update_parent_milestone(parent_id):
+    """Update parent milestone name and age range based on sub-milestones."""
+    parent = ParentMilestone.query.get(parent_id)
+    if parent and parent.sub_milestones:
+        # If there's only one sub-milestone, use its name
+        if len(parent.sub_milestones) == 1:
+            parent.name = parent.sub_milestones[0].name
+        # Update age range
+        parent.update_age_range()
+        db.session.commit()
+
+@api_bp.route('/parent-milestones', methods=['GET'])
+def get_parent_milestones():
+    """Get all parent milestones."""
+    parent_milestones = ParentMilestone.query.all()
+    return jsonify([milestone.to_dict() for milestone in parent_milestones])
+
+@api_bp.route('/parent-milestones', methods=['POST'])
+def create_parent_milestone():
+    """Create a new parent milestone."""
+    data = request.get_json()
+    parent_milestone = ParentMilestone(
+        name=data['name'],
+        min_age=data['min_age'],
+        max_age=data['max_age']
+    )
+    db.session.add(parent_milestone)
+    db.session.commit()
+    return jsonify(parent_milestone.to_dict()), 201
+
+@api_bp.route('/parent-milestones/<int:parent_id>', methods=['PUT'])
+def update_parent_milestone_route(parent_id):
+    """Update a parent milestone."""
+    parent = ParentMilestone.query.get_or_404(parent_id)
+    data = request.get_json()
+    
+    for key, value in data.items():
+        setattr(parent, key, value)
+    
+    db.session.commit()
+    return jsonify(parent.to_dict())
+
+@api_bp.route('/parent-milestones/<int:parent_id>', methods=['DELETE'])
+def delete_parent_milestone(parent_id):
+    """Delete a parent milestone and its sub-milestones."""
+    parent = ParentMilestone.query.get_or_404(parent_id)
+    
+    # Delete all sub-milestones
+    for sub_milestone in parent.sub_milestones:
+        db.session.delete(sub_milestone)
+    
+    # Delete the parent milestone
+    db.session.delete(parent)
+    db.session.commit()
+    
+    # Recalculate net worth
+    recalculate_net_worth()
+    
+    return '', 204
+
 @api_bp.route('/profile', methods=['GET'])
 def get_profile():
     """Get the user's profile."""
@@ -59,13 +119,8 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
-    # Get parent milestones (those without a parent)
-    parent_milestones = Milestone.query.filter_by(parent_milestone_id=None).order_by(Milestone.order).all()
-    
-    # Get all milestones for the response
-    all_milestones = Milestone.query.order_by(Milestone.order).all()
-    
-    return jsonify([milestone.to_dict() for milestone in all_milestones])
+    milestones = Milestone.query.order_by(Milestone.order).all()
+    return jsonify([milestone.to_dict() for milestone in milestones])
 
 @api_bp.route('/milestones/<int:milestone_id>/sub-milestones', methods=['GET'])
 def get_sub_milestones(milestone_id):
@@ -85,6 +140,7 @@ def create_milestone():
         milestone_type=data['milestone_type'],
         disbursement_type=data['disbursement_type'],
         amount=data['amount'],
+        payment=data.get('payment'),
         occurrence=data.get('occurrence'),
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
@@ -95,7 +151,11 @@ def create_milestone():
     db.session.add(milestone)
     db.session.commit()
     
-    # Recalculate net worth after creating milestone
+    # Update parent milestone if this is a sub-milestone
+    if milestone.parent_milestone_id:
+        update_parent_milestone(milestone.parent_milestone_id)
+    
+    # Recalculate net worth
     recalculate_net_worth()
     
     print(f"Created milestone: {milestone.to_dict()}")  # Debug log
@@ -107,21 +167,22 @@ def update_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
     data = request.get_json()
     
-    # Handle parent name update
-    if 'parent_name' in data:
-        # Update the name of the parent milestone
-        parent = Milestone.query.get(milestone.parent_milestone_id or milestone_id)
-        if parent:
-            parent.name = data['parent_name']
-            db.session.commit()
+    # Store the old parent ID for updating
+    old_parent_id = milestone.parent_milestone_id
     
     for key, value in data.items():
-        if key != 'parent_name':  # Skip parent_name as it's handled above
-            setattr(milestone, key, value)
+        setattr(milestone, key, value)
     
     db.session.commit()
     
-    # Recalculate net worth after updating milestone
+    # Update both old and new parent milestones if parent changed
+    if old_parent_id != milestone.parent_milestone_id:
+        if old_parent_id:
+            update_parent_milestone(old_parent_id)
+        if milestone.parent_milestone_id:
+            update_parent_milestone(milestone.parent_milestone_id)
+    
+    # Recalculate net worth
     recalculate_net_worth()
     
     return jsonify(milestone.to_dict())
@@ -130,10 +191,16 @@ def update_milestone(milestone_id):
 def delete_milestone(milestone_id):
     """Delete a milestone."""
     milestone = Milestone.query.get_or_404(milestone_id)
+    parent_id = milestone.parent_milestone_id
+    
     db.session.delete(milestone)
     db.session.commit()
     
-    # Recalculate net worth after deleting milestone
+    # Update parent milestone if this was a sub-milestone
+    if parent_id:
+        update_parent_milestone(parent_id)
+    
+    # Recalculate net worth
     recalculate_net_worth()
     
     return '', 204

@@ -107,136 +107,112 @@ function handleProfileSubmit(e) {
 
 // Milestone Functions
 function createDefaultMilestones() {
-    // Create all milestones in parallel and wait for all to complete
-    Promise.all([
-        // Create Current Assets milestone (order 0)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Liquid Assets',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Asset',
-                disbursement_type: 'Perpetuity',
-                amount: 30000,
-                payment: 5000,
-                occurrence: 'Yearly',
-                rate_of_return: 0.07,  // 7%
-                order: 2
-            })
+    // Check if default milestones already exist
+    const existingCurrentMilestone = milestones.find(m => m.name === 'Current');
+    const existingInheritanceMilestone = milestones.find(m => m.name === 'Inheritance');
+    
+    if (existingCurrentMilestone && existingInheritanceMilestone) {
+        console.log('Default milestones already exist');
+        return;
+    }
+    
+    const currentAge = parseInt($('#currentAge').val());
+    
+    // Create Current milestone
+    const newCurrentMilestone = {
+        name: 'Current',
+        age_at_occurrence: currentAge,
+        milestone_type: 'Asset',
+        disbursement_type: 'Perpetuity',
+        amount: 0,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: null,
+        rate_of_return: 0.0,
+        order: 0
+    };
+    
+    // Create Inheritance milestone
+    const newInheritanceMilestone = {
+        name: 'Inheritance',
+        age_at_occurrence: 100,
+        milestone_type: 'Asset',
+        disbursement_type: 'Perpetuity',
+        amount: 10000,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: null,
+        rate_of_return: 0.0,
+        order: 1
+    };
+    
+    // Create parent milestones first
+    $.ajax({
+        url: '/api/parent-milestones',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            name: newCurrentMilestone.name,
+            min_age: newCurrentMilestone.age_at_occurrence,
+            max_age: newCurrentMilestone.age_at_occurrence
         }),
-        // Create Current Debt milestone (order 1)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Debt',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Liability',
-                disbursement_type: 'Fixed Duration',
-                amount: 35000,
-                payment: 500,
-                occurrence: 'Monthly',
-                rate_of_return: 0.07,  // 7%
-                duration: 120,
-                order: 3
-            })
-        }),
-        // Create Current Income milestone (order 2)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Salary (incl. Bonus, Side Hustle, etc.)',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Income',
-                disbursement_type: 'Fixed Duration',
-                amount: 50000,
-                occurrence: 'Yearly',
-                duration: 70 - currentAge,  // Auto-calculate duration
-                rate_of_return: 0.02,  // 2%
-                order: 0
-            })
-        }),
-        // Create Current Expense milestone (order 3)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Current Average Expenses',
-                age_at_occurrence: currentAge,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 3000,
-                occurrence: 'Monthly',
-                duration: 70 - currentAge,  // Auto-calculate duration
-                rate_of_return: 0.03,  // 2%
-                order: 1
-            })
-        }),
-        // Create Retirement milestone (order 4)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Retirement',
-                age_at_occurrence: 70,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 60000,
-                occurrence: 'Yearly',
-                duration: 30,  // 4 years
-                rate_of_return: 0.06,  // 4%
-                order: 4
-            })
-        }),
-        // Create Long Term Care (self) milestone (order 5)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Long Term Care (self)',
-                age_at_occurrence: 96,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 6000,
-                occurrence: 'Monthly',
-                duration: 48,  // 4 years
-                rate_of_return: 0.04,  // 4%
-                order: 5
-            })
-        }),
-        // Create Inheritance milestone (order 6)
-        $.ajax({
-            url: '/api/milestones',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                name: 'Inheritance',
-                age_at_occurrence: 100,
-                milestone_type: 'Expense',
-                disbursement_type: 'Fixed Duration',
-                amount: 10000,
-                occurrence: 'Monthly',
-                duration: 1,
-                rate_of_return: 0.0,
-                order: 6
-            })
-        })
-    ])
-    .then(() => {
-        console.log('Created default milestones');
-        loadMilestones();
-    })
-    .catch(error => {
-        console.error('Error creating default milestones:', error);
-        alert('Error creating default milestones. Please try again.');
+        success: function(currentParentResponse) {
+            // Add parent milestone ID to current milestone
+            newCurrentMilestone.parent_milestone_id = currentParentResponse.id;
+            
+            // Create current milestone
+            $.ajax({
+                url: '/api/milestones',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newCurrentMilestone),
+                success: function(currentResponse) {
+                    // Create inheritance parent milestone
+                    $.ajax({
+                        url: '/api/parent-milestones',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            name: newInheritanceMilestone.name,
+                            min_age: newInheritanceMilestone.age_at_occurrence,
+                            max_age: newInheritanceMilestone.age_at_occurrence
+                        }),
+                        success: function(inheritanceParentResponse) {
+                            // Add parent milestone ID to inheritance milestone
+                            newInheritanceMilestone.parent_milestone_id = inheritanceParentResponse.id;
+                            
+                            // Create inheritance milestone
+                            $.ajax({
+                                url: '/api/milestones',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify(newInheritanceMilestone),
+                                success: function(inheritanceResponse) {
+                                    // Load milestones and update UI
+                                    loadMilestones();
+                                },
+                                error: function(error) {
+                                    console.error('Error creating inheritance milestone:', error);
+                                    alert('Error creating inheritance milestone. Please try again.');
+                                }
+                            });
+                        },
+                        error: function(error) {
+                            console.error('Error creating inheritance parent milestone:', error);
+                            alert('Error creating inheritance parent milestone. Please try again.');
+                        }
+                    });
+                },
+                error: function(error) {
+                    console.error('Error creating current milestone:', error);
+                    alert('Error creating current milestone. Please try again.');
+                }
+            });
+        },
+        error: function(error) {
+            console.error('Error creating current parent milestone:', error);
+            alert('Error creating current parent milestone. Please try again.');
+        }
     });
 }
 
@@ -254,11 +230,8 @@ function loadMilestones() {
             // Clear existing milestone forms
             $('#milestoneForms').empty();
             
-            // Get parent milestones (those without a parent)
-            const parentMilestones = milestones.filter(m => !m.parent_milestone_id);
-            
-            // Create forms for parent milestones
-            parentMilestones.forEach(milestone => {
+            // Create forms for all milestones
+            milestones.forEach(milestone => {
                 const form = createMilestoneForm(milestone);
                 $('#milestoneForms').append(form);
             });
@@ -277,6 +250,9 @@ function loadMilestones() {
 }
 
 function addNewMilestone() {
+    const currentAge = parseInt($('#currentAge').val());
+    
+    // Create new milestone
     const milestone = {
         name: 'New Milestone',
         age_at_occurrence: currentAge + 5,
@@ -290,19 +266,40 @@ function addNewMilestone() {
         order: milestones.length  // Set order to be after all existing milestones
     };
     
+    // Create parent milestone first
     $.ajax({
-        url: '/api/milestones',
+        url: '/api/parent-milestones',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify(milestone),
-        success: function(response) {
-            milestones.push(response);
-            updateTimeline();
-            createMilestoneForm(response);
+        data: JSON.stringify({
+            name: milestone.name,
+            min_age: milestone.age_at_occurrence,
+            max_age: milestone.age_at_occurrence
+        }),
+        success: function(parentResponse) {
+            // Add parent milestone ID to the milestone
+            milestone.parent_milestone_id = parentResponse.id;
+            
+            // Create the milestone
+            $.ajax({
+                url: '/api/milestones',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(milestone),
+                success: function(response) {
+                    milestones.push(response);
+                    updateTimeline();
+                    createMilestoneForm(response);
+                },
+                error: function(error) {
+                    console.error('Error creating milestone:', error);
+                    alert('Error creating milestone. Please try again.');
+                }
+            });
         },
         error: function(error) {
-            console.error('Error creating milestone:', error);
-            alert('Error creating milestone. Please try again.');
+            console.error('Error creating parent milestone:', error);
+            alert('Error creating parent milestone. Please try again.');
         }
     });
 }
@@ -311,108 +308,28 @@ function updateTimeline() {
     // Clear existing milestones
     $('#timeline-milestones').empty();
     
-    // Add each milestone to the timeline
-    milestones.forEach(milestone => {
-        window.timeline.addMilestone(milestone);
+    // Load parent milestones
+    $.ajax({
+        url: '/api/parent-milestones',
+        method: 'GET',
+        success: function(parentMilestones) {
+            // Add each parent milestone to the timeline
+            parentMilestones.forEach(milestone => {
+                window.timeline.addParentMilestone(milestone);
+            });
+        },
+        error: function(error) {
+            console.error('Error loading parent milestones:', error);
+        }
     });
 }
 
 function createMilestoneForm(milestone) {
-    // Check if this is a sub-milestone
-    const isSubMilestone = milestone.parent_milestone_id !== null;
-    
-    // Get all sub-milestones for this milestone if it's a parent
-    const subMilestones = milestones.filter(m => m.parent_milestone_id === milestone.id);
-    const hasSubMilestones = subMilestones.length > 0;
-    
-    // If this is a sub-milestone, create a sub-milestone form
-    if (isSubMilestone) {
-        const subForm = $(`
-            <div class="sub-milestone-form" data-id="${milestone.id}">
-                <div class="milestone-header" draggable="true">
-                    <h3>${milestone.name}</h3>
-                    <div class="milestone-header-buttons">
-                        <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
-                            <i class="fas fa-save"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger btn-sm delete-milestone">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                </div>
-                <form class="milestone-form-content">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-control" name="name" value="${milestone.name}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Age at Occurrence</label>
-                        <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Milestone Type</label>
-                        <select class="form-control" name="milestone_type">
-                            <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
-                            <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
-                            <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
-                            <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Disbursement Type</label>
-                        <select class="form-control" name="disbursement_type">
-                            <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
-                            <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Amount</label>
-                        <input type="number" class="form-control" name="amount" value="${milestone.amount}">
-                    </div>
-                    <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
-                        <label class="form-label">
-                            Payment
-                            <span class="tooltip-container">
-                                <i class="fas fa-info-circle info-icon"></i>
-                                <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
-                            </span>
-                        </label>
-                        <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
-                    </div>
-                    <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                        <label class="form-label">Occurrence</label>
-                        <select class="form-control" name="occurrence">
-                            <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
-                            <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
-                        </select>
-                    </div>
-                    <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
-                        <label class="form-label">Duration</label>
-                        <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
-                    </div>
-                    <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                        <label class="form-label">Rate of Return (%)</label>
-                        <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
-                    </div>
-                </form>
-            </div>
-        `);
-        
-        // Add event listeners for sub-milestone form
-        addSubMilestoneEventListeners(subForm);
-        return subForm;
-    }
-    
-    // Create parent milestone form
     const form = $(`
-        <div class="milestone-form ${hasSubMilestones ? 'has-sub-milestones' : ''}" data-id="${milestone.id}">
+        <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
-                <h3>${hasSubMilestones ? milestone.name : milestone.name}</h3>
+                <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
-                    <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
-                        <i class="fas fa-plus"></i>
-                    </button>
                     <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
                         <i class="fas fa-save"></i>
                     </button>
@@ -422,91 +339,66 @@ function createMilestoneForm(milestone) {
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
             </div>
-            <div class="milestone-form-content">
-                ${hasSubMilestones ? `
-                    <div class="parent-name-field">
-                        <div class="mb-3">
-                            <label class="form-label">Parent Name</label>
-                            <input type="text" class="form-control" name="parent_name" value="${milestone.name}">
-                        </div>
-                    </div>
-                ` : ''}
-                <div class="sub-milestones-container">
-                    ${hasSubMilestones ? '' : `
-                        <form class="milestone-form-content">
-                            <div class="mb-3">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-control" name="name" value="${milestone.name}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Age at Occurrence</label>
-                                <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Milestone Type</label>
-                                <select class="form-control" name="milestone_type">
-                                    <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
-                                    <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
-                                    <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
-                                    <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Disbursement Type</label>
-                                <select class="form-control" name="disbursement_type">
-                                    <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
-                                    <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Amount</label>
-                                <input type="number" class="form-control" name="amount" value="${milestone.amount}">
-                            </div>
-                            <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
-                                <label class="form-label">
-                                    Payment
-                                    <span class="tooltip-container">
-                                        <i class="fas fa-info-circle info-icon"></i>
-                                        <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
-                                    </span>
-                                </label>
-                                <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
-                            </div>
-                            <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                                <label class="form-label">Occurrence</label>
-                                <select class="form-control" name="occurrence">
-                                    <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
-                                    <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
-                                </select>
-                            </div>
-                            <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
-                                <label class="form-label">Duration</label>
-                                <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
-                            </div>
-                            <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                                <label class="form-label">Rate of Return (%)</label>
-                                <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
-                            </div>
-                        </form>
-                    `}
+            <form class="milestone-form-content">
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" value="${milestone.name}">
                 </div>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Age at Occurrence</label>
+                    <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Milestone Type</label>
+                    <select class="form-control" name="milestone_type">
+                        <option value="Expense" ${milestone.milestone_type === 'Expense' ? 'selected' : ''}>Expense</option>
+                        <option value="Income" ${milestone.milestone_type === 'Income' ? 'selected' : ''}>Income</option>
+                        <option value="Asset" ${milestone.milestone_type === 'Asset' ? 'selected' : ''}>Asset</option>
+                        <option value="Liability" ${milestone.milestone_type === 'Liability' ? 'selected' : ''}>Liability</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Disbursement Type</label>
+                    <select class="form-control" name="disbursement_type">
+                        <option value="">None</option>
+                        <option value="Fixed Duration" ${milestone.disbursement_type === 'Fixed Duration' ? 'selected' : ''}>Fixed Duration</option>
+                        <option value="Perpetuity" ${milestone.disbursement_type === 'Perpetuity' ? 'selected' : ''}>Perpetuity</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                </div>
+                <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
+                    <label class="form-label">
+                        Payment
+                        <span class="tooltip-container">
+                            <i class="fas fa-info-circle info-icon"></i>
+                            <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
+                        </span>
+                    </label>
+                    <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
+                </div>
+                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
+                    <label class="form-label">Occurrence</label>
+                    <select class="form-control" name="occurrence">
+                        <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                        <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
+                    </select>
+                </div>
+                <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
+                    <label class="form-label">Duration</label>
+                    <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
+                </div>
+                <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
+                    <label class="form-label">Rate of Return (%)</label>
+                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
+                </div>
+            </form>
         </div>
     `);
     
-    // Add sub-milestones if they exist
-    if (hasSubMilestones) {
-        const container = form.find('.sub-milestones-container');
-        subMilestones.forEach(subMilestone => {
-            const subForm = createMilestoneForm(subMilestone);
-            container.append(subForm);
-        });
-    }
-    
-    // Add event listeners
-    form.find('.add-sub-milestone').on('click', function() {
-        addSubMilestone(form);
-    });
+    $('#milestoneForms').append(form);
     
     // Add drag and drop event listeners to the header
     const header = form.find('.milestone-header');
@@ -598,8 +490,95 @@ function createMilestoneForm(milestone) {
         handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
     });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+}
+
+function addSubMilestone(parentForm) {
+    const parentId = parentForm.data('id');
+    const parentMilestone = milestones.find(m => m.id === parentId);
     
-    return form;
+    // Create new sub-milestone
+    const subMilestone = {
+        name: 'New Sub-Milestone',
+        age_at_occurrence: parentMilestone.age_at_occurrence,
+        milestone_type: 'Expense',
+        disbursement_type: 'Fixed Duration',
+        amount: 0,
+        payment: null,
+        occurrence: 'Yearly',
+        duration: 1,
+        rate_of_return: 0.0,
+        order: milestones.length,
+        parent_milestone_id: parentId
+    };
+    
+    $.ajax({
+        url: '/api/milestones',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(subMilestone),
+        success: function(response) {
+            milestones.push(response);
+            
+            // If this is the first sub-milestone, create a parent milestone
+            if (!parentMilestone.parent_milestone_id) {
+                // Create a parent milestone
+                $.ajax({
+                    url: '/api/parent-milestones',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: parentMilestone.name,
+                        min_age: parentMilestone.age_at_occurrence,
+                        max_age: parentMilestone.age_at_occurrence
+                    }),
+                    success: function(parentResponse) {
+                        // Update the parent milestone ID for both milestones
+                        $.ajax({
+                            url: `/api/milestones/${parentId}`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                parent_milestone_id: parentResponse.id
+                            }),
+                            success: function() {
+                                $.ajax({
+                                    url: `/api/milestones/${response.id}`,
+                                    method: 'PUT',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        parent_milestone_id: parentResponse.id
+                                    }),
+                                    success: function() {
+                                        // Refresh the page to show new structure
+                                        window.location.reload();
+                                    },
+                                    error: function(error) {
+                                        console.error('Error updating milestone:', error);
+                                        alert('Error updating milestone. Please try again.');
+                                    }
+                                });
+                            },
+                            error: function(error) {
+                                console.error('Error updating milestone:', error);
+                                alert('Error updating milestone. Please try again.');
+                            }
+                        });
+                    },
+                    error: function(error) {
+                        console.error('Error creating parent milestone:', error);
+                        alert('Error creating parent milestone. Please try again.');
+                    }
+                });
+            } else {
+                // Just refresh the page to show the new sub-milestone
+                window.location.reload();
+            }
+        },
+        error: function(error) {
+            console.error('Error creating sub-milestone:', error);
+            alert('Error creating sub-milestone. Please try again.');
+        }
+    });
 }
 
 function addSubMilestoneEventListeners(form) {
@@ -1009,86 +988,4 @@ document.addEventListener('milestoneDeleted', updateCharts);
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing charts');
     updateCharts();
-});
-
-function addSubMilestone(parentForm) {
-    const parentId = parentForm.data('id');
-    const parentMilestone = milestones.find(m => m.id === parentId);
-    
-    // Create new sub-milestone
-    const subMilestone = {
-        name: 'New Sub-Milestone',
-        age_at_occurrence: parentMilestone.age_at_occurrence,
-        milestone_type: 'Expense',
-        disbursement_type: 'Fixed Duration',
-        amount: 0,
-        payment: null,
-        occurrence: 'Yearly',
-        duration: 1,
-        rate_of_return: 0.0,
-        order: milestones.length,
-        parent_milestone_id: parentId
-    };
-    
-    $.ajax({
-        url: '/api/milestones',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(subMilestone),
-        success: function(response) {
-            milestones.push(response);
-            
-            // If this is the first sub-milestone, convert the parent milestone
-            if (!parentMilestone.parent_milestone_id) {
-                // Create a copy of the parent milestone as a sub-milestone
-                const parentAsSubMilestone = {
-                    ...parentMilestone,
-                    id: null,  // New ID will be assigned by the server
-                    parent_milestone_id: parentId,
-                    order: milestones.length
-                };
-                
-                // Create the parent as a sub-milestone
-                $.ajax({
-                    url: '/api/milestones',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(parentAsSubMilestone),
-                    success: function(parentSubResponse) {
-                        milestones.push(parentSubResponse);
-                        
-                        // Update the parent milestone to be a container
-                        $.ajax({
-                            url: `/api/milestones/${parentId}`,
-                            method: 'PUT',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                parent_milestone_id: parentId,
-                                name: parentMilestone.name
-                            }),
-                            success: function() {
-                                // Refresh the page to show new structure
-                                window.location.reload();
-                            },
-                            error: function(error) {
-                                console.error('Error updating parent milestone:', error);
-                                alert('Error updating parent milestone. Please try again.');
-                            }
-                        });
-                    },
-                    error: function(error) {
-                        console.error('Error creating parent as sub-milestone:', error);
-                        alert('Error creating parent as sub-milestone. Please try again.');
-                    }
-                });
-            } else {
-                // Just refresh the page to show the new sub-milestone
-                window.location.reload();
-            }
-        },
-        error: function(error) {
-            console.error('Error creating sub-milestone:', error);
-            alert('Error creating sub-milestone. Please try again.');
-        }
-    });
-} 
+}); 
