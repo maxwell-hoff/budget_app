@@ -154,7 +154,7 @@ function createDefaultMilestones() {
         data: JSON.stringify({
             name: newCurrentMilestone.name,
             min_age: newCurrentMilestone.age_at_occurrence,
-            max_age: newCurrentMilestone.age_at_occurrence
+            milestone_data: newCurrentMilestone
         }),
         success: function(currentParentResponse) {
             // Add parent milestone ID to current milestone
@@ -175,7 +175,7 @@ function createDefaultMilestones() {
                         data: JSON.stringify({
                             name: newInheritanceMilestone.name,
                             min_age: newInheritanceMilestone.age_at_occurrence,
-                            max_age: newInheritanceMilestone.age_at_occurrence
+                            milestone_data: newInheritanceMilestone
                         }),
                         success: function(inheritanceParentResponse) {
                             // Add parent milestone ID to inheritance milestone
@@ -274,7 +274,7 @@ function addNewMilestone() {
         data: JSON.stringify({
             name: milestone.name,
             min_age: milestone.age_at_occurrence,
-            max_age: milestone.age_at_occurrence
+            milestone_data: milestone
         }),
         success: function(parentResponse) {
             // Add parent milestone ID to the milestone

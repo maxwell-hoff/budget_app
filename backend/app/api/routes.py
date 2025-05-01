@@ -38,8 +38,20 @@ def update_parent_milestone(parent_id):
         # If there's only one sub-milestone, use its name
         if len(parent.sub_milestones) == 1:
             parent.name = parent.sub_milestones[0].name
-        # Update age range
-        parent.update_age_range()
+        
+        # Calculate min_age and max_age based on sub-milestones
+        min_age = min(m.age_at_occurrence for m in parent.sub_milestones)
+        max_age = min_age  # Start with min_age
+        
+        # Find the maximum end age considering durations
+        for milestone in parent.sub_milestones:
+            end_age = milestone.age_at_occurrence
+            if milestone.disbursement_type == 'Fixed Duration' and milestone.duration:
+                end_age += milestone.duration
+            max_age = max(max_age, end_age)
+        
+        parent.min_age = min_age
+        parent.max_age = max_age
         db.session.commit()
 
 @api_bp.route('/parent-milestones', methods=['GET'])
@@ -52,10 +64,18 @@ def get_parent_milestones():
 def create_parent_milestone():
     """Create a new parent milestone."""
     data = request.get_json()
+    
+    # Calculate max_age based on milestone data if provided
+    max_age = data.get('max_age', data['min_age'])
+    if 'milestone_data' in data:
+        milestone_data = data['milestone_data']
+        if milestone_data.get('disbursement_type') == 'Fixed Duration' and milestone_data.get('duration'):
+            max_age = milestone_data['age_at_occurrence'] + milestone_data['duration']
+    
     parent_milestone = ParentMilestone(
         name=data['name'],
         min_age=data['min_age'],
-        max_age=data['max_age']
+        max_age=max_age
     )
     db.session.add(parent_milestone)
     db.session.commit()
@@ -153,7 +173,14 @@ def create_milestone():
     
     # Update parent milestone if this is a sub-milestone
     if milestone.parent_milestone_id:
-        update_parent_milestone(milestone.parent_milestone_id)
+        parent = ParentMilestone.query.get(milestone.parent_milestone_id)
+        if parent:
+            # Calculate max_age based on milestone duration
+            max_age = milestone.age_at_occurrence
+            if milestone.disbursement_type == 'Fixed Duration' and milestone.duration:
+                max_age += milestone.duration
+            parent.max_age = max_age
+            db.session.commit()
     
     # Recalculate net worth
     recalculate_net_worth()
@@ -181,6 +208,16 @@ def update_milestone(milestone_id):
             update_parent_milestone(old_parent_id)
         if milestone.parent_milestone_id:
             update_parent_milestone(milestone.parent_milestone_id)
+    elif milestone.parent_milestone_id:
+        # Update the parent milestone's max_age based on the milestone's duration
+        parent = ParentMilestone.query.get(milestone.parent_milestone_id)
+        if parent:
+            # Calculate max_age based on milestone's age and duration
+            max_age = milestone.age_at_occurrence
+            if milestone.disbursement_type == 'Fixed Duration' and milestone.duration:
+                max_age += milestone.duration
+            parent.max_age = max_age
+            db.session.commit()
     
     # Recalculate net worth
     recalculate_net_worth()
