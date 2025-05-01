@@ -273,55 +273,70 @@ function loadMilestones() {
                 return;
             }
             
-            // Group milestones by their age_at_occurrence to create parent milestones
-            const milestoneGroups = {};
-            milestones.forEach(milestone => {
-                if (!milestoneGroups[milestone.age_at_occurrence]) {
-                    milestoneGroups[milestone.age_at_occurrence] = [];
+            // First, get all parent milestones
+            $.ajax({
+                url: '/api/parent-milestones',
+                method: 'GET',
+                success: function(parentMilestones) {
+                    console.log('Parent milestones loaded:', parentMilestones);
+                    
+                    // Group milestones by their parent_milestone_id
+                    const milestoneGroups = {};
+                    milestones.forEach(milestone => {
+                        const parentId = milestone.parent_milestone_id;
+                        if (!milestoneGroups[parentId]) {
+                            milestoneGroups[parentId] = [];
+                        }
+                        milestoneGroups[parentId].push(milestone);
+                    });
+                    
+                    console.log('Milestone groups:', milestoneGroups);
+                    
+                    // Create forms for each parent milestone and its sub-milestones
+                    parentMilestones.forEach(parentMilestone => {
+                        // Create a parent milestone form
+                        const parentForm = createMilestoneForm({
+                            id: parentMilestone.id,
+                            name: parentMilestone.name,
+                            age_at_occurrence: parentMilestone.min_age,
+                            milestone_type: 'Group',
+                            disbursement_type: 'Fixed Duration',
+                            amount: 0,
+                            payment: 0,
+                            occurrence: 'Yearly',
+                            duration: parentMilestone.max_age - parentMilestone.min_age,
+                            rate_of_return: 0,
+                            order: 0
+                        });
+                        
+                        // Add sub-milestones container
+                        const subMilestonesContainer = $('<div class="sub-milestones-container"></div>');
+                        parentForm.append(subMilestonesContainer);
+                        
+                        // Add sub-milestones for this parent
+                        const subMilestones = milestoneGroups[parentMilestone.id] || [];
+                        subMilestones.forEach(milestone => {
+                            const subForm = createMilestoneForm(milestone);
+                            subForm.addClass('sub-milestone-form');
+                            subMilestonesContainer.append(subForm);
+                        });
+                        
+                        // Append the parent form to the milestone forms container
+                        $('#milestoneForms').append(parentForm);
+                        console.log('Appended parent form for', parentMilestone.name);
+                    });
+                    
+                    // Update the timeline with the loaded milestones
+                    updateTimeline();
+                    
+                    // Update the NPV chart
+                    window.npvChart.updateChart(milestones);
+                },
+                error: function(error) {
+                    console.error('Error loading parent milestones:', error);
+                    $('#milestoneForms').html('<div class="alert alert-danger">Error loading milestones. Please try refreshing the page.</div>');
                 }
-                milestoneGroups[milestone.age_at_occurrence].push(milestone);
             });
-            
-            console.log('Milestone groups:', milestoneGroups);
-            
-            // Create parent milestones for each age group
-            Object.entries(milestoneGroups).forEach(([age, groupMilestones]) => {
-                // Create a parent milestone form
-                const parentForm = createMilestoneForm({
-                    id: `parent-${age}`,
-                    name: `Age ${age} Milestones`,
-                    age_at_occurrence: parseInt(age),
-                    milestone_type: 'Group',
-                    disbursement_type: 'Fixed Duration',
-                    amount: 0,
-                    payment: 0,
-                    occurrence: 'Yearly',
-                    duration: 1,
-                    rate_of_return: 0,
-                    order: groupMilestones[0].order
-                });
-                
-                // Add sub-milestones container
-                const subMilestonesContainer = $('<div class="sub-milestones-container"></div>');
-                parentForm.append(subMilestonesContainer);
-                
-                // Add sub-milestones
-                groupMilestones.forEach(milestone => {
-                    const subForm = createMilestoneForm(milestone);
-                    subForm.addClass('sub-milestone-form');
-                    subMilestonesContainer.append(subForm);
-                });
-                
-                // Append the parent form to the milestone forms container
-                $('#milestoneForms').append(parentForm);
-                console.log('Appended parent form for age', age);
-            });
-            
-            // Update the timeline with the loaded milestones
-            updateTimeline();
-            
-            // Update the NPV chart
-            window.npvChart.updateChart(milestones);
         },
         error: function(error) {
             console.error('Error loading milestones:', error);
