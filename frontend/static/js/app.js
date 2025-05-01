@@ -4,13 +4,28 @@ let milestones = [];
 
 // Initialize the application
 $(document).ready(function() {
+    console.log('Document ready, initializing application...');
     initializeEventListeners();
     loadProfile();
     setupSidebarToggle();
+    
+    // Ensure milestone details section exists
+    if ($('#milestoneDetails').length === 0) {
+        console.error('Milestone details section not found!');
+    } else {
+        console.log('Milestone details section found');
+    }
+    
+    if ($('#milestoneForms').length === 0) {
+        console.error('Milestone forms container not found!');
+    } else {
+        console.log('Milestone forms container found');
+    }
 });
 
 // Event Listeners
 function initializeEventListeners() {
+    console.log('Initializing event listeners...');
     // User profile form
     $('#userProfileForm').on('submit', handleProfileSubmit);
     $('#birthday').on('change', calculateAge);
@@ -24,10 +39,12 @@ function initializeEventListeners() {
 
 // User Profile Functions
 function loadProfile() {
+    console.log('Loading profile...');
     $.ajax({
         url: '/api/profile',
         method: 'GET',
         success: function(response) {
+            console.log('Profile loaded:', response);
             if (response.birthday) {
                 // Hide the profile form and show the profile info
                 $('#profileForm').hide();
@@ -52,13 +69,14 @@ function loadProfile() {
                 
                 loadMilestones();
             } else {
+                console.log('No birthday found, showing profile form');
                 // Show the profile form if no birthday is saved
                 $('#profileForm').show();
                 $('#profileInfo').hide();
             }
         },
         error: function(error) {
-            console.error('Error loading profile:', error);
+            console.log('Error loading profile:', error);
             // Show the profile form if there's an error
             $('#profileForm').show();
             $('#profileInfo').hide();
@@ -86,17 +104,36 @@ function handleProfileSubmit(e) {
     e.preventDefault();
     const birthday = $('#birthday').val();
     
-    // Save profile and create default milestones
+    console.log('Submitting profile with birthday:', birthday);
+    
+    // Save profile
     $.ajax({
         url: '/api/profile',
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({ birthday: birthday }),
         success: function(response) {
-            // After saving profile, create default milestones
-            createDefaultMilestones();
-            // Refresh the page to ensure proper ordering of milestone markers and labels
-            window.location.reload();
+            console.log('Profile saved successfully:', response);
+            
+            // Hide the profile form and show the profile info
+            $('#profileForm').hide();
+            $('#profileInfo').show();
+            
+            // Set the birthday and current age display
+            const birthday = new Date(response.birthday);
+            const formattedDate = birthday.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            $('#savedBirthday').text(formattedDate);
+            $('#savedCurrentAge').text(currentAge);
+            
+            // Update the timeline with the loaded birthday
+            window.timeline.updateTimeline();
+            
+            // Load milestones after profile is created
+            loadMilestones();
         },
         error: function(error) {
             console.error('Error saving profile:', error);
@@ -217,23 +254,67 @@ function createDefaultMilestones() {
 }
 
 function loadMilestones() {
+    console.log('Loading milestones...');
     $.ajax({
         url: '/api/milestones',
         method: 'GET',
         success: function(response) {
-            // Log the received milestones and their order
-            console.log('Received milestones:', response.map(m => ({ name: m.name, order: m.order })));
-            
-            // Use the order from the backend response
+            console.log('Milestones loaded:', response);
             milestones = response;
             
             // Clear existing milestone forms
             $('#milestoneForms').empty();
+            console.log('Cleared milestone forms container');
             
-            // Create forms for all milestones
+            if (milestones.length === 0) {
+                console.log('No milestones found');
+                // Add a message when there are no milestones
+                $('#milestoneForms').html('<div class="alert alert-info">No milestones yet. Click the + button in the timeline to add your first milestone.</div>');
+                return;
+            }
+            
+            // Group milestones by their age_at_occurrence to create parent milestones
+            const milestoneGroups = {};
             milestones.forEach(milestone => {
-                const form = createMilestoneForm(milestone);
-                $('#milestoneForms').append(form);
+                if (!milestoneGroups[milestone.age_at_occurrence]) {
+                    milestoneGroups[milestone.age_at_occurrence] = [];
+                }
+                milestoneGroups[milestone.age_at_occurrence].push(milestone);
+            });
+            
+            console.log('Milestone groups:', milestoneGroups);
+            
+            // Create parent milestones for each age group
+            Object.entries(milestoneGroups).forEach(([age, groupMilestones]) => {
+                // Create a parent milestone form
+                const parentForm = createMilestoneForm({
+                    id: `parent-${age}`,
+                    name: `Age ${age} Milestones`,
+                    age_at_occurrence: parseInt(age),
+                    milestone_type: 'Group',
+                    disbursement_type: 'Fixed Duration',
+                    amount: 0,
+                    payment: 0,
+                    occurrence: 'Yearly',
+                    duration: 1,
+                    rate_of_return: 0,
+                    order: groupMilestones[0].order
+                });
+                
+                // Add sub-milestones container
+                const subMilestonesContainer = $('<div class="sub-milestones-container"></div>');
+                parentForm.append(subMilestonesContainer);
+                
+                // Add sub-milestones
+                groupMilestones.forEach(milestone => {
+                    const subForm = createMilestoneForm(milestone);
+                    subForm.addClass('sub-milestone-form');
+                    subMilestonesContainer.append(subForm);
+                });
+                
+                // Append the parent form to the milestone forms container
+                $('#milestoneForms').append(parentForm);
+                console.log('Appended parent form for age', age);
             });
             
             // Update the timeline with the loaded milestones
@@ -244,7 +325,8 @@ function loadMilestones() {
         },
         error: function(error) {
             console.error('Error loading milestones:', error);
-            alert('Error loading milestones. Please try again.');
+            // Show error message when milestone loading fails
+            $('#milestoneForms').html('<div class="alert alert-danger">Error loading milestones. Please try refreshing the page.</div>');
         }
     });
 }
@@ -325,11 +407,15 @@ function updateTimeline() {
 }
 
 function createMilestoneForm(milestone) {
+    console.log('Creating milestone form for:', milestone);
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
+                    <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
+                        <i class="fas fa-plus"></i>
+                    </button>
                     <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
                         <i class="fas fa-save"></i>
                     </button>
@@ -395,10 +481,16 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
             </form>
+            <div class="sub-milestones-container"></div>
         </div>
     `);
     
-    $('#milestoneForms').append(form);
+    console.log('Created form HTML:', form.prop('outerHTML'));
+    
+    // Add event listener for adding sub-milestone
+    form.find('.add-sub-milestone').on('click', function() {
+        addSubMilestone(form);
+    });
     
     // Add drag and drop event listeners to the header
     const header = form.find('.milestone-header');
@@ -490,6 +582,8 @@ function createMilestoneForm(milestone) {
         handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
     });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+    
+    return form;
 }
 
 function addSubMilestone(parentForm) {
@@ -577,103 +671,6 @@ function addSubMilestone(parentForm) {
         error: function(error) {
             console.error('Error creating sub-milestone:', error);
             alert('Error creating sub-milestone. Please try again.');
-        }
-    });
-}
-
-function addSubMilestoneEventListeners(form) {
-    // Add hover handlers
-    form.hover(
-        function() { // mouseenter
-            const milestoneId = $(this).data('id');
-            highlightMilestone(milestoneId);
-        },
-        function() { // mouseleave
-            const milestoneId = $(this).data('id');
-            unhighlightMilestone(milestoneId);
-        }
-    );
-    
-    // Add click handler for the header to toggle the form
-    const header = form.find('.milestone-header');
-    header.on('click', function(e) {
-        // Only toggle if not dragging and not clicking buttons
-        if (e.type === 'click' && !form.hasClass('dragging') && !$(e.target).is('button')) {
-            form.toggleClass('expanded');
-            form.find('.toggle-icon').toggleClass('expanded');
-        }
-    });
-    
-    // Add event listener for milestone type changes
-    form.find('[name="milestone_type"]').on('change', function() {
-        updateAnnuityFieldsVisibility(form);
-    });
-    
-    // Add event listener for disbursement type changes
-    form.find('[name="disbursement_type"]').on('change', function() {
-        updateAnnuityFieldsVisibility(form);
-    });
-    
-    // Add event listeners for the new form
-    form.find('.save-milestone').on('click', function() {
-        handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
-    });
-    form.find('.delete-milestone').on('click', handleMilestoneDelete);
-    
-    // Add drag and drop event listeners
-    header.attr('draggable', 'true');
-    header.on('dragstart', function(e) {
-        e.originalEvent.dataTransfer.setData('text/plain', form.data('id'));
-        form.addClass('dragging');
-    });
-    
-    header.on('dragend', function() {
-        form.removeClass('dragging');
-    });
-    
-    form.on('dragover', function(e) {
-        e.preventDefault();
-        e.originalEvent.dataTransfer.dropEffect = 'move';
-    });
-    
-    form.on('drop', function(e) {
-        e.preventDefault();
-        const draggedId = e.originalEvent.dataTransfer.getData('text/plain');
-        const draggedForm = $(`.sub-milestone-form[data-id="${draggedId}"]`);
-        const dropForm = $(this);
-        
-        if (draggedId !== dropForm.data('id')) {
-            // Reorder the sub-milestones
-            const parentId = dropForm.closest('.milestone-form').data('id');
-            const subMilestones = milestones.filter(m => m.parent_milestone_id === parentId);
-            
-            const draggedIndex = subMilestones.findIndex(m => m.id === parseInt(draggedId));
-            const dropIndex = subMilestones.findIndex(m => m.id === dropForm.data('id'));
-            
-            const [draggedMilestone] = subMilestones.splice(draggedIndex, 1);
-            subMilestones.splice(dropIndex, 0, draggedMilestone);
-            
-            // Update order for all sub-milestones
-            const updatePromises = subMilestones.map((milestone, index) => {
-                milestone.order = index;
-                // Send update to server
-                return $.ajax({
-                    url: `/api/milestones/${milestone.id}`,
-                    method: 'PUT',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ order: index })
-                });
-            });
-            
-            // Wait for all updates to complete, then refresh the page
-            Promise.all(updatePromises)
-                .then(() => {
-                    window.location.reload();
-                })
-                .catch(error => {
-                    console.error('Error updating sub-milestone order:', error);
-                    alert('Error updating sub-milestone order. Please try again.');
-                });
         }
     });
 }

@@ -802,4 +802,19 @@ body {
 
 .sub-milestone-form .milestone-form-content {
     padding: 10px;
+}
+
+/* Plus Button Styles */
+.add-sub-milestone {
+    color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+.add-sub-milestone:hover {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.add-sub-milestone i {
+    font-size: 0.8rem;
 } 
