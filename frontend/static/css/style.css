@@ -424,6 +424,7 @@ body {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
     z-index: 103;
+    border: none;
 }
 
 .milestone-form.dragging {
@@ -443,7 +444,7 @@ body {
     align-items: center;
     padding: 4px 10px;
     background-color: #f8f9fa;
-    border-bottom: none;
+    border: none;
     cursor: pointer;
     min-height: 16px;
 }
@@ -772,9 +773,10 @@ body {
 .sub-milestones-container {
     margin-top: 10px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: #fff;
     border-radius: 4px;
-    border: 1px solid #dee2e6;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .parent-name-field {
@@ -794,12 +796,11 @@ body {
 }
 
 .sub-milestone-form {
-    margin-bottom: 15px;
-    padding: 15px;
     background-color: #fff;
     border-radius: 4px;
-    border: 1px solid #dee2e6;
-    position: relative;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: none;
 }
 
 .sub-milestone-form:last-child {
@@ -809,8 +810,8 @@ body {
 .sub-milestone-form .milestone-header {
     padding: 4px 10px;
     background-color: #f8f9fa;
-    border-bottom: none;
-    min-height: 28px;
+    border: none;
+    min-height: 16px;
 }
 
 .sub-milestone-form .milestone-header h3 {
