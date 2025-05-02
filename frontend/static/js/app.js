@@ -312,7 +312,7 @@ function loadMilestones() {
                         // Add parent milestone name field
                         const parentNameField = $(`
                             <div class="parent-milestone-name">
-                                <label>Parent Milestone Name</label>
+                                <label>Grouping Name</label>
                                 <input type="text" class="form-control" value="${parentMilestone.name}" 
                                     data-parent-id="${parentMilestone.id}">
                             </div>
