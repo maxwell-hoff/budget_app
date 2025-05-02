@@ -449,7 +449,7 @@ body {
 
 .milestone-header h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
 }
 
 .milestone-header-buttons {
@@ -817,4 +817,27 @@ body {
 
 .add-sub-milestone i {
     font-size: 0.8rem;
+}
+
+.parent-milestone-name {
+    margin-bottom: 15px;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.parent-milestone-name label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.parent-milestone-name input {
+    font-size: 0.9rem;
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
 } 
