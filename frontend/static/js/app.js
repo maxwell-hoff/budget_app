@@ -838,26 +838,10 @@ function handleMilestoneDelete(e) {
                 url: `/api/milestones/${milestoneId}`,
                 method: 'DELETE',
                 success: function() {
-                    // Update the parent milestone to be a regular milestone
-                    $.ajax({
-                        url: `/api/milestones/${parentId}`,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: JSON.stringify({
-                            parent_milestone_id: null,
-                            name: parentMilestone.name
-                        }),
-                        success: function() {
-                            // Remove the milestone from the local array
-                            milestones = milestones.filter(m => m.id !== milestoneId);
-                            // Refresh the page to show new structure
-                            window.location.reload();
-                        },
-                        error: function(error) {
-                            console.error('Error updating parent milestone:', error);
-                            alert('Error updating parent milestone. Please try again.');
-                        }
-                    });
+                    // Remove the milestone from the local array
+                    milestones = milestones.filter(m => m.id !== milestoneId);
+                    // Refresh the page to show new structure
+                    window.location.reload();
                 },
                 error: function(error) {
                     console.error('Error deleting milestone:', error);

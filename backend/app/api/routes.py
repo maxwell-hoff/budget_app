@@ -98,8 +98,9 @@ def delete_parent_milestone(parent_id):
     """Delete a parent milestone and its sub-milestones."""
     parent = ParentMilestone.query.get_or_404(parent_id)
     
-    # Delete all sub-milestones
+    # Delete all milestone values by age for each sub-milestone
     for sub_milestone in parent.sub_milestones:
+        MilestoneValueByAge.query.filter_by(milestone_id=sub_milestone.id).delete()
         db.session.delete(sub_milestone)
     
     # Delete the parent milestone
@@ -230,12 +231,18 @@ def delete_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
     parent_id = milestone.parent_milestone_id
     
+    # Delete all milestone values by age for this milestone
+    MilestoneValueByAge.query.filter_by(milestone_id=milestone_id).delete()
+    
+    # If this is a sub-milestone, check if it's the last one
+    if parent_id:
+        parent = ParentMilestone.query.get(parent_id)
+        if parent and len(parent.sub_milestones) == 1:
+            # This is the last sub-milestone, delete the parent milestone
+            db.session.delete(parent)
+    
     db.session.delete(milestone)
     db.session.commit()
-    
-    # Update parent milestone if this was a sub-milestone
-    if parent_id:
-        update_parent_milestone(parent_id)
     
     # Recalculate net worth
     recalculate_net_worth()
