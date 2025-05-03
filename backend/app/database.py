@@ -23,37 +23,37 @@ def create_default_milestones():
         current_assets_parent = ParentMilestone(
             name='Current Liquid Assets',
             min_age=30,  # Default age
-            max_age=30
+            max_age=100  # No duration for current assets
         )
         current_debt_parent = ParentMilestone(
             name='Current Debt',
             min_age=30,  # Default age
-            max_age=30
+            max_age=100  # No duration for current debt
         )
         current_income_parent = ParentMilestone(
             name='Current Salary',
             min_age=30,  # Default age
-            max_age=30
+            max_age=70  # No duration for current income
         )
         current_expense_parent = ParentMilestone(
             name='Current Average Expenses',
             min_age=30,  # Default age
-            max_age=30
+            max_age=70  # No duration for current expenses
         )
         retirement_parent = ParentMilestone(
             name='Retirement',
             min_age=70,
-            max_age=70
+            max_age=100  # Retirement typically lasts until end of life
         )
         long_term_care_parent = ParentMilestone(
             name='Long Term Care',
             min_age=96,
-            max_age=96
+            max_age=100  # Long term care typically lasts until end of life
         )
         inheritance_parent = ParentMilestone(
             name='Inheritance',
             min_age=100,
-            max_age=100
+            max_age=100  # Inheritance is a one-time event
         )
         
         # Add all parent milestones
