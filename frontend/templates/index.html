@@ -60,6 +60,17 @@
 
             <!-- Main Content -->
             <div class="col-md-9 main-content">
+                <!-- Scenario Bar -->
+                <div class="scenario-bar">
+                    <div class="scenario-controls">
+                        <select id="scenarioSelect" class="form-control">
+                            <option value="">Select a scenario...</option>
+                        </select>
+                        <button id="saveScenario" class="btn btn-primary">Save</button>
+                        <button id="newScenario" class="btn btn-success">New</button>
+                    </div>
+                </div>
+                
                 <!-- Show Sidebar Button -->
                 <div class="show-sidebar-button">
                     <i class="fas fa-bars toggle-icon"></i>
@@ -110,6 +121,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/timeline.js"></script>
     <script src="/static/js/net_worth_chart.js"></script>
+    <script src="/static/js/scenarios.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html> 

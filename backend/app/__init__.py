@@ -4,7 +4,9 @@ from .database import init_db, create_default_milestones
 from .models.milestone import Milestone
 from .models.user import User
 from .models.net_worth import MilestoneValueByAge, NetWorthByAge
+from .models.scenario import Scenario
 from .api.routes import api_bp
+from .routes.scenarios import scenarios_bp
 
 def create_app():
     """Create and configure the Flask application."""
@@ -22,6 +24,7 @@ def create_app():
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(scenarios_bp)
     
     @app.route('/')
     def index():
