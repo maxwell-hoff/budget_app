@@ -20,25 +20,10 @@ def create_default_milestones():
     
     if not Milestone.query.first():
         # Create parent milestones for each default milestone
-        current_assets_parent = ParentMilestone(
-            name='Current Liquid Assets',
+        current_lifestyle_parent = ParentMilestone(
+            name='Current Lifestyle',
             min_age=30,  # Default age
-            max_age=100  # No duration for current assets
-        )
-        current_debt_parent = ParentMilestone(
-            name='Current Debt',
-            min_age=30,  # Default age
-            max_age=100  # No duration for current debt
-        )
-        current_income_parent = ParentMilestone(
-            name='Current Salary',
-            min_age=30,  # Default age
-            max_age=70  # No duration for current income
-        )
-        current_expense_parent = ParentMilestone(
-            name='Current Average Expenses',
-            min_age=30,  # Default age
-            max_age=70  # No duration for current expenses
+            max_age=70  # End at retirement age
         )
         retirement_parent = ParentMilestone(
             name='Retirement',
@@ -58,10 +43,7 @@ def create_default_milestones():
         
         # Add all parent milestones
         parents = [
-            current_assets_parent,
-            current_debt_parent,
-            current_income_parent,
-            current_expense_parent,
+            current_lifestyle_parent,
             retirement_parent,
             long_term_care_parent,
             inheritance_parent
@@ -83,8 +65,8 @@ def create_default_milestones():
                 occurrence='Yearly',
                 duration=None,
                 rate_of_return=0.07,
-                order=2,
-                parent_milestone_id=current_assets_parent.id
+                order=0,
+                parent_milestone_id=current_lifestyle_parent.id
             ),
             Milestone(
                 name='Current Debt',
@@ -96,8 +78,8 @@ def create_default_milestones():
                 occurrence='Monthly',
                 duration=120,
                 rate_of_return=0.07,
-                order=3,
-                parent_milestone_id=current_debt_parent.id
+                order=1,
+                parent_milestone_id=current_lifestyle_parent.id
             ),
             Milestone(
                 name='Current Salary (incl. Bonus, Side Hustle, etc.)',
@@ -108,8 +90,8 @@ def create_default_milestones():
                 occurrence='Yearly',
                 duration=70 - default_age,
                 rate_of_return=0.02,
-                order=0,
-                parent_milestone_id=current_income_parent.id
+                order=2,
+                parent_milestone_id=current_lifestyle_parent.id
             ),
             Milestone(
                 name='Current Average Expenses',
@@ -120,8 +102,8 @@ def create_default_milestones():
                 occurrence='Monthly',
                 duration=70 - default_age,
                 rate_of_return=0.03,
-                order=1,
-                parent_milestone_id=current_expense_parent.id
+                order=3,
+                parent_milestone_id=current_lifestyle_parent.id
             ),
             Milestone(
                 name='Retirement',
