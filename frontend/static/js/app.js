@@ -363,9 +363,6 @@ function loadMilestones() {
                     
                     // Update the timeline with the loaded milestones
                     updateTimeline();
-                    
-                    // Update the NPV chart
-                    window.npvChart.updateChart(milestones);
                 },
                 error: function(error) {
                     console.error('Error loading parent milestones:', error);
@@ -804,8 +801,6 @@ function handleMilestoneUpdate(e, form) {
             success: function(response) {
                 Object.assign(milestone, response);
                 updateTimeline();
-                // Update the NPV chart
-                window.npvChart.updateChart(milestones);
                 // Refresh the page to update milestone headers
                 window.location.reload();
             },
@@ -986,13 +981,6 @@ function setupSidebarToggle() {
 }
 
 function updateCharts() {
-    // Update NPV chart
-    fetch('/api/milestones')
-        .then(response => response.json())
-        .then(milestones => {
-            window.npvChart.updateChart(milestones);
-        });
-    
     // Update net worth chart
     fetch('/api/net-worth')
         .then(response => response.json())
