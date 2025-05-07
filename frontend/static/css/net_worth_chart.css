@@ -2,8 +2,8 @@
     position: relative;
     width: 100%;
     height: 300px;
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
     border-radius: 4px;
     margin-top: 40px;
     overflow: visible;
@@ -60,6 +60,7 @@
     cursor: pointer;
     padding: 5px;
     z-index: 1;
+    color: #e0e0e0;
 }
 
 .net-worth-toggle-button .toggle-icon {
@@ -81,7 +82,7 @@
 }
 
 .net-worth-bar.negative {
-    background-color: #f44336;
+    background-color: #ff5252;
 }
 
 .x-axis-line {
@@ -90,7 +91,7 @@
     left: 0;
     width: 100%;
     height: 1px;
-    background-color: #000;
+    background-color: #e0e0e0;
 }
 
 .y-axis-line {
@@ -99,7 +100,7 @@
     left: 0;
     width: 1px;
     height: 100%;
-    background-color: #000;
+    background-color: #e0e0e0;
 }
 
 .x-axis-marker {
@@ -107,7 +108,7 @@
     bottom: 0;
     width: 1px;
     height: 5px;
-    background-color: #000;
+    background-color: #e0e0e0;
 }
 
 .y-axis-marker {
@@ -115,7 +116,7 @@
     left: 0;
     width: 5px;
     height: 1px;
-    background-color: #000;
+    background-color: #e0e0e0;
 }
 
 .x-axis-label {
@@ -123,7 +124,7 @@
     bottom: -20px;
     transform: translateX(-50%);
     font-size: 12px;
-    color: #666;
+    color: #a0a0a0;
 }
 
 .y-axis-label {
@@ -131,15 +132,15 @@
     left: -50px;
     transform: translateY(-50%);
     font-size: 12px;
-    color: #666;
+    color: #a0a0a0;
 }
 
 /* Add container styles to match other charts */
 .chart-container {
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
@@ -163,7 +164,7 @@
 .net-worth-total-label {
     font-size: 16px;
     font-weight: 500;
-    color: #333;
+    color: #e0e0e0;
 }
 
 .net-worth-total-value {
@@ -175,11 +176,11 @@
 }
 
 .net-worth-total-value.positive {
-    color: #28a745;
-    background-color: rgba(40, 167, 69, 0.1);
+    color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
 }
 
 .net-worth-total-value.negative {
-    color: #dc3545;
-    background-color: rgba(220, 53, 69, 0.1);
+    color: #ff5252;
+    background-color: rgba(255, 82, 82, 0.1);
 } 

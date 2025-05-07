@@ -363,9 +363,6 @@ function loadMilestones() {
                     
                     // Update the timeline with the loaded milestones
                     updateTimeline();
-                    
-                    // Update the NPV chart
-                    window.npvChart.updateChart(milestones);
                 },
                 error: function(error) {
                     console.error('Error loading parent milestones:', error);
@@ -463,9 +460,11 @@ function createMilestoneForm(milestone) {
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
-                    <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                    ${milestone.milestone_type === 'Group' ? `
+                        <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    ` : ''}
                     <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
                         <i class="fas fa-save"></i>
                     </button>
@@ -804,8 +803,6 @@ function handleMilestoneUpdate(e, form) {
             success: function(response) {
                 Object.assign(milestone, response);
                 updateTimeline();
-                // Update the NPV chart
-                window.npvChart.updateChart(milestones);
                 // Refresh the page to update milestone headers
                 window.location.reload();
             },
@@ -986,13 +983,6 @@ function setupSidebarToggle() {
 }
 
 function updateCharts() {
-    // Update NPV chart
-    fetch('/api/milestones')
-        .then(response => response.json())
-        .then(milestones => {
-            window.npvChart.updateChart(milestones);
-        });
-    
     // Update net worth chart
     fetch('/api/net-worth')
         .then(response => response.json())

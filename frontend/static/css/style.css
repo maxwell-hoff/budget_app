@@ -1,8 +1,8 @@
 /* General Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
-    color: #333;
+    background-color: #121212;
+    color: #e0e0e0;
 }
 
 .container-fluid {
@@ -13,18 +13,18 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    height: calc(100vh - 40px); /* Account for container padding */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    height: calc(100vh - 40px);
     position: sticky;
     top: 20px;
     transition: all 0.3s ease;
     width: 25%;
     float: left;
     margin-right: 20px;
-    overflow-y: auto; /* Enable scrolling within sidebar if content overflows */
+    overflow-y: auto;
 }
 
 .sidebar.hidden {
@@ -39,24 +39,24 @@ body {
     right: 20px;
     cursor: pointer;
     z-index: 1000;
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 10px 0;
     margin-bottom: 10px;
 }
 
 .sidebar-header .toggle-icon {
     font-size: 1.2em;
-    color: #666;
+    color: #e0e0e0;
     transition: transform 0.3s ease;
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 5px;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar-header .toggle-icon:hover {
-    color: #333;
-    background-color: #f8f9fa;
+    color: #ffffff;
+    background-color: #2d2d2d;
 }
 
 /* Show button styles */
@@ -67,10 +67,10 @@ body {
     left: 20px;
     cursor: pointer;
     z-index: 2000;
-    background-color: #fff;
+    background-color: #1e1e1e;
     width: 40px;
     height: calc(100vh - 40px);
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -80,16 +80,15 @@ body {
 }
 
 .show-sidebar-button .toggle-icon {
-    font-size: 1.2em;
-    color: #666;
+    color: #e0e0e0;
 }
 
 .show-sidebar-button:hover {
-    background-color: #f8f9fa;
+    background-color: #2d2d2d;
 }
 
 .show-sidebar-button:hover .toggle-icon {
-    color: #333;
+    color: #ffffff;
 }
 
 /* Hide the show button when sidebar is visible */
@@ -141,10 +140,10 @@ body {
 
 /* Timeline Styles */
 .timeline-container {
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     margin-bottom: 20px;
     width: 100%;
     overflow: visible;
@@ -164,9 +163,9 @@ body {
     height: auto;
     min-height: 75px;
     position: relative;
-    background-color: #f8f9fa;
+    background-color: #2d2d2d;
     border-radius: 4px;
-    border: 1px solid #ddd;
+    border: 1px solid #404040;
     margin: 20px 0;
     width: calc(100% - 170px);
     margin-left: 170px;
@@ -179,7 +178,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #666;
+    color: #a0a0a0;
     font-size: 1.2em;
     text-align: center;
     z-index: 1;
@@ -198,7 +197,7 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background-color: #333;
+    background-color: #e0e0e0;
     width: 100%;
     z-index: 1;
 }
@@ -237,7 +236,7 @@ body {
     top: 0;
     width: 2px;
     height: 12px;
-    background-color: #666;
+    background-color: #a0a0a0;
     z-index: 1;
 }
 
@@ -246,7 +245,7 @@ body {
     top: 0;
     transform: translate(-50%, 0);
     font-size: 0.8em;
-    color: #666;
+    color: #a0a0a0;
     z-index: 2;
 }
 
@@ -254,7 +253,7 @@ body {
     position: absolute;
     width: 6px;
     height: 6px;
-    background-color: #007bff;
+    background-color: #4a9eff;
     border-radius: 50%;
     transform: translate(-50%, -50%);
     cursor: pointer;
@@ -264,37 +263,37 @@ body {
 .milestone-marker.end-marker {
     width: 6px;
     height: 6px;
-    background-color: #007bff;
+    background-color: #4a9eff;
 }
 
 .milestone-line {
     position: absolute;
     height: 2px;
-    background-color: #007bff;
+    background-color: #4a9eff;
     opacity: 0.5;
     z-index: 0;
     transform: translateY(-50%);
 }
 
 .milestone-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.5);
 }
 
 .milestone-marker.end-marker.highlighted {
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.5);
 }
 
 .milestone-line.highlighted {
-    background-color: #007bff;
+    background-color: #4a9eff;
     opacity: 0.8;
 }
 
 .milestone-label {
     position: absolute;
     font-size: 0.9em;
-    color: #333;
+    color: #e0e0e0;
     white-space: nowrap;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(30, 30, 30, 0.9);
     padding: 2px 5px;
     border-radius: 3px;
     text-align: left;
@@ -306,44 +305,56 @@ body {
 }
 
 .milestone-label.highlighted {
-    border: 2px solid #007bff;
+    border: 2px solid #4a9eff;
     padding: 0 3px;
-    background-color: rgba(0, 123, 255, 0.1);
+    background-color: rgba(74, 158, 255, 0.1);
 }
 
 .current-marker,
 .inheritance-marker {
-    background-color: #007bff;
+    background-color: #4a9eff;
 }
 
 /* Bank Statement Styles */
 #balanceSheet {
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .balance-sheet-item {
     margin-bottom: 10px;
     padding: 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #404040;
 }
 
 /* Form Styles */
+.form-control {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
 .form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    background-color: #2d2d2d;
+    border-color: #4a9eff;
+    box-shadow: 0 0 0 0.2rem rgba(74, 158, 255, 0.25);
+    color: #e0e0e0;
+}
+
+.form-control::placeholder {
+    color: #a0a0a0;
 }
 
 .btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: #4a9eff;
+    border-color: #4a9eff;
 }
 
 .btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
+    background-color: #3d8eff;
+    border-color: #3d8eff;
 }
 
 /* Tooltip Styles */
@@ -353,15 +364,15 @@ body {
 }
 
 .info-icon {
-    color: #6c757d;
+    color: #a0a0a0;
     cursor: help;
     margin-left: 5px;
 }
 
 .tooltip-text {
     visibility: hidden;
-    background-color: #333;
-    color: #fff;
+    background-color: #2d2d2d;
+    color: #e0e0e0;
     text-align: center;
     border-radius: 6px;
     padding: 5px 10px;
@@ -372,6 +383,7 @@ body {
     transform: translateX(-50%);
     white-space: nowrap;
     font-size: 0.9em;
+    border: 1px solid #404040;
 }
 
 .tooltip-container:hover .tooltip-text {
@@ -392,32 +404,32 @@ body {
 }
 
 .bank-statements {
-    background-color: #fff;
+    background-color: #1e1e1e;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     margin-top: 20px;
 }
 
 .balance-amount {
     font-size: 24px;
     font-weight: bold;
-    color: #2ecc71;
+    color: #4CAF50;
     margin: 10px 0;
 }
 
 #latest-balance {
-    background-color: #f8f9fa;
+    background-color: #2d2d2d;
     padding: 15px;
     border-radius: 6px;
-    border-left: 4px solid #2ecc71;
+    border-left: 4px solid #4CAF50;
 }
 
 /* Milestone Form Styles */
 .milestone-form {
-    background-color: #fff;
+    background-color: #1e1e1e;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     margin-bottom: 20px;
     overflow: hidden;
     cursor: move;
@@ -443,7 +455,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 4px 10px;
-    background-color: #f8f9fa;
+    background-color: #2d2d2d;
     border: none;
     cursor: pointer;
     min-height: 16px;
@@ -453,6 +465,7 @@ body {
     margin: 0 !important;
     font-size: 0.85rem !important;
     font-weight: 600 !important;
+    color: #e0e0e0;
 }
 
 /* Parent milestone header */
@@ -499,8 +512,8 @@ body {
 }
 
 .milestone-form.highlighted {
-    border: 2px solid #007bff;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    border: 2px solid #4a9eff;
+    box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
 }
 
 /* Sidebar Toggle */
@@ -532,16 +545,16 @@ body {
 #milestoneDetails {
     margin-top: 40px;
     padding: 20px;
-    background-color: #fff;
+    background-color: #1e1e1e;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     position: relative;
     z-index: 101;
 }
 
 #milestoneDetails h3 {
     margin-bottom: 20px;
-    color: #333;
+    color: #e0e0e0;
     font-size: 1.5rem;
     font-weight: 600;
 }
@@ -558,305 +571,138 @@ body {
     margin-bottom: 20px;
     position: relative;
     z-index: 103;
-    background-color: #fff;
+    background-color: #1e1e1e;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     padding: 20px;
 }
 
-/* NPV Chart Styles */
-.chart-container {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+/* Net Worth Chart Styles */
+.net-worth-chart-container {
     width: 100%;
-    overflow: visible;
-    position: relative;
-    z-index: 100;
-}
-
-#npv-chart {
-    height: auto;
-    min-height: 100px;
-    position: relative;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    border: 1px solid #ddd;
+    height: 400px;
     margin: 20px 0;
-    width: calc(100% - 170px);
-    margin-left: 170px;
-    overflow: visible;
-    padding-bottom: 20px;
+    position: relative;
 }
 
-#npv-chart-content {
+.net-worth-chart {
+    width: 100%;
     height: 100%;
     position: relative;
-    width: 100%;
 }
 
-#npv-chart-y-axis {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    height: 100%;
-    width: 1px;
-    background-color: rgba(0, 0, 0, 0.1);
-    transform: translateX(-50%);
-    z-index: 1;
-}
-
-#npv-chart-x-axis {
+.net-worth-chart .bar {
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
-    height: 30px; /* Increased height to accommodate markers and labels */
-    z-index: 2;
+    width: 30px;
+    background-color: #4CAF50;
+    transition: height 0.3s ease;
 }
 
-#npv-chart-bars {
+.net-worth-chart .bar.negative {
+    background-color: #f44336;
+}
+
+.net-worth-chart .bar-label {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 30px; /* Increased bottom margin to accommodate x-axis */
-    z-index: 1;
-}
-
-.npv-bar {
-    position: absolute;
-    height: 6px;
-    transition: width 0.3s ease, opacity 0.3s ease;
-}
-
-.npv-bar.positive {
-    background-color: #28a745;
-}
-
-.npv-bar.negative {
-    background-color: #dc3545;
-}
-
-.npv-bar[data-id].highlighted {
-    opacity: 0.8;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-}
-
-.npv-label {
-    position: absolute;
-    font-size: 0.9em;
-    color: #333;
-    white-space: nowrap;
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 2px 5px;
-    border-radius: 3px;
-    text-align: left;
-    width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    left: -151px;
-    top: -13px;
-    transition: all 0.3s ease;
-}
-
-.npv-label[data-id].highlighted {
-    background-color: rgba(0, 123, 255, 0.1);
-    border: 2px solid #007bff;
-    padding: 0 3px;
-}
-
-.npv-label.bold {
-    font-weight: bold;
-}
-
-.x-axis-line {
-    position: absolute;
-    bottom: -20px; 
-    left: 0;
-    right: 0;
-    height: 3px;
-    background-color: #666;
-    z-index: 1;
-}
-
-.x-axis-marker {
-    position: absolute;
-    bottom: -24px; 
-    width: 2px;
-    height: 10px;
-    background-color: #666;
-}
-
-.x-axis-label {
-    position: absolute;
-    bottom: -50px; 
+    bottom: -25px;
+    left: 50%;
     transform: translateX(-50%);
-    font-size: 0.8em;
+    font-size: 12px;
     color: #666;
 }
 
-.npv-total-container {
+.net-worth-chart .axis {
     position: absolute;
-    top: -40px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #ddd;
 }
 
-.npv-total-label {
-    font-size: 16px;
-    font-weight: 500;
-    color: #333;
-}
-
-.npv-total-value {
-    font-size: 20px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.npv-total-value.positive {
-    color: #28a745;
-    background-color: rgba(40, 167, 69, 0.1);
-}
-
-.npv-total-value.negative {
-    color: #dc3545;
-    background-color: rgba(220, 53, 69, 0.1);
-}
-
-.npv-toggle-button {
-    position: absolute;
-    top: -40px;
-    right: 20px;
-    padding: 4px 8px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #666;
-    transition: all 0.3s ease;
-}
-
-.npv-toggle-button:hover {
-    background-color: #e9ecef;
-}
-
-.npv-toggle-button .toggle-icon {
-    transition: transform 0.3s ease;
-}
-
-.npv-toggle-button .toggle-icon.expanded {
-    transform: rotate(-180deg);
-}
-
-#npv-chart.collapsed {
-    background-color: transparent;
-    border: none;
-    height: auto !important;
-    min-height: 0;
-}
-
-#npv-chart.collapsed #npv-chart-content {
-    display: none !important;
-}
-
-/* Sub-Milestone Styles */
-.sub-milestones-container {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #fff;
-    border-radius: 4px;
-    border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.parent-name-field {
-    margin-bottom: 20px;
-    padding: 10px;
-    background-color: #fff;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-}
-
-.milestone-form.has-sub-milestones .milestone-header {
-    background-color: #e9ecef;
-}
-
-.milestone-form.has-sub-milestones .milestone-header h3 {
-    font-weight: 600;
-}
-
-.sub-milestone-form {
-    background-color: #fff;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: none;
-}
-
-.sub-milestone-form:last-child {
-    margin-bottom: 0;
-}
-
-.sub-milestone-form .milestone-header {
-    padding: 4px 10px;
-    background-color: #f8f9fa;
-    border: none;
-    min-height: 16px;
-}
-
-.sub-milestone-form .milestone-header h3 {
-    font-size: 1rem;
-    margin: 0;
-}
-
-.sub-milestone-form .milestone-form-content {
-    padding: 10px;
-}
-
-/* Plus Button Styles */
-.add-sub-milestone {
-    color: #28a745 !important;
-    border-color: #28a745 !important;
-}
-
-.add-sub-milestone:hover {
-    background-color: #28a745 !important;
-    color: white !important;
-}
-
-.add-sub-milestone i {
-    font-size: 0.8rem;
-}
-
-.parent-milestone-name {
-    margin-bottom: 15px;
-    padding: 8px;
-    background-color: #fff;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-}
-
-.parent-milestone-name label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 5px;
-    display: block;
-}
-
-.parent-milestone-name input {
-    font-size: 0.9rem;
+.net-worth-chart .axis.x-axis {
+    bottom: 0;
+    left: 0;
     width: 100%;
-    padding: 4px 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    height: 1px;
+}
+
+.net-worth-chart .axis.y-axis {
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+}
+
+.net-worth-chart .tick {
+    position: absolute;
+    background-color: #ddd;
+}
+
+.net-worth-chart .tick.x-tick {
+    bottom: 0;
+    width: 1px;
+    height: 5px;
+}
+
+.net-worth-chart .tick.y-tick {
+    left: 0;
+    width: 5px;
+    height: 1px;
+}
+
+.net-worth-chart .tick-label {
+    position: absolute;
+    font-size: 12px;
+    color: #666;
+}
+
+.net-worth-chart .tick-label.x-label {
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.net-worth-chart .tick-label.y-label {
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Alert Styles */
+.alert {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+.alert-info {
+    background-color: rgba(74, 158, 255, 0.1);
+    border-color: #4a9eff;
+    color: #4a9eff;
+}
+
+.alert-danger {
+    background-color: rgba(255, 82, 82, 0.1);
+    border-color: #ff5252;
+    color: #ff5252;
+}
+
+/* Select Styles */
+select.form-control {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+select.form-control option {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+/* Label Styles */
+label {
+    color: #e0e0e0;
+}
+
+/* Parent Milestone Name Field */
+.parent-milestone-name {
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
 } 
