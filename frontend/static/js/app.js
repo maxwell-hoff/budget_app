@@ -460,9 +460,11 @@ function createMilestoneForm(milestone) {
             <div class="milestone-header" draggable="true">
                 <h3>${milestone.name}</h3>
                 <div class="milestone-header-buttons">
-                    <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                    ${milestone.milestone_type === 'Group' ? `
+                        <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    ` : ''}
                     <button type="button" class="btn btn-outline-primary btn-sm save-milestone">
                         <i class="fas fa-save"></i>
                     </button>
