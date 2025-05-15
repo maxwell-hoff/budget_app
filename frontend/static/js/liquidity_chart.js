@@ -1,156 +1,92 @@
 class LiquidityChart {
     constructor() {
-        console.log('Initializing LiquidityChart');
         this.chart = document.getElementById('liquidity-chart');
         this.chartContent = document.getElementById('liquidity-chart-content');
         this.chartBars = document.getElementById('liquidity-chart-bars');
         this.chartXAxis = document.getElementById('liquidity-chart-x-axis');
         this.chartYAxis = document.getElementById('liquidity-chart-y-axis');
+        this.totalValue = document.querySelector('.liquidity-total-value');
+        this.toggleButton = document.querySelector('.liquidity-toggle-button');
+        this.toggleIcon = this.toggleButton.querySelector('.toggle-icon');
+        this.isExpanded = false;
         
-        console.log('Chart elements:', {
-            chart: this.chart,
-            content: this.chartContent,
-            bars: this.chartBars,
-            xAxis: this.chartXAxis,
-            yAxis: this.chartYAxis
-        });
-        
-        this.verticalSpacing = 30;
-        this.padding = 20;
-        this.chartHeight = 150; // Half of the original 300px height
-        
-        // Create toggle button
-        this.toggleButton = document.createElement('button');
-        this.toggleButton.className = 'liquidity-toggle-button';
-        this.toggleButton.innerHTML = '<i class="fas fa-chevron-up toggle-icon"></i>';
-        this.toggleButton.addEventListener('click', () => this.toggleChart());
-        this.chart.appendChild(this.toggleButton);
-        
-        // Initialize chart state
-        this.isExpanded = true;
+        // Add click event listener to toggle button
+        this.toggleButton.addEventListener('click', () => this.toggleExpand());
     }
-
-    toggleChart() {
+    
+    toggleExpand() {
         this.isExpanded = !this.isExpanded;
-        
-        if (this.isExpanded) {
-            // If expanding, refresh the page
-            window.location.reload();
-        } else {
-            // If collapsing, just update the UI
-            this.chart.classList.add('collapsed');
-            this.toggleButton.querySelector('.toggle-icon').classList.add('expanded');
-            this.chart.style.height = 'auto';
-        }
+        this.chart.classList.toggle('collapsed');
+        this.toggleIcon.classList.toggle('expanded');
+        this.updateChart(this.currentData);
     }
-
-    updateChart(liquidityData) {
-        console.log('Updating liquidity chart with data:', liquidityData);
+    
+    updateChart(data) {
+        if (!data || data.length === 0) {
+            this.chartContent.style.display = 'none';
+            return;
+        }
         
-        // Clear existing content
+        this.currentData = data;
+        this.chartContent.style.display = 'block';
+        
+        // Clear existing chart content
         this.chartBars.innerHTML = '';
         this.chartXAxis.innerHTML = '';
         this.chartYAxis.innerHTML = '';
         
-        if (!liquidityData || liquidityData.length === 0) {
-            console.log('No liquidity data, hiding chart content');
-            this.chartContent.style.display = 'none';
-            return;
-        }
-
-        console.log('Showing chart content');
-        this.chartContent.style.display = this.isExpanded ? 'block' : 'none';
-
         // Find max and min values for scaling
-        const maxValue = Math.max(...liquidityData.map(d => d.net_worth));
-        const minValue = Math.min(...liquidityData.map(d => d.net_worth));
-        const maxAbsValue = Math.max(Math.abs(maxValue), Math.abs(minValue));
-        
-        console.log('Chart values:', { maxValue, minValue, maxAbsValue });
+        const maxValue = Math.max(...data.map(d => d.liquid_assets));
+        const minValue = Math.min(...data.map(d => d.liquid_assets));
         
         // Create y-axis
-        this.createYAxis(maxAbsValue);
-        
-        // Create x-axis
-        this.createXAxis(liquidityData);
-        
-        // Create line
-        this.createLine(liquidityData, maxAbsValue);
-        
-        // Adjust chart height based on expanded state
-        if (this.isExpanded) {
-            this.chart.style.height = `${this.chartHeight}px`;
-        } else {
-            this.chart.style.height = 'auto';
-        }
-    }
-
-    createYAxis(maxAbsValue) {
-        // Calculate interval for y-axis markers
-        let interval = 100000;
-        let numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1; // +1 for zero
-        
-        // Keep doubling the interval until we have 10 or fewer markers
-        while (numMarkers > 10) {
-            interval *= 2;
-            numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1;
-        }
-
-        // Round maxAbsValue up to nearest multiple of interval
-        const roundedMax = Math.ceil(maxAbsValue / interval) * interval;
-        
-        // Create y-axis line
-        const line = document.createElement('div');
-        line.className = 'y-axis-line';
-        this.chartYAxis.appendChild(line);
-        
-        // Create markers and labels
-        for (let value = -roundedMax; value <= roundedMax; value += interval) {
-            const position = this.chartHeight/2 - (value / roundedMax) * (this.chartHeight/2); // Half of chart height
-            
-            // Create marker
+        const yAxisValues = this.calculateYAxisValues(minValue, maxValue);
+        yAxisValues.forEach(value => {
             const marker = document.createElement('div');
             marker.className = 'y-axis-marker';
-            marker.style.top = `${position}px`;
-            this.chartYAxis.appendChild(marker);
+            marker.style.position = 'absolute';
+            marker.style.left = '0';
+            marker.style.width = '100%';
+            marker.style.textAlign = 'right';
+            marker.style.paddingRight = '10px';
+            marker.style.fontSize = '12px';
+            marker.style.color = '#a0a0a0';
             
-            // Create label
+            const y = this.getYPosition(value, minValue, maxValue);
+            marker.style.top = `${y}px`;
+            
             const label = document.createElement('div');
             label.className = 'y-axis-label';
             label.textContent = this.formatValue(value);
-            label.style.top = `${position}px`;
-            this.chartYAxis.appendChild(label);
-        }
-    }
-
-    createXAxis(liquidityData) {
-        // Create x-axis line
-        const line = document.createElement('div');
-        line.className = 'x-axis-line';
-        this.chartXAxis.appendChild(line);
-        
-        // Create markers and labels for each age
-        liquidityData.forEach((data, index) => {
-            const position = (index / (liquidityData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
+            marker.appendChild(label);
             
-            // Create marker
+            this.chartYAxis.appendChild(marker);
+        });
+        
+        // Create x-axis
+        const xAxisValues = this.calculateXAxisValues(data);
+        xAxisValues.forEach(age => {
             const marker = document.createElement('div');
             marker.className = 'x-axis-marker';
-            marker.style.left = `${position}px`;
-            this.chartXAxis.appendChild(marker);
+            marker.style.position = 'absolute';
+            marker.style.bottom = '0';
+            marker.style.width = '100%';
+            marker.style.textAlign = 'center';
+            marker.style.fontSize = '12px';
+            marker.style.color = '#a0a0a0';
             
-            // Only create label if age is divisible by 5
-            if (data.age % 5 === 0) {
-                const label = document.createElement('div');
-                label.className = 'x-axis-label';
-                label.textContent = data.age;
-                label.style.left = `${position}px`;
-                this.chartXAxis.appendChild(label);
-            }
+            const x = this.getXPosition(age, data[0].age, data[data.length - 1].age);
+            marker.style.left = `${x}px`;
+            
+            const label = document.createElement('div');
+            label.className = 'x-axis-label';
+            label.textContent = age;
+            marker.appendChild(label);
+            
+            this.chartXAxis.appendChild(marker);
         });
-    }
-
-    createLine(liquidityData, maxAbsValue) {
+        
+        // Create line segments
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
@@ -158,46 +94,123 @@ class LiquidityChart {
         svg.style.top = '0';
         svg.style.left = '0';
         
-        // Get the value display element
-        const valueDisplay = this.chart.querySelector('.liquidity-total-value');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        let pathData = '';
         
-        // Create line segments
-        for (let i = 0; i < liquidityData.length - 1; i++) {
-            const currentData = liquidityData[i];
-            const nextData = liquidityData[i + 1];
+        data.forEach((point, index) => {
+            const x = this.getXPosition(point.age, data[0].age, data[data.length - 1].age);
+            const y = this.getYPosition(point.liquid_assets, minValue, maxValue);
             
-            const x1 = (i / (liquidityData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            const y1 = this.chartHeight/2 - (currentData.net_worth / maxAbsValue) * (this.chartHeight/2);
-            const x2 = ((i + 1) / (liquidityData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            const y2 = this.chartHeight/2 - (nextData.net_worth / maxAbsValue) * (this.chartHeight/2);
-            
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', x1);
-            line.setAttribute('y1', y1);
-            line.setAttribute('x2', x2);
-            line.setAttribute('y2', y2);
-            line.setAttribute('stroke', currentData.net_worth >= 0 ? '#4CAF50' : '#f44336');
-            line.setAttribute('stroke-width', '2');
+            if (index === 0) {
+                pathData += `M ${x} ${y}`;
+            } else {
+                pathData += ` L ${x} ${y}`;
+            }
             
             // Add hover effect
-            line.addEventListener('mouseover', (e) => {
-                valueDisplay.textContent = `${this.formatValue(currentData.net_worth)} (Age ${currentData.age})`;
-                valueDisplay.className = `liquidity-total-value ${currentData.net_worth >= 0 ? 'positive' : 'negative'}`;
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', '4');
+            circle.setAttribute('fill', '#3498db');
+            circle.style.opacity = '0';
+            circle.style.transition = 'opacity 0.2s';
+            
+            circle.addEventListener('mouseover', () => {
+                circle.style.opacity = '1';
+                this.showTooltip(x, y, point);
             });
             
-            svg.appendChild(line);
+            circle.addEventListener('mouseout', () => {
+                circle.style.opacity = '0';
+                this.hideTooltip();
+            });
+            
+            svg.appendChild(circle);
+        });
+        
+        path.setAttribute('d', pathData);
+        path.setAttribute('stroke', '#3498db');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        
+        svg.appendChild(path);
+        this.chartBars.appendChild(svg);
+        
+        // Update total value
+        const currentAge = 30; // TODO: Get from user settings
+        const currentValue = data.find(d => d.age === currentAge)?.liquid_assets || 0;
+        this.totalValue.textContent = this.formatValue(currentValue);
+        this.totalValue.className = 'liquidity-total-value ' + (currentValue >= 0 ? 'positive' : 'negative');
+    }
+    
+    calculateYAxisValues(min, max) {
+        const range = max - min;
+        const step = Math.pow(10, Math.floor(Math.log10(range / 5)));
+        const values = [];
+        
+        for (let value = Math.floor(min / step) * step; value <= max; value += step) {
+            values.push(value);
         }
         
-        this.chartBars.appendChild(svg);
+        return values;
     }
-
-    formatValue(value) {
-        if (Math.abs(value) >= 1000000) {
-            return `$${(value / 1000000).toFixed(1)}M`;
-        } else if (Math.abs(value) >= 1000) {
-            return `$${(value / 1000).toFixed(1)}K`;
+    
+    calculateXAxisValues(data) {
+        const startAge = data[0].age;
+        const endAge = data[data.length - 1].age;
+        const step = Math.ceil((endAge - startAge) / 5);
+        const values = [];
+        
+        for (let age = startAge; age <= endAge; age += step) {
+            values.push(age);
         }
-        return `$${value.toFixed(0)}`;
+        
+        return values;
+    }
+    
+    getXPosition(age, startAge, endAge) {
+        const chartWidth = this.chartBars.clientWidth;
+        return ((age - startAge) / (endAge - startAge)) * chartWidth;
+    }
+    
+    getYPosition(value, min, max) {
+        const chartHeight = this.chartBars.clientHeight;
+        return chartHeight - ((value - min) / (max - min)) * chartHeight;
+    }
+    
+    formatValue(value) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    }
+    
+    showTooltip(x, y, point) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.left = `${x + 10}px`;
+        tooltip.style.top = `${y - 10}px`;
+        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        tooltip.style.color = '#fff';
+        tooltip.style.padding = '5px 10px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        tooltip.textContent = `Age ${point.age}: ${this.formatValue(point.liquid_assets)}`;
+        
+        this.chartBars.appendChild(tooltip);
+    }
+    
+    hideTooltip() {
+        const tooltip = this.chartBars.querySelector('.tooltip');
+        if (tooltip) {
+            tooltip.remove();
+        }
     }
 }
 

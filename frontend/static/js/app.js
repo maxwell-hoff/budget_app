@@ -999,21 +999,19 @@ function updateCharts() {
             console.error('Error fetching net worth data:', error);
         });
 
-    // Update liquidity chart
+    // Fetch liquidity data
     fetch('/api/liquidity')
         .then(response => response.json())
-        .then(liquidityData => {
-            console.log('Liquidity data:', liquidityData);
+        .then(data => {
+            console.log('Liquidity data received:', data);
             if (window.liquidityChart) {
                 console.log('Updating liquidity chart with data');
-                window.liquidityChart.updateChart(liquidityData);
+                window.liquidityChart.updateChart(data);
             } else {
                 console.error('Liquidity chart not initialized');
             }
         })
-        .catch(error => {
-            console.error('Error fetching liquidity data:', error);
-        });
+        .catch(error => console.error('Error fetching liquidity data:', error));
 }
 
 // Add event listeners for milestone changes

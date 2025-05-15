@@ -71,20 +71,6 @@
     transform: rotate(180deg);
 }
 
-.liquidity-bar {
-    position: absolute;
-    background-color: #4CAF50;
-    transition: height 0.3s ease;
-}
-
-.liquidity-bar.positive {
-    background-color: #4CAF50;
-}
-
-.liquidity-bar.negative {
-    background-color: #ff5252;
-}
-
 .x-axis-line {
     position: absolute;
     bottom: 0;
