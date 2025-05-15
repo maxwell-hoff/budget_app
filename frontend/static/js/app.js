@@ -998,6 +998,22 @@ function updateCharts() {
         .catch(error => {
             console.error('Error fetching net worth data:', error);
         });
+
+    // Update liquidity chart
+    fetch('/api/liquidity')
+        .then(response => response.json())
+        .then(liquidityData => {
+            console.log('Liquidity data:', liquidityData);
+            if (window.liquidityChart) {
+                console.log('Updating liquidity chart with data');
+                window.liquidityChart.updateChart(liquidityData);
+            } else {
+                console.error('Liquidity chart not initialized');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching liquidity data:', error);
+        });
 }
 
 // Add event listeners for milestone changes
