@@ -1,6 +1,6 @@
 from ..database import db
 from ..models.milestone import Milestone
-from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
+from ..models.net_worth import MilestoneValueByAge, NetWorthByAge, LiquidAssetsByAge
 from datetime import datetime
 
 class NetWorthCalculator:
@@ -122,6 +122,43 @@ class NetWorthCalculator:
         
         db.session.commit()
     
+    def update_liquid_assets(self):
+        """Update liquid assets values for all ages."""
+        # Clear existing liquid assets values
+        LiquidAssetsByAge.query.delete()
+        
+        # Get all milestones
+        milestones = Milestone.query.all()
+        
+        # Calculate liquid assets for each age
+        for age in range(self.current_age, self.max_age + 1):
+            # Initialize current liquid assets
+            current_liquid_assets = 0.0
+            
+            # First pass: Calculate asset values
+            for milestone in milestones:
+                if milestone.milestone_type == 'Asset':
+                    value = self.calculate_milestone_value_at_age(milestone, age)
+                    current_liquid_assets += value
+            
+            # Second pass: Calculate income/expense impact
+            for milestone in milestones:
+                if milestone.milestone_type in ['Income', 'Expense']:
+                    value = self.calculate_milestone_value_at_age(milestone, age)
+                    if milestone.milestone_type == 'Income':
+                        current_liquid_assets += value
+                    else:  # Expense
+                        if current_liquid_assets >= value:
+                            current_liquid_assets -= value
+                        else:
+                            current_liquid_assets = 0
+            
+            # Create liquid assets record
+            liquid_assets_record = LiquidAssetsByAge(age=age, liquid_assets=current_liquid_assets)
+            db.session.add(liquid_assets_record)
+        
+        db.session.commit()
+    
     def update_net_worth(self):
         """Update net worth values for all ages."""
         # Clear existing net worth values
@@ -170,6 +207,7 @@ class NetWorthCalculator:
         db.session.commit()
     
     def recalculate_all(self):
-        """Recalculate all milestone values and net worth."""
+        """Recalculate all milestone values, liquid assets, and net worth."""
         self.update_milestone_values()
+        self.update_liquid_assets()
         self.update_net_worth() 

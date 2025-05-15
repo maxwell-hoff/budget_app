@@ -1,0 +1,172 @@
+#liquidity-chart {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background-color: #2d2d2d;
+    border: 1px solid #404040;
+    border-radius: 4px;
+    margin-top: 40px;
+    overflow: visible;
+    transition: height 0.3s ease;
+    width: calc(100% - 50px);
+    margin-left: 50px;
+}
+
+#liquidity-chart.collapsed {
+    height: 40px;
+}
+
+#liquidity-chart-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+    padding-bottom: 0px;
+}
+
+#liquidity-chart-bars {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#liquidity-chart-bars svg {
+    z-index: 2;
+}
+
+#liquidity-chart-x-axis {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    z-index: 1;
+}
+
+#liquidity-chart-y-axis {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 100%;
+}
+
+.liquidity-toggle-button {
+    position: absolute;
+    top: -50px;
+    right: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    z-index: 1;
+    color: #e0e0e0;
+}
+
+.liquidity-toggle-button .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.liquidity-toggle-button .toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.x-axis-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #e0e0e0;
+}
+
+.y-axis-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+    background-color: #e0e0e0;
+}
+
+.x-axis-marker {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 5px;
+    background-color: #e0e0e0;
+}
+
+.y-axis-marker {
+    position: absolute;
+    left: 0;
+    width: 5px;
+    height: 1px;
+    background-color: #e0e0e0;
+}
+
+.x-axis-label {
+    position: absolute;
+    bottom: -20px;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #a0a0a0;
+}
+
+.y-axis-label {
+    position: absolute;
+    left: -50px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #a0a0a0;
+}
+
+/* Add container styles to match other charts */
+.chart-container {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 20px;
+    width: 100%;
+    overflow: visible;
+    position: sticky;
+    top: 75px;
+    z-index: 100;
+}
+
+/* Add header styles to match NPV chart */
+.liquidity-total-container {
+    position: absolute;
+    top: -40px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    z-index: 2;
+}
+
+.liquidity-total-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.liquidity-total-value {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.liquidity-total-value.positive {
+    color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.liquidity-total-value.negative {
+    color: #ff5252;
+    background-color: rgba(255, 82, 82, 0.1);
+} 
