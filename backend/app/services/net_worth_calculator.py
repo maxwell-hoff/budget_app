@@ -174,7 +174,7 @@ class NetWorthCalculator:
             # Get all milestone values for this age
             milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
             
-            # First pass: Calculate asset and liability values
+            # Calculate asset and liability values
             for milestone_value in milestone_values:
                 milestone = milestone_value.milestone
                 if milestone.milestone_type in ['Asset', 'Liability']:
@@ -182,21 +182,6 @@ class NetWorthCalculator:
                         current_liquid_assets += milestone_value.value
                     else:  # Liability
                         current_debt += milestone_value.value
-            
-            # Second pass: Calculate income/expense impact
-            for milestone_value in milestone_values:
-                milestone = milestone_value.milestone
-                if milestone.milestone_type in ['Income', 'Expense']:
-                    if milestone.milestone_type == 'Income':
-                        current_liquid_assets += milestone_value.value
-                    else:  # Expense
-                        if current_liquid_assets >= milestone_value.value:
-                            current_liquid_assets -= milestone_value.value
-                        else:
-                            # If expenses exceed liquid assets, add excess to debt
-                            excess = milestone_value.value - current_liquid_assets
-                            current_liquid_assets = 0
-                            current_debt += excess
             
             # Calculate net worth
             net_worth = current_liquid_assets - current_debt
