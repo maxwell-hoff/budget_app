@@ -53,28 +53,4 @@ class NetWorthByAge(db.Model):
             'net_worth': self.net_worth,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
-        }
-
-class LiquidAssetsByAge(db.Model):
-    """Model representing the liquid assets at a specific age."""
-    __tablename__ = 'liquid_assets_by_age'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    age = db.Column(db.Integer, nullable=False, unique=True)
-    liquid_assets = db.Column(db.Float, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __init__(self, age, liquid_assets):
-        self.age = age
-        self.liquid_assets = liquid_assets
-    
-    def to_dict(self):
-        """Convert liquid assets to dictionary."""
-        return {
-            'id': self.id,
-            'age': self.age,
-            'liquid_assets': self.liquid_assets,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
         } 

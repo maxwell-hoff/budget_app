@@ -1,6 +1,6 @@
 from ..database import db
 from ..models.milestone import Milestone
-from ..models.net_worth import MilestoneValueByAge, NetWorthByAge, LiquidAssetsByAge
+from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
 from datetime import datetime
 
 class NetWorthCalculator:
@@ -122,50 +122,46 @@ class NetWorthCalculator:
         
         db.session.commit()
     
-    def update_liquid_assets(self):
-        """Update liquid assets values for all ages."""
-        # Clear existing liquid assets values
-        LiquidAssetsByAge.query.delete()
+    def calculate_liquid_assets_at_age(self, age):
+        """
+        Calculate liquid assets at a specific age from milestone values.
         
-        # Get all milestones
-        milestones = Milestone.query.all()
+        Args:
+            age (int): The age to calculate liquid assets for
+            
+        Returns:
+            float: The liquid assets at the specified age
+        """
+        # Get all milestone values for this age
+        milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
         
-        # Calculate liquid assets for each age
-        for age in range(self.current_age, self.max_age + 1):
-            # Initialize current liquid assets
-            current_liquid_assets = 0.0
-            
-            # First pass: Calculate asset values
-            for milestone in milestones:
-                if milestone.milestone_type == 'Asset':
-                    value = self.calculate_milestone_value_at_age(milestone, age)
-                    current_liquid_assets += value
-            
-            # Second pass: Calculate income/expense impact
-            for milestone in milestones:
-                if milestone.milestone_type in ['Income', 'Expense']:
-                    value = self.calculate_milestone_value_at_age(milestone, age)
-                    if milestone.milestone_type == 'Income':
-                        current_liquid_assets += value
-                    else:  # Expense
-                        if current_liquid_assets >= value:
-                            current_liquid_assets -= value
-                        else:
-                            current_liquid_assets = 0
-            
-            # Create liquid assets record
-            liquid_assets_record = LiquidAssetsByAge(age=age, liquid_assets=current_liquid_assets)
-            db.session.add(liquid_assets_record)
+        # Initialize current liquid assets
+        current_liquid_assets = 0.0
         
-        db.session.commit()
+        # First pass: Calculate asset values
+        for milestone_value in milestone_values:
+            milestone = milestone_value.milestone
+            if milestone.milestone_type == 'Asset':
+                current_liquid_assets += milestone_value.value
+        
+        # Second pass: Calculate income/expense impact
+        for milestone_value in milestone_values:
+            milestone = milestone_value.milestone
+            if milestone.milestone_type in ['Income', 'Expense']:
+                if milestone.milestone_type == 'Income':
+                    current_liquid_assets += milestone_value.value
+                else:  # Expense
+                    if current_liquid_assets >= milestone_value.value:
+                        current_liquid_assets -= milestone_value.value
+                    else:
+                        current_liquid_assets = 0
+        
+        return current_liquid_assets
     
     def update_net_worth(self):
         """Update net worth values for all ages."""
         # Clear existing net worth values
         NetWorthByAge.query.delete()
-        
-        # Get all milestones
-        milestones = Milestone.query.all()
         
         # Calculate net worth for each age
         for age in range(self.current_age, self.max_age + 1):
@@ -173,27 +169,30 @@ class NetWorthCalculator:
             current_liquid_assets = 0.0
             current_debt = 0.0
             
+            # Get all milestone values for this age
+            milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
+            
             # First pass: Calculate asset and liability values
-            for milestone in milestones:
+            for milestone_value in milestone_values:
+                milestone = milestone_value.milestone
                 if milestone.milestone_type in ['Asset', 'Liability']:
-                    value = self.calculate_milestone_value_at_age(milestone, age)
                     if milestone.milestone_type == 'Asset':
-                        current_liquid_assets += value
+                        current_liquid_assets += milestone_value.value
                     else:  # Liability
-                        current_debt += value
+                        current_debt += milestone_value.value
             
             # Second pass: Calculate income/expense impact
-            for milestone in milestones:
+            for milestone_value in milestone_values:
+                milestone = milestone_value.milestone
                 if milestone.milestone_type in ['Income', 'Expense']:
-                    value = self.calculate_milestone_value_at_age(milestone, age)
                     if milestone.milestone_type == 'Income':
-                        current_liquid_assets += value
+                        current_liquid_assets += milestone_value.value
                     else:  # Expense
-                        if current_liquid_assets >= value:
-                            current_liquid_assets -= value
+                        if current_liquid_assets >= milestone_value.value:
+                            current_liquid_assets -= milestone_value.value
                         else:
                             # If expenses exceed liquid assets, add excess to debt
-                            excess = value - current_liquid_assets
+                            excess = milestone_value.value - current_liquid_assets
                             current_liquid_assets = 0
                             current_debt += excess
             
@@ -207,7 +206,6 @@ class NetWorthCalculator:
         db.session.commit()
     
     def recalculate_all(self):
-        """Recalculate all milestone values, liquid assets, and net worth."""
+        """Recalculate all milestone values and net worth."""
         self.update_milestone_values()
-        self.update_liquid_assets()
         self.update_net_worth() 
