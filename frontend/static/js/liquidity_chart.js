@@ -149,6 +149,8 @@ class LiquidityChart {
             
             // Add hover effect
             line.addEventListener('mouseover', () => {
+                this.totalValue.textContent = `${this.formatValue(currentData.liquid_assets)} (Age ${currentData.age})`;
+                this.totalValue.className = 'liquidity-total-value ' + (currentData.liquid_assets >= 0 ? 'positive' : 'negative');
                 this.showTooltip(x1, y1, currentData);
             });
             
@@ -184,7 +186,7 @@ class LiquidityChart {
         tooltip.style.fontSize = '12px';
         tooltip.style.pointerEvents = 'none';
         tooltip.style.zIndex = '1000';
-        tooltip.textContent = `Age ${point.age}: ${this.formatValue(point.liquid_assets)}`;
+        tooltip.textContent = `${this.formatValue(point.liquid_assets)} (Age ${point.age})`;
         
         this.chartBars.appendChild(tooltip);
     }
