@@ -144,7 +144,7 @@ class LiquidityChart {
             line.setAttribute('y1', y1);
             line.setAttribute('x2', x2);
             line.setAttribute('y2', y2);
-            line.setAttribute('stroke', '#3498db');
+            line.setAttribute('stroke', currentData.liquid_assets >= 0 ? '#4CAF50' : '#f44336');
             line.setAttribute('stroke-width', '2');
             
             // Add hover effect
