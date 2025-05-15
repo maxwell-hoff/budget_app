@@ -72,13 +72,29 @@ class NetWorthCalculator:
                         return max(0, balance)
                     return balance
             else:  # Perpetuity
-                # For perpetuity, balance is initial amount adjusted for payments
+                # For perpetuity, calculate balance with rate of return and payments
                 if milestone.occurrence == 'Monthly':
-                    payments_made = (milestone.payment or 0) * years_elapsed * 12
+                    rate = milestone.rate_of_return / 12
+                    periods = years_elapsed * 12
+                    payment = milestone.payment or 0
+                    
+                    if rate == 0:
+                        balance = milestone.amount - payment * periods
+                    else:
+                        # Calculate balance with compound interest and regular payments
+                        balance = milestone.amount * (1 + rate) ** periods - \
+                                payment * ((1 + rate) ** periods - 1) / rate
                 else:  # Yearly
-                    payments_made = (milestone.payment or 0) * years_elapsed
-                
-                balance = milestone.amount - payments_made
+                    rate = milestone.rate_of_return
+                    periods = years_elapsed
+                    payment = milestone.payment or 0
+                    
+                    if rate == 0:
+                        balance = milestone.amount - payment * periods
+                    else:
+                        # Calculate balance with compound interest and regular payments
+                        balance = milestone.amount * (1 + rate) ** periods - \
+                                payment * ((1 + rate) ** periods - 1) / rate
                 
                 # For liabilities, ensure balance doesn't go negative
                 if milestone.milestone_type == 'Liability':
