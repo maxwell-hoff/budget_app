@@ -38,104 +38,16 @@ class LiquidityChart {
         // Find max and min values for scaling
         const maxValue = Math.max(...data.map(d => d.liquid_assets));
         const minValue = Math.min(...data.map(d => d.liquid_assets));
+        const maxAbsValue = Math.max(Math.abs(maxValue), Math.abs(minValue));
         
         // Create y-axis
-        const yAxisValues = this.calculateYAxisValues(minValue, maxValue);
-        yAxisValues.forEach(value => {
-            const marker = document.createElement('div');
-            marker.className = 'y-axis-marker';
-            marker.style.position = 'absolute';
-            marker.style.left = '0';
-            marker.style.width = '100%';
-            marker.style.textAlign = 'right';
-            marker.style.paddingRight = '10px';
-            marker.style.fontSize = '12px';
-            marker.style.color = '#a0a0a0';
-            
-            const y = this.getYPosition(value, minValue, maxValue);
-            marker.style.top = `${y}px`;
-            
-            const label = document.createElement('div');
-            label.className = 'y-axis-label';
-            label.textContent = this.formatValue(value);
-            marker.appendChild(label);
-            
-            this.chartYAxis.appendChild(marker);
-        });
+        this.createYAxis(maxAbsValue);
         
         // Create x-axis
-        const xAxisValues = this.calculateXAxisValues(data);
-        xAxisValues.forEach(age => {
-            const marker = document.createElement('div');
-            marker.className = 'x-axis-marker';
-            marker.style.position = 'absolute';
-            marker.style.bottom = '0';
-            marker.style.width = '100%';
-            marker.style.textAlign = 'center';
-            marker.style.fontSize = '12px';
-            marker.style.color = '#a0a0a0';
-            
-            const x = this.getXPosition(age, data[0].age, data[data.length - 1].age);
-            marker.style.left = `${x}px`;
-            
-            const label = document.createElement('div');
-            label.className = 'x-axis-label';
-            label.textContent = age;
-            marker.appendChild(label);
-            
-            this.chartXAxis.appendChild(marker);
-        });
+        this.createXAxis(data);
         
-        // Create line segments
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.position = 'absolute';
-        svg.style.top = '0';
-        svg.style.left = '0';
-        
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        let pathData = '';
-        
-        data.forEach((point, index) => {
-            const x = this.getXPosition(point.age, data[0].age, data[data.length - 1].age);
-            const y = this.getYPosition(point.liquid_assets, minValue, maxValue);
-            
-            if (index === 0) {
-                pathData += `M ${x} ${y}`;
-            } else {
-                pathData += ` L ${x} ${y}`;
-            }
-            
-            // Add hover effect
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', x);
-            circle.setAttribute('cy', y);
-            circle.setAttribute('r', '4');
-            circle.setAttribute('fill', '#3498db');
-            circle.style.opacity = '0';
-            circle.style.transition = 'opacity 0.2s';
-            
-            circle.addEventListener('mouseover', () => {
-                circle.style.opacity = '1';
-                this.showTooltip(x, y, point);
-            });
-            
-            circle.addEventListener('mouseout', () => {
-                circle.style.opacity = '0';
-                this.hideTooltip();
-            });
-            
-            svg.appendChild(circle);
-        });
-        
-        path.setAttribute('d', pathData);
-        path.setAttribute('stroke', '#3498db');
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('fill', 'none');
-        
-        svg.appendChild(path);
-        this.chartBars.appendChild(svg);
+        // Create line
+        this.createLine(data, maxAbsValue);
         
         // Update total value
         const currentAge = 30; // TODO: Get from user settings
@@ -144,48 +56,119 @@ class LiquidityChart {
         this.totalValue.className = 'liquidity-total-value ' + (currentValue >= 0 ? 'positive' : 'negative');
     }
     
-    calculateYAxisValues(min, max) {
-        const range = max - min;
-        const step = Math.pow(10, Math.floor(Math.log10(range / 5)));
-        const values = [];
+    createYAxis(maxAbsValue) {
+        // Calculate interval for y-axis markers
+        let interval = 100000;
+        let numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1; // +1 for zero
         
-        for (let value = Math.floor(min / step) * step; value <= max; value += step) {
-            values.push(value);
+        // Keep doubling the interval until we have 7 or fewer markers
+        while (numMarkers > 7) {
+            interval *= 2;
+            numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1;
+        }
+
+        // Round maxAbsValue up to nearest multiple of interval
+        const roundedMax = Math.ceil(maxAbsValue / interval) * interval;
+        
+        // Create y-axis line
+        const line = document.createElement('div');
+        line.className = 'y-axis-line';
+        this.chartYAxis.appendChild(line);
+        
+        // Create markers and labels
+        for (let value = -roundedMax; value <= roundedMax; value += interval) {
+            const position = this.chart.offsetHeight/2 - (value / roundedMax) * (this.chart.offsetHeight/2);
+            
+            // Create marker
+            const marker = document.createElement('div');
+            marker.className = 'y-axis-marker';
+            marker.style.top = `${position}px`;
+            this.chartYAxis.appendChild(marker);
+            
+            // Create label
+            const label = document.createElement('div');
+            label.className = 'y-axis-label';
+            label.textContent = this.formatValue(value);
+            label.style.top = `${position}px`;
+            this.chartYAxis.appendChild(label);
+        }
+    }
+    
+    createXAxis(data) {
+        // Create x-axis line
+        const line = document.createElement('div');
+        line.className = 'x-axis-line';
+        this.chartXAxis.appendChild(line);
+        
+        // Create markers and labels for each age
+        data.forEach((point, index) => {
+            const position = (index / (data.length - 1)) * (this.chart.offsetWidth - 40) + 20;
+            
+            // Create marker
+            const marker = document.createElement('div');
+            marker.className = 'x-axis-marker';
+            marker.style.left = `${position}px`;
+            this.chartXAxis.appendChild(marker);
+            
+            // Only create label if age is divisible by 5
+            if (point.age % 5 === 0) {
+                const label = document.createElement('div');
+                label.className = 'x-axis-label';
+                label.textContent = point.age;
+                label.style.left = `${position}px`;
+                this.chartXAxis.appendChild(label);
+            }
+        });
+    }
+    
+    createLine(data, maxAbsValue) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        
+        // Create line segments
+        for (let i = 0; i < data.length - 1; i++) {
+            const currentData = data[i];
+            const nextData = data[i + 1];
+            
+            const x1 = (i / (data.length - 1)) * (this.chart.offsetWidth - 40) + 20;
+            const y1 = this.chart.offsetHeight/2 - (currentData.liquid_assets / maxAbsValue) * (this.chart.offsetHeight/2);
+            const x2 = ((i + 1) / (data.length - 1)) * (this.chart.offsetWidth - 40) + 20;
+            const y2 = this.chart.offsetHeight/2 - (nextData.liquid_assets / maxAbsValue) * (this.chart.offsetHeight/2);
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', '#3498db');
+            line.setAttribute('stroke-width', '2');
+            
+            // Add hover effect
+            line.addEventListener('mouseover', () => {
+                this.showTooltip(x1, y1, currentData);
+            });
+            
+            line.addEventListener('mouseout', () => {
+                this.hideTooltip();
+            });
+            
+            svg.appendChild(line);
         }
         
-        return values;
-    }
-    
-    calculateXAxisValues(data) {
-        const startAge = data[0].age;
-        const endAge = data[data.length - 1].age;
-        const step = Math.ceil((endAge - startAge) / 5);
-        const values = [];
-        
-        for (let age = startAge; age <= endAge; age += step) {
-            values.push(age);
-        }
-        
-        return values;
-    }
-    
-    getXPosition(age, startAge, endAge) {
-        const chartWidth = this.chartBars.clientWidth;
-        return ((age - startAge) / (endAge - startAge)) * chartWidth;
-    }
-    
-    getYPosition(value, min, max) {
-        const chartHeight = this.chartBars.clientHeight;
-        return chartHeight - ((value - min) / (max - min)) * chartHeight;
+        this.chartBars.appendChild(svg);
     }
     
     formatValue(value) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(value);
+        if (Math.abs(value) >= 1000000) {
+            return `$${(value / 1000000).toFixed(1)}M`;
+        } else if (Math.abs(value) >= 1000) {
+            return `$${(value / 1000).toFixed(1)}K`;
+        }
+        return `$${value.toFixed(0)}`;
     }
     
     showTooltip(x, y, point) {
