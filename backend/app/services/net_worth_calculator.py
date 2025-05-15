@@ -135,28 +135,14 @@ class NetWorthCalculator:
         # Get all milestone values for this age
         milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
         
-        # Initialize current liquid assets
-        current_liquid_assets = 0.0
+        # Sum up all asset values
+        liquid_assets = sum(
+            milestone_value.value 
+            for milestone_value in milestone_values 
+            if milestone_value.milestone.milestone_type == 'Asset'
+        )
         
-        # First pass: Calculate asset values
-        for milestone_value in milestone_values:
-            milestone = milestone_value.milestone
-            if milestone.milestone_type == 'Asset':
-                current_liquid_assets += milestone_value.value
-        
-        # Second pass: Calculate income/expense impact
-        for milestone_value in milestone_values:
-            milestone = milestone_value.milestone
-            if milestone.milestone_type in ['Income', 'Expense']:
-                if milestone.milestone_type == 'Income':
-                    current_liquid_assets += milestone_value.value
-                else:  # Expense
-                    if current_liquid_assets >= milestone_value.value:
-                        current_liquid_assets -= milestone_value.value
-                    else:
-                        current_liquid_assets = 0
-        
-        return current_liquid_assets
+        return liquid_assets
     
     def update_net_worth(self):
         """Update net worth values for all ages."""
