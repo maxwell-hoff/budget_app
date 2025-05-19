@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from ..models.net_worth import NetWorthByAge, LiquidAssetsByAge
+from ..models.net_worth import NetWorthByAge
 from ..services.net_worth_calculator import NetWorthCalculator
 from ..models.user import User
 from datetime import datetime
@@ -44,10 +44,19 @@ def get_liquid_assets():
     calculator = NetWorthCalculator(current_age=30)  # TODO: Get current age from user settings
     calculator.recalculate_all()
     
-    # Get liquid assets values
-    liquid_assets_values = LiquidAssetsByAge.query.order_by(LiquidAssetsByAge.age).all()
+    # Get all ages from net worth values
+    net_worth_values = NetWorthByAge.query.order_by(NetWorthByAge.age).all()
     
-    return jsonify([value.to_dict() for value in liquid_assets_values])
+    # Calculate liquid assets for each age
+    liquid_assets_values = []
+    for net_worth in net_worth_values:
+        liquid_assets = calculator.calculate_liquid_assets_at_age(net_worth.age)
+        liquid_assets_values.append({
+            'age': net_worth.age,
+            'liquid_assets': liquid_assets
+        })
+    
+    return jsonify(liquid_assets_values)
 
 @net_worth_bp.route('/api/liquidity', methods=['GET'])
 def get_liquidity():
@@ -56,15 +65,16 @@ def get_liquidity():
     calculator = NetWorthCalculator(current_age=30)  # TODO: Get current age from user settings
     calculator.recalculate_all()
     
-    # Get liquid assets values
-    liquid_assets_values = LiquidAssetsByAge.query.order_by(LiquidAssetsByAge.age).all()
+    # Get all ages from net worth values
+    net_worth_values = NetWorthByAge.query.order_by(NetWorthByAge.age).all()
     
-    # Log the data being returned
-    print("Liquidity data:", [value.to_dict() for value in liquid_assets_values])
+    # Calculate liquid assets for each age
+    liquid_assets_values = []
+    for net_worth in net_worth_values:
+        liquid_assets = calculator.calculate_liquid_assets_at_age(net_worth.age)
+        liquid_assets_values.append({
+            'age': net_worth.age,
+            'liquid_assets': liquid_assets
+        })
     
-    # Check if there are any milestones
-    milestones = Milestone.query.all()
-    print("Number of milestones:", len(milestones))
-    print("Milestones:", [m.to_dict() for m in milestones])
-    
-    return jsonify([value.to_dict() for value in liquid_assets_values]) 
+    return jsonify(liquid_assets_values) 
