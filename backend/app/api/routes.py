@@ -32,13 +32,9 @@ def recalculate_net_worth():
     return False
 
 def update_parent_milestone(parent_id):
-    """Update parent milestone name and age range based on sub-milestones."""
+    """Update parent milestone age range based on sub-milestones."""
     parent = ParentMilestone.query.get(parent_id)
     if parent and parent.sub_milestones:
-        # If there's only one sub-milestone, use its name
-        if len(parent.sub_milestones) == 1:
-            parent.name = parent.sub_milestones[0].name
-        
         # Calculate min_age and max_age based on sub-milestones
         min_age = min(m.age_at_occurrence for m in parent.sub_milestones)
         max_age = min_age  # Start with min_age
@@ -87,10 +83,18 @@ def update_parent_milestone_route(parent_id):
     parent = ParentMilestone.query.get_or_404(parent_id)
     data = request.get_json()
     
-    for key, value in data.items():
-        setattr(parent, key, value)
+    # Only update the parent milestone's own fields
+    if 'name' in data:
+        parent.name = data['name']
+    if 'min_age' in data:
+        parent.min_age = data['min_age']
+    if 'max_age' in data:
+        parent.max_age = data['max_age']
     
+    # Ensure we're not updating any sub-milestones
     db.session.commit()
+    
+    # Return the updated parent milestone
     return jsonify(parent.to_dict())
 
 @api_bp.route('/parent-milestones/<int:parent_id>', methods=['DELETE'])
