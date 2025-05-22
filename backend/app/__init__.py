@@ -5,6 +5,7 @@ from .models.milestone import Milestone
 from .models.user import User
 from .models.net_worth import MilestoneValueByAge, NetWorthByAge
 from .models.scenario import Scenario
+from .models.goal import Goal
 from .api.routes import api_bp
 from .routes.scenarios import scenarios_bp
 from .routes.net_worth import net_worth_bp

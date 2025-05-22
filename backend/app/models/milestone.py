@@ -116,6 +116,7 @@ class Milestone(db.Model):
             'rate_of_return': self.rate_of_return,
             'order': self.order,
             'parent_milestone_id': self.parent_milestone_id,
+            'goal_parameters': [goal.parameter for goal in self.goals if goal.is_goal],
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         } 

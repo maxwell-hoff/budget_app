@@ -3,6 +3,7 @@ from ..database import db
 from ..models.milestone import Milestone, ParentMilestone
 from ..models.user import User
 from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
+from ..models.goal import Goal
 from ..services.dcf_calculator import DCFCalculator
 from ..services.net_worth_calculator import NetWorthCalculator
 from ..services.statement_parser import StatementParser
@@ -49,6 +50,51 @@ def update_parent_milestone(parent_id):
         parent.min_age = min_age
         parent.max_age = max_age
         db.session.commit()
+
+# -------------------------------------------------------------------------
+# Goal helpers
+# -------------------------------------------------------------------------
+
+ALLOWED_GOAL_PARAMS = {
+    'amount',
+    'age_at_occurrence',
+    'payment',
+    'occurrence',
+    'duration',
+    'rate_of_return'
+}
+
+
+def sync_goal_parameters(milestone: Milestone, goal_params: list):
+    """Synchronize Goal records for a milestone with the desired list of goal parameters.
+
+    Args:
+        milestone (Milestone): The milestone whose goals we are syncing.
+        goal_params (list): List of parameter names that should be marked as goals.
+    """
+    if goal_params is None:
+        return  # Nothing to sync
+
+    # Ensure only allowed parameters are considered
+    desired = {param for param in goal_params if param in ALLOWED_GOAL_PARAMS}
+
+    # Map existing goals by parameter name for quick lookup
+    existing_goals = {g.parameter: g for g in milestone.goals}
+
+    # Add or enable desired goals
+    for param in desired:
+        if param in existing_goals:
+            existing_goals[param].is_goal = True
+        else:
+            db.session.add(Goal(milestone_id=milestone.id, parameter=param, is_goal=True))
+
+    # Remove or disable goals that are no longer desired
+    for param, goal in existing_goals.items():
+        if param not in desired:
+            # We could soft disable by setting is_goal=False, but simpler to delete
+            db.session.delete(goal)
+
+    db.session.commit()
 
 @api_bp.route('/parent-milestones', methods=['GET'])
 def get_parent_milestones():
@@ -190,6 +236,10 @@ def create_milestone():
     # Recalculate net worth
     recalculate_net_worth()
     
+    # Sync goal parameters if provided
+    if 'goal_parameters' in data:
+        sync_goal_parameters(milestone, data.get('goal_parameters'))
+    
     print(f"Created milestone: {milestone.to_dict()}")  # Debug log
     return jsonify(milestone.to_dict()), 201
 
@@ -203,9 +253,15 @@ def update_milestone(milestone_id):
     old_parent_id = milestone.parent_milestone_id
     
     for key, value in data.items():
-        setattr(milestone, key, value)
+        # Skip goal parameters here; we'll handle separately
+        if key != 'goal_parameters':
+            setattr(milestone, key, value)
     
     db.session.commit()
+    
+    # Sync goal parameters if provided
+    if 'goal_parameters' in data:
+        sync_goal_parameters(milestone, data.get('goal_parameters'))
     
     # Update both old and new parent milestones if parent changed
     if old_parent_id != milestone.parent_milestone_id:

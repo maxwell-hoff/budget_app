@@ -420,6 +420,13 @@ function updateTimeline() {
 
 function createMilestoneForm(milestone) {
     console.log('Creating milestone form for:', milestone);
+    
+    // Helper to generate a goal checkbox HTML snippet next to a parameter label
+    const goalCheckbox = (param) => {
+        const checked = milestone.goal_parameters && milestone.goal_parameters.includes(param) ? 'checked' : '';
+        return `<input type="checkbox" class="goal-checkbox ms-2" data-param="${param}" ${checked} title="Mark as goal">`;
+    };
+    
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
@@ -441,7 +448,7 @@ function createMilestoneForm(milestone) {
             </div>
             <form class="milestone-form-content">
                 <div class="mb-3">
-                    <label class="form-label">Age at Occurrence</label>
+                    <label class="form-label">Age at Occurrence${goalCheckbox('age_at_occurrence')}</label>
                     <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
                 </div>
                 <div class="mb-3">
@@ -462,12 +469,12 @@ function createMilestoneForm(milestone) {
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Amount</label>
+                    <label class="form-label">Amount${goalCheckbox('amount')}</label>
                     <input type="number" class="form-control" name="amount" value="${milestone.amount}">
                 </div>
                 <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
                     <label class="form-label">
-                        Payment
+                        Payment${goalCheckbox('payment')}
                         <span class="tooltip-container">
                             <i class="fas fa-info-circle info-icon"></i>
                             <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
@@ -476,18 +483,18 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Occurrence</label>
+                    <label class="form-label">Occurrence${goalCheckbox('occurrence')}</label>
                     <select class="form-control" name="occurrence">
                         <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
                 </div>
                 <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
-                    <label class="form-label">Duration</label>
+                    <label class="form-label">Duration${goalCheckbox('duration')}</label>
                     <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Rate of Return (%)</label>
+                    <label class="form-label">Rate of Return (%)${goalCheckbox('rate_of_return')}</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                 </div>
             </form>
@@ -778,6 +785,13 @@ function handleMilestoneUpdate(e, form) {
             updatedMilestone.duration = null;
             updatedMilestone.rate_of_return = null;
         }
+        
+        // After computing updatedMilestone fields, collect goal parameters
+        const goalParameters = [];
+        form.find('.goal-checkbox:checked').each(function() {
+            goalParameters.push($(this).data('param'));
+        });
+        updatedMilestone.goal_parameters = goalParameters;
         
         $.ajax({
             url: `/api/milestones/${milestoneId}`,
