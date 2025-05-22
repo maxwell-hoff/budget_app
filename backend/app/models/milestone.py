@@ -117,6 +117,11 @@ class Milestone(db.Model):
             'order': self.order,
             'parent_milestone_id': self.parent_milestone_id,
             'goal_parameters': [goal.parameter for goal in self.goals if goal.is_goal],
+            'scenario_parameter_values': {
+                param: [sv.value for sv in self.scenario_values if sv.parameter == param]
+                for param in ['amount', 'age_at_occurrence', 'payment', 'occurrence', 'duration', 'rate_of_return']
+                if any(sv.parameter == param for sv in self.scenario_values)
+            },
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         } 

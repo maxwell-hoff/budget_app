@@ -427,6 +427,26 @@ function createMilestoneForm(milestone) {
         return `<input type="checkbox" class="goal-checkbox ms-2" data-param="${param}" ${checked} title="Mark as goal">`;
     };
     
+    // Helper to generate scenario control HTML (button + dropdown) for a parameter
+    const scenarioControls = (param) => {
+        const values = (milestone.scenario_parameter_values && milestone.scenario_parameter_values[param]) || [];
+        const listItems = values.map(v => `
+            <li>
+                <span class="dropdown-item d-flex justify-content-between align-items-center" data-value="${v}">
+                    ${v}
+                    <i class="fas fa-times text-danger delete-scenario-value" data-param="${param}" data-value="${v}"></i>
+                </span>
+            </li>`).join('');
+        return `
+            <div class="btn-group ms-2 scenario-values-group" data-param="${param}">
+                <button type="button" class="btn btn-outline-secondary btn-sm add-scenario-value" data-param="${param}">Add as Scenario</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Values
+                </button>
+                <ul class="dropdown-menu scenario-values-list" data-param="${param}">${listItems}</ul>
+            </div>`;
+    };
+    
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
@@ -449,7 +469,10 @@ function createMilestoneForm(milestone) {
             <form class="milestone-form-content">
                 <div class="mb-3">
                     <label class="form-label">Age at Occurrence${goalCheckbox('age_at_occurrence')}</label>
-                    <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                    <div class="d-flex align-items-center">
+                        <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                        ${scenarioControls('age_at_occurrence')}
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Milestone Type</label>
@@ -470,7 +493,10 @@ function createMilestoneForm(milestone) {
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Amount${goalCheckbox('amount')}</label>
-                    <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                    <div class="d-flex align-items-center">
+                        <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                        ${scenarioControls('amount')}
+                    </div>
                 </div>
                 <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
                     <label class="form-label">
@@ -481,6 +507,7 @@ function createMilestoneForm(milestone) {
                         </span>
                     </label>
                     <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
+                    ${scenarioControls('payment')}
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Occurrence${goalCheckbox('occurrence')}</label>
@@ -488,14 +515,17 @@ function createMilestoneForm(milestone) {
                         <option value="Monthly" ${milestone.occurrence === 'Monthly' ? 'selected' : ''}>Monthly</option>
                         <option value="Yearly" ${milestone.occurrence === 'Yearly' ? 'selected' : ''}>Yearly</option>
                     </select>
+                    ${scenarioControls('occurrence')}
                 </div>
                 <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
                     <label class="form-label">Duration${goalCheckbox('duration')}</label>
                     <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
+                    ${scenarioControls('duration')}
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Rate of Return (%)${goalCheckbox('rate_of_return')}</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
+                    ${scenarioControls('rate_of_return')}
                 </div>
             </form>
             <div class="sub-milestones-container"></div>
@@ -621,6 +651,66 @@ function createMilestoneForm(milestone) {
                 }
             });
         }
+    });
+    
+    // Add event listeners for scenario parameter controls
+    form.on('click', '.add-scenario-value', function() {
+        const param = $(this).data('param');
+        let value;
+        if (param === 'occurrence') {
+            value = form.find('[name="occurrence"]').val();
+        } else {
+            value = form.find(`[name="${param}"]`).val();
+        }
+        if (value === '' || value === null || value === undefined) {
+            return;
+        }
+        const milestoneId = form.data('id');
+        $.ajax({
+            url: `/api/milestones/${milestoneId}/scenario-values`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ parameter: param, value: parseFloat(value) || value }),
+            success: function(updatedMilestone) {
+                // Update local milestone data and refresh list
+                const list = form.find(`.scenario-values-list[data-param="${param}"]`);
+                if (list.find(`li span[data-value="${value}"]`).length === 0) {
+                    list.append(`
+                        <li><span class="dropdown-item d-flex justify-content-between align-items-center" data-value="${value}">
+                            ${value}
+                            <i class="fas fa-times text-danger delete-scenario-value" data-param="${param}" data-value="${value}"></i>
+                        </span></li>`);
+                }
+                // Update global array
+                const index = milestones.findIndex(m => m.id === milestoneId);
+                if (index !== -1) {
+                    milestones[index] = updatedMilestone;
+                }
+            },
+            error: function(err) { console.error('Error adding scenario value', err); }
+        });
+    });
+
+    form.on('click', '.delete-scenario-value', function(e) {
+        e.stopPropagation();
+        const param = $(this).data('param');
+        const value = $(this).data('value');
+        const milestoneId = form.data('id');
+        const listItem = $(this).closest('li');
+        $.ajax({
+            url: `/api/milestones/${milestoneId}/scenario-values`,
+            method: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ parameter: param, value: parseFloat(value) || value }),
+            success: function(updatedMilestone) {
+                listItem.remove();
+                const index = milestones.findIndex(m => m.id === milestoneId);
+                if (index !== -1) {
+                    milestones[index] = updatedMilestone;
+                }
+            },
+            error: function(err) { console.error('Error deleting scenario value', err); }
+        });
     });
     
     return form;

@@ -4,6 +4,7 @@ from ..models.milestone import Milestone, ParentMilestone
 from ..models.user import User
 from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
 from ..models.goal import Goal
+from ..models.scenario_parameter_value import ScenarioParameterValue
 from ..services.dcf_calculator import DCFCalculator
 from ..services.net_worth_calculator import NetWorthCalculator
 from ..services.statement_parser import StatementParser
@@ -385,4 +386,46 @@ def recalculate_net_worth_endpoint():
     """Recalculate net worth values."""
     if recalculate_net_worth():
         return jsonify({'message': 'Net worth recalculated successfully'})
-    return jsonify({'error': 'No user profile found'}), 404 
+    return jsonify({'error': 'No user profile found'}), 404
+
+@api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['POST'])
+def add_scenario_value(milestone_id):
+    """Add a scenario parameter value for a milestone."""
+    milestone = Milestone.query.get_or_404(milestone_id)
+    data = request.get_json()
+    parameter = data.get('parameter')
+    value = data.get('value')
+
+    if parameter not in ALLOWED_GOAL_PARAMS:
+        return jsonify({'error': 'Invalid parameter'}), 400
+
+    if value is None:
+        return jsonify({'error': 'Value is required'}), 400
+
+    value_str = str(value)
+    # Prevent duplicates
+    existing = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
+    if not existing:
+        db.session.add(ScenarioParameterValue(milestone_id=milestone_id, parameter=parameter, value=value_str))
+        db.session.commit()
+
+    return jsonify(milestone.to_dict())
+
+@api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['DELETE'])
+def delete_scenario_value(milestone_id):
+    """Delete a scenario parameter value for a milestone."""
+    data = request.get_json()
+    parameter = data.get('parameter')
+    value = data.get('value')
+
+    if parameter not in ALLOWED_GOAL_PARAMS:
+        return jsonify({'error': 'Invalid parameter'}), 400
+
+    value_str = str(value)
+    entry = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
+    if entry:
+        db.session.delete(entry)
+        db.session.commit()
+
+    milestone = Milestone.query.get(milestone_id)
+    return jsonify(milestone.to_dict()) 
