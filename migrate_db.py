@@ -1,12 +1,17 @@
 from backend.app import create_app
 from backend.app.database import db
 from backend.app.models.milestone import Milestone, ParentMilestone
+from sqlalchemy import text
 
 def migrate_database():
     app = create_app()
     with app.app_context():
-        # Create parent_milestones table
+        # Create parent_milestones table and sequence
         db.create_all()
+        
+        # Create the sequence if it doesn't exist
+        db.session.execute(text("CREATE SEQUENCE IF NOT EXISTS parent_milestone_id_seq START 1000000"))
+        db.session.commit()
         
         # Get all milestones
         milestones = Milestone.query.all()

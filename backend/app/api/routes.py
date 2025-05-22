@@ -87,8 +87,13 @@ def update_parent_milestone_route(parent_id):
     parent = ParentMilestone.query.get_or_404(parent_id)
     data = request.get_json()
     
-    for key, value in data.items():
-        setattr(parent, key, value)
+    # Only update the parent milestone's own fields
+    if 'name' in data:
+        parent.name = data['name']
+    if 'min_age' in data:
+        parent.min_age = data['min_age']
+    if 'max_age' in data:
+        parent.max_age = data['max_age']
     
     db.session.commit()
     return jsonify(parent.to_dict())

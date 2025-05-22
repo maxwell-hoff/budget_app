@@ -1,11 +1,13 @@
 from datetime import datetime
 from ..database import db
+from sqlalchemy import Sequence
 
 class ParentMilestone(db.Model):
     """Model representing a parent milestone that contains sub-milestones."""
     __tablename__ = 'parent_milestones'
     
-    id = db.Column(db.Integer, primary_key=True)
+    # Use a sequence starting from 1000000 to avoid ID collisions with regular milestones
+    id = db.Column(db.Integer, Sequence('parent_milestone_id_seq', start=1000000), primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     min_age = db.Column(db.Integer, nullable=False)
     max_age = db.Column(db.Integer, nullable=False)

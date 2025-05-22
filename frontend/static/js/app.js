@@ -333,6 +333,7 @@ function loadMilestones() {
                                     console.log('Parent milestone name updated:', response);
                                     // Update the header text
                                     parentForm.find('.milestone-header h3').text(newName);
+                                    // Don't update sub-milestone names
                                 },
                                 error: function(error) {
                                     console.error('Error updating parent milestone name:', error);
