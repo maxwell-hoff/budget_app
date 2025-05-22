@@ -309,37 +309,6 @@ function loadMilestones() {
                             order: 0
                         });
 
-                        // Add parent milestone name field
-                        const parentNameField = $(`
-                            <div class="parent-milestone-name">
-                                <h3 contenteditable="true" class="editable-header" data-parent-id="${parentMilestone.id}">${parentMilestone.name}</h3>
-                            </div>
-                        `);
-
-                        // Add event listener for parent name changes
-                        parentNameField.find('.editable-header').on('blur', function() {
-                            const newName = $(this).text().trim();
-                            const parentId = $(this).data('parent-id');
-                            $.ajax({
-                                url: `/api/parent-milestones/${parentId}`,
-                                method: 'PUT',
-                                contentType: 'application/json',
-                                data: JSON.stringify({ name: newName }),
-                                success: function(response) {
-                                    console.log('Parent milestone name updated:', response);
-                                    // Update the parent form header (direct child) to avoid changing sub-milestone headers
-                                    parentForm.children('.milestone-header').find('h3').first().text(newName);
-                                },
-                                error: function(error) {
-                                    console.error('Error updating parent milestone name:', error);
-                                    alert('Error updating parent milestone name. Please try again.');
-                                }
-                            });
-                        });
-
-                        // Insert the parent name field before the form content
-                        parentForm.find('.milestone-form-content').before(parentNameField);
-                        
                         // Add sub-milestones container
                         const subMilestonesContainer = $('<div class="sub-milestones-container"></div>');
                         parentForm.append(subMilestonesContainer);
