@@ -323,23 +323,9 @@ function loadMilestones() {
                             const newName = $(this).val();
                             const parentId = $(this).data('parent-id');
                             
-                            // Update parent milestone name in the database
-                            $.ajax({
-                                url: `/api/parent-milestones/${parentId}`,
-                                method: 'PUT',
-                                contentType: 'application/json',
-                                data: JSON.stringify({ name: newName }),
-                                success: function(response) {
-                                    console.log('Parent milestone name updated:', response);
-                                    // Update the header text
-                                    parentForm.find('.milestone-header h3').text(newName);
-                                    // Don't update sub-milestone names
-                                },
-                                error: function(error) {
-                                    console.error('Error updating parent milestone name:', error);
-                                    alert('Error updating parent milestone name. Please try again.');
-                                }
-                            });
+                            // Update only the parent form header (direct child) to avoid changing sub-milestone headers
+                            parentForm.children('.milestone-header').find('h3').first().text(newName);
+                            // Don't update sub-milestone names
                         });
 
                         // Insert the parent name field before the form content

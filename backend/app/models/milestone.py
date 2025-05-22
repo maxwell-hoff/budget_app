@@ -1,13 +1,14 @@
 from datetime import datetime
 from ..database import db
-from sqlalchemy import Sequence
+from sqlalchemy import Sequence, event, text
 
 class ParentMilestone(db.Model):
     """Model representing a parent milestone that contains sub-milestones."""
     __tablename__ = 'parent_milestones'
     
-    # Use a sequence starting from 1000000 to avoid ID collisions with regular milestones
-    id = db.Column(db.Integer, Sequence('parent_milestone_id_seq', start=1000000), primary_key=True)
+    # Manually assigned high-range IDs to avoid overlap with Milestone IDs.
+    # We will populate this in a SQLAlchemy "before_insert" listener below.
+    id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     min_age = db.Column(db.Integer, nullable=False)
     max_age = db.Column(db.Integer, nullable=False)
@@ -39,6 +40,25 @@ class ParentMilestone(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+# SQLAlchemy event listener to assign ParentMilestone IDs starting at 1,000,000
+
+# We always store ParentMilestone IDs in the range 1,000,000+ so they can never
+# collide with Milestone IDs (which will start from 1).
+@event.listens_for(ParentMilestone, 'before_insert')
+def set_parent_milestone_id(mapper, connection, target):
+    """Assign a unique ID >= 1_000_000 if one is not provided."""
+    if target.id is None:
+        # Initialize a class-level counter the first time we insert within this
+        # application run. This guarantees uniqueness even when multiple
+        # ParentMilestones are pending in the same transaction/flush.
+        if not hasattr(ParentMilestone, "_next_high_id"):
+            result = connection.execute(text("SELECT MAX(id) FROM parent_milestones WHERE id >= 1000000"))
+            max_existing = result.scalar()
+            ParentMilestone._next_high_id = 1_000_000 if max_existing is None else (max_existing + 1)
+
+        target.id = ParentMilestone._next_high_id
+        ParentMilestone._next_high_id += 1
 
 class Milestone(db.Model):
     """Model representing a financial milestone in the timeline."""
