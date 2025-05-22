@@ -312,20 +312,29 @@ function loadMilestones() {
                         // Add parent milestone name field
                         const parentNameField = $(`
                             <div class="parent-milestone-name">
-                                <label>Grouping Name</label>
-                                <input type="text" class="form-control" value="${parentMilestone.name}" 
-                                    data-parent-id="${parentMilestone.id}">
+                                <h3 contenteditable="true" class="editable-header" data-parent-id="${parentMilestone.id}">${parentMilestone.name}</h3>
                             </div>
                         `);
 
                         // Add event listener for parent name changes
-                        parentNameField.find('input').on('change', function() {
-                            const newName = $(this).val();
+                        parentNameField.find('.editable-header').on('blur', function() {
+                            const newName = $(this).text().trim();
                             const parentId = $(this).data('parent-id');
-                            
-                            // Update only the parent form header (direct child) to avoid changing sub-milestone headers
-                            parentForm.children('.milestone-header').find('h3').first().text(newName);
-                            // Don't update sub-milestone names
+                            $.ajax({
+                                url: `/api/parent-milestones/${parentId}`,
+                                method: 'PUT',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ name: newName }),
+                                success: function(response) {
+                                    console.log('Parent milestone name updated:', response);
+                                    // Update the parent form header (direct child) to avoid changing sub-milestone headers
+                                    parentForm.children('.milestone-header').find('h3').first().text(newName);
+                                },
+                                error: function(error) {
+                                    console.error('Error updating parent milestone name:', error);
+                                    alert('Error updating parent milestone name. Please try again.');
+                                }
+                            });
                         });
 
                         // Insert the parent name field before the form content
@@ -445,7 +454,7 @@ function createMilestoneForm(milestone) {
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
-                <h3>${milestone.name}</h3>
+                <h3 contenteditable="true" class="editable-header">${milestone.name}</h3>
                 <div class="milestone-header-buttons">
                     ${milestone.milestone_type === 'Group' ? `
                         <button type="button" class="btn btn-outline-success btn-sm add-sub-milestone">
@@ -462,10 +471,6 @@ function createMilestoneForm(milestone) {
                 </div>
             </div>
             <form class="milestone-form-content">
-                <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    <input type="text" class="form-control" name="name" value="${milestone.name}">
-                </div>
                 <div class="mb-3">
                     <label class="form-label">Age at Occurrence</label>
                     <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
@@ -618,6 +623,29 @@ function createMilestoneForm(milestone) {
         handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
     });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+    
+    // Add event listener for the editable header to update the milestone name on blur
+    form.find('.editable-header').on('blur', function() {
+        const newName = $(this).text().trim();
+        const milestoneId = form.data('id');
+        const milestone = milestones.find(m => m.id === milestoneId);
+        if (milestone && newName !== milestone.name) {
+            milestone.name = newName;
+            $.ajax({
+                url: `/api/milestones/${milestoneId}`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ name: newName }),
+                success: function(response) {
+                    console.log('Milestone name updated:', response);
+                },
+                error: function(error) {
+                    console.error('Error updating milestone name:', error);
+                    alert('Error updating milestone name. Please try again.');
+                }
+            });
+        }
+    });
     
     return form;
 }
