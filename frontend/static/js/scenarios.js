@@ -3,7 +3,7 @@ class ScenarioManager {
         this.scenarioSelect = document.getElementById('scenarioSelect');
         this.newButton = document.getElementById('newScenario');
         
-        // Retrieve previously-selected scenario (if any)
+        // We lazily read localStorage each time we reload the list, but keep an initial copy for first paint.
         this.storedScenarioId = localStorage.getItem('selectedScenarioId');
         
         this.setupEventListeners();
@@ -24,10 +24,8 @@ class ScenarioManager {
             const response = await fetch('/api/scenarios');
             const scenarios = await response.json();
             
-            // Clear existing options except the first one
-            while (this.scenarioSelect.options.length > 1) {
-                this.scenarioSelect.remove(1);
-            }
+            // Remove all existing options (including placeholder)
+            this.scenarioSelect.innerHTML = '';
             
             // Add scenarios to select
             scenarios.forEach(scenario => {
@@ -37,8 +35,11 @@ class ScenarioManager {
                 this.scenarioSelect.appendChild(option);
             });
             
-            // Try to restore previously-selected scenario
+            // Refresh storedScenarioId from localStorage (it may have changed, e.g. after creating a new scenario)
+            this.storedScenarioId = localStorage.getItem('selectedScenarioId');
             const storedId = this.storedScenarioId;
+            
+            // Try to restore previously-selected scenario
             if (storedId && this.scenarioSelect.querySelector(`option[value="${storedId}"]`)) {
                 this.scenarioSelect.value = storedId;
             }
@@ -113,6 +114,7 @@ class ScenarioManager {
                 const newScenario = await response.json();
                 // Persist and select the new scenario
                 localStorage.setItem('selectedScenarioId', newScenario.id.toString());
+                this.storedScenarioId = newScenario.id.toString();
                 await this.loadScenarios();
                 alert('New scenario created successfully');
             } else {
