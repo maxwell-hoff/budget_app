@@ -3,13 +3,20 @@ class ScenarioManager {
         this.scenarioSelect = document.getElementById('scenarioSelect');
         this.newButton = document.getElementById('newScenario');
         
+        // Retrieve previously-selected scenario (if any)
+        this.storedScenarioId = localStorage.getItem('selectedScenarioId');
+        
         this.setupEventListeners();
         this.loadScenarios();
     }
     
     setupEventListeners() {
         this.newButton.addEventListener('click', () => this.createNewScenario());
-        this.scenarioSelect.addEventListener('change', () => this.loadSelectedScenario());
+        this.scenarioSelect.addEventListener('change', () => {
+            // Persist selection so it survives full page reloads
+            localStorage.setItem('selectedScenarioId', this.scenarioSelect.value);
+            this.loadSelectedScenario();
+        });
     }
     
     async loadScenarios() {
@@ -30,10 +37,20 @@ class ScenarioManager {
                 this.scenarioSelect.appendChild(option);
             });
             
-            // Auto-select the first scenario if none is selected yet
+            // Try to restore previously-selected scenario
+            const storedId = this.storedScenarioId;
+            if (storedId && this.scenarioSelect.querySelector(`option[value="${storedId}"]`)) {
+                this.scenarioSelect.value = storedId;
+            }
+            
+            // Fallback: auto-select first scenario if still none selected
             if (!this.scenarioSelect.value && scenarios.length > 0) {
                 this.scenarioSelect.value = scenarios[0].id;
                 // Trigger load for selected scenario
+                this.loadSelectedScenario();
+            }
+            else if (this.scenarioSelect.value) {
+                // Ensure parameters load when restoring stored scenario
                 this.loadSelectedScenario();
             }
         } catch (error) {
@@ -93,6 +110,9 @@ class ScenarioManager {
             });
             
             if (response.ok) {
+                const newScenario = await response.json();
+                // Persist and select the new scenario
+                localStorage.setItem('selectedScenarioId', newScenario.id.toString());
                 await this.loadScenarios();
                 alert('New scenario created successfully');
             } else {
