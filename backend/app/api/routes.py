@@ -100,7 +100,11 @@ def sync_goal_parameters(milestone: Milestone, goal_params: list):
 @api_bp.route('/parent-milestones', methods=['GET'])
 def get_parent_milestones():
     """Get all parent milestones."""
-    parent_milestones = ParentMilestone.query.all()
+    scenario_id = request.args.get('scenario_id', type=int)
+    if scenario_id is None:
+        parent_milestones = ParentMilestone.query.all()
+    else:
+        parent_milestones = ParentMilestone.query.join(Milestone).filter(Milestone.scenario_id == scenario_id).all()
     return jsonify([milestone.to_dict() for milestone in parent_milestones])
 
 @api_bp.route('/parent-milestones', methods=['POST'])
@@ -191,7 +195,11 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
-    milestones = Milestone.query.order_by(Milestone.order).all()
+    scenario_id = request.args.get('scenario_id', type=int)
+    query = Milestone.query
+    if scenario_id is not None:
+        query = query.filter_by(scenario_id=scenario_id)
+    milestones = query.order_by(Milestone.order).all()
     return jsonify([milestone.to_dict() for milestone in milestones])
 
 @api_bp.route('/milestones/<int:milestone_id>/sub-milestones', methods=['GET'])
@@ -217,7 +225,9 @@ def create_milestone():
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
         order=data.get('order', 0),
-        parent_milestone_id=data.get('parent_milestone_id')
+        parent_milestone_id=data.get('parent_milestone_id'),
+        scenario_id=data.get('scenario_id', 1),
+        scenario_name=data.get('scenario_name', 'Base Scenario')
     )
     
     db.session.add(milestone)

@@ -148,3 +148,4 @@ def create_default_milestones():
             db.session.add(milestone)
         
         db.session.commit() 
+        # No separate Scenario rows—milestones already seeded with scenario_id=1 

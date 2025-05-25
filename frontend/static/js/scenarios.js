@@ -1,7 +1,6 @@
 class ScenarioManager {
     constructor() {
         this.scenarioSelect = document.getElementById('scenarioSelect');
-        this.saveButton = document.getElementById('saveScenario');
         this.newButton = document.getElementById('newScenario');
         
         this.setupEventListeners();
@@ -9,7 +8,6 @@ class ScenarioManager {
     }
     
     setupEventListeners() {
-        this.saveButton.addEventListener('click', () => this.saveCurrentScenario());
         this.newButton.addEventListener('click', () => this.createNewScenario());
         this.scenarioSelect.addEventListener('change', () => this.loadSelectedScenario());
     }
@@ -31,6 +29,13 @@ class ScenarioManager {
                 option.textContent = scenario.name;
                 this.scenarioSelect.appendChild(option);
             });
+            
+            // Auto-select the first scenario if none is selected yet
+            if (!this.scenarioSelect.value && scenarios.length > 0) {
+                this.scenarioSelect.value = scenarios[0].id;
+                // Trigger load for selected scenario
+                this.loadSelectedScenario();
+            }
         } catch (error) {
             console.error('Error loading scenarios:', error);
         }
@@ -40,7 +45,7 @@ class ScenarioManager {
         const selectedId = this.scenarioSelect.value;
         if (!selectedId) {
             alert('Please select a scenario to save to');
-            return;
+            return Promise.reject('No scenario selected');
         }
         
         try {
@@ -56,13 +61,15 @@ class ScenarioManager {
             });
             
             if (response.ok) {
-                alert('Scenario saved successfully');
+                // Optionally provide quiet confirmation in console instead of alert
+                console.log('Scenario saved automatically');
+                return true;
             } else {
                 throw new Error('Failed to save scenario');
             }
         } catch (error) {
             console.error('Error saving scenario:', error);
-            alert('Error saving scenario');
+            return Promise.reject(error);
         }
     }
     
@@ -106,7 +113,11 @@ class ScenarioManager {
             const scenario = await response.json();
             
             // Apply the loaded parameters
-            this.applyParameters(scenario.parameters);
+            this.applyParameters(scenario.milestones ? { milestones: scenario.milestones } : scenario.parameters);
+            
+            if (typeof loadMilestones === 'function') {
+                loadMilestones();
+            }
         } catch (error) {
             console.error('Error loading scenario:', error);
             alert('Error loading scenario');

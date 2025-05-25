@@ -255,8 +255,10 @@ function createDefaultMilestones() {
 
 function loadMilestones() {
     console.log('Loading milestones...');
+    const scenarioId = $('#scenarioSelect').val();
+    const url = scenarioId ? `/api/milestones?scenario_id=${scenarioId}` : '/api/milestones';
     $.ajax({
-        url: '/api/milestones',
+        url: url,
         method: 'GET',
         success: function(response) {
             console.log('Milestones loaded:', response);
@@ -275,7 +277,7 @@ function loadMilestones() {
             
             // First, get all parent milestones
             $.ajax({
-                url: '/api/parent-milestones',
+                url: scenarioId ? `/api/parent-milestones?scenario_id=${scenarioId}` : '/api/parent-milestones',
                 method: 'GET',
                 success: function(parentMilestones) {
                     console.log('Parent milestones loaded:', parentMilestones);
@@ -357,7 +359,9 @@ function addNewMilestone() {
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0,
-        order: milestones.length  // Set order to be after all existing milestones
+        order: milestones.length, // Set order to be after all existing milestones
+        scenario_id: parseInt($('#scenarioSelect').val()) || 1,
+        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario'
     };
     
     // Create parent milestone first
@@ -403,8 +407,9 @@ function updateTimeline() {
     $('#timeline-milestones').empty();
     
     // Load parent milestones
+    const scenarioId = $('#scenarioSelect').val();
     $.ajax({
-        url: '/api/parent-milestones',
+        url: scenarioId ? `/api/parent-milestones?scenario_id=${scenarioId}` : '/api/parent-milestones',
         method: 'GET',
         success: function(parentMilestones) {
             // Add each parent milestone to the timeline
@@ -732,7 +737,9 @@ function addSubMilestone(parentForm) {
         duration: 1,
         rate_of_return: 0.0,
         order: milestones.length,
-        parent_milestone_id: parentId
+        parent_milestone_id: parentId,
+        scenario_id: parseInt($('#scenarioSelect').val()) || 1,
+        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario'
     };
     
     $.ajax({
@@ -891,8 +898,15 @@ function handleMilestoneUpdate(e, form) {
             success: function(response) {
                 Object.assign(milestone, response);
                 updateTimeline();
-                // Refresh the page to update milestone headers
-                window.location.reload();
+
+                // Automatically persist the current scenario, then reload.
+                if (window.scenarioManager && typeof window.scenarioManager.saveCurrentScenario === 'function') {
+                    window.scenarioManager.saveCurrentScenario()
+                        .catch(err => console.warn('Auto-saving scenario failed', err))
+                        .finally(() => window.location.reload());
+                } else {
+                    window.location.reload();
+                }
             },
             error: function(error) {
                 console.error('Error updating milestone:', error);

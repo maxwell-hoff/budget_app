@@ -4,7 +4,6 @@ from .database import init_db, create_default_milestones
 from .models.milestone import Milestone
 from .models.user import User
 from .models.net_worth import MilestoneValueByAge, NetWorthByAge
-from .models.scenario import Scenario
 from .models.goal import Goal
 from .models.scenario_parameter_value import ScenarioParameterValue
 from .api.routes import api_bp
