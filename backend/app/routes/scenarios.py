@@ -36,6 +36,42 @@ def create_scenario():
         source_records = Milestone.query.filter_by(scenario_id=1).all()
         source_milestones_data = [m.to_dict() for m in source_records]
 
+    # ------------------------------------------------------------------
+    # Deduplicate: ensure we only process each source milestone once.
+    # We first try to deduplicate by the provided milestone ID (if any),
+    # falling back to a composite key of name + age_at_occurrence when
+    # an ID is missing.  This is defensive – the frontend occasionally
+    # posts the same milestone twice, which previously caused duplicates
+    # in the new scenario.
+    # ------------------------------------------------------------------
+    unique_src = []
+    seen_ids = set()
+    seen_fallback_keys = set()
+    for m in source_milestones_data:
+        # Skip ParentMilestone entries – they live in a separate table and
+        # are identified by IDs starting at 1,000,000.
+        try:
+            mid_val_int = int(m.get('id')) if m.get('id') is not None else None
+        except (ValueError, TypeError):
+            mid_val_int = None
+        if mid_val_int is not None and mid_val_int >= 1_000_000:
+            continue  # Ignore parent milestone forms entirely
+
+        mid = m.get('id')
+        if mid is not None:
+            if mid in seen_ids:
+                continue
+            seen_ids.add(mid)
+        else:
+            key = (m.get('name'), m.get('parameters', {}).get('age_at_occurrence') or m.get('age_at_occurrence'))
+            if key in seen_fallback_keys:
+                continue
+            seen_fallback_keys.add(key)
+        unique_src.append(m)
+
+    # Replace the list we iterate over with the de-duplicated version
+    source_milestones_data = unique_src
+
     # Allowed fields we can copy into a Milestone constructor
     ALLOWED_FIELDS = {
         'name','age_at_occurrence','milestone_type','disbursement_type','amount',
