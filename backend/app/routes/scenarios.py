@@ -37,40 +37,36 @@ def create_scenario():
         source_milestones_data = [m.to_dict() for m in source_records]
 
     # ------------------------------------------------------------------
-    # Deduplicate: ensure we only process each source milestone once.
-    # We first try to deduplicate by the provided milestone ID (if any),
-    # falling back to a composite key of name + age_at_occurrence when
-    # an ID is missing.  This is defensive – the frontend occasionally
-    # posts the same milestone twice, which previously caused duplicates
-    # in the new scenario.
+    # Deduplicate logical milestones regardless of row IDs.  We consider two
+    # milestones identical if they share (name, age_at_occurrence,
+    # milestone_type, parent_milestone_id).  Additional fields such as amount
+    # or rate_of_return can later be stored as scenario-parameter values.
     # ------------------------------------------------------------------
-    unique_src = []
-    seen_ids = set()
-    seen_fallback_keys = set()
+    deduped = []
+    seen_keys = set()
     for m in source_milestones_data:
-        # Skip ParentMilestone entries – they live in a separate table and
-        # are identified by IDs starting at 1,000,000.
+        # Exclude parent-milestone "group" forms (id >= 1_000_000)
         try:
             mid_val_int = int(m.get('id')) if m.get('id') is not None else None
         except (ValueError, TypeError):
             mid_val_int = None
         if mid_val_int is not None and mid_val_int >= 1_000_000:
-            continue  # Ignore parent milestone forms entirely
+            continue
 
-        mid = m.get('id')
-        if mid is not None:
-            if mid in seen_ids:
-                continue
-            seen_ids.add(mid)
-        else:
-            key = (m.get('name'), m.get('parameters', {}).get('age_at_occurrence') or m.get('age_at_occurrence'))
-            if key in seen_fallback_keys:
-                continue
-            seen_fallback_keys.add(key)
-        unique_src.append(m)
+        # Resolve the basic attributes (may live in nested parameters dict)
+        params = m.get('parameters', {}) if isinstance(m, dict) else {}
+        name = m.get('name') or params.get('name')
+        age = m.get('age_at_occurrence') if 'age_at_occurrence' in m else params.get('age_at_occurrence')
+        m_type = m.get('milestone_type') or params.get('milestone_type')
+        parent_id = m.get('parent_milestone_id') if 'parent_milestone_id' in m else params.get('parent_milestone_id')
 
-    # Replace the list we iterate over with the de-duplicated version
-    source_milestones_data = unique_src
+        key = (name, age, m_type, parent_id)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(m)
+
+    source_milestones_data = deduped
 
     # Allowed fields we can copy into a Milestone constructor
     ALLOWED_FIELDS = {

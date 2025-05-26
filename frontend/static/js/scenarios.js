@@ -116,7 +116,8 @@ class ScenarioManager {
                 localStorage.setItem('selectedScenarioId', newScenario.id.toString());
                 this.storedScenarioId = newScenario.id.toString();
                 await this.loadScenarios();
-                alert('New scenario created successfully');
+                // Full reload to ensure all dependent components reset (including sub-scenario dropdown)
+                window.location.reload();
             } else {
                 throw new Error('Failed to create scenario');
             }
