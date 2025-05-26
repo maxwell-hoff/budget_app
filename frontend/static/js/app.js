@@ -260,7 +260,14 @@ function loadMilestones() {
     const loadId = ++milestonesLoadCounter;
     console.log('Loading milestones...');
     const scenarioId = $('#scenarioSelect').val();
-    const url = scenarioId ? `/api/milestones?scenario_id=${scenarioId}` : '/api/milestones';
+    const subScenarioId = $('#subScenarioSelect').val();
+    let url = '/api/milestones';
+    const params = [];
+    if (scenarioId) params.push(`scenario_id=${scenarioId}`);
+    if (subScenarioId) params.push(`sub_scenario_id=${subScenarioId}`);
+    if (params.length) {
+        url += '?' + params.join('&');
+    }
     $.ajax({
         url: url,
         method: 'GET',
@@ -396,7 +403,9 @@ function addNewMilestone() {
         rate_of_return: 0.0,
         order: milestones.length, // Set order to be after all existing milestones
         scenario_id: parseInt($('#scenarioSelect').val()) || 1,
-        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario'
+        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario',
+        sub_scenario_id: parseInt($('#subScenarioSelect').val()) || 1,
+        sub_scenario_name: $('#subScenarioSelect option:selected').text() || 'Base Sub-Scenario'
     };
     
     // Create parent milestone first

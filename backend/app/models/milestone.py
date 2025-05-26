@@ -68,6 +68,9 @@ class Milestone(db.Model):
     # Scenario grouping columns (each milestone belongs to a scenario)
     scenario_id = db.Column(db.Integer, nullable=False, default=1)
     scenario_name = db.Column(db.String(100), nullable=False, default='Base Scenario')
+    # Sub-scenario grouping columns (each milestone can further belong to a sub-scenario of the parent scenario)
+    sub_scenario_id = db.Column(db.Integer, nullable=False, default=1)
+    sub_scenario_name = db.Column(db.String(100), nullable=False, default='Base Sub-Scenario')
     name = db.Column(db.String(100), nullable=False)
     age_at_occurrence = db.Column(db.Integer, nullable=False)
     milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income', 'Expense', 'Asset', or 'Liability'
@@ -83,7 +86,8 @@ class Milestone(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0, parent_milestone_id=None,
-                 scenario_id: int = 1, scenario_name: str = 'Base Scenario'):
+                 scenario_id: int = 1, scenario_name: str = 'Base Scenario',
+                 sub_scenario_id: int = 1, sub_scenario_name: str = 'Base Sub-Scenario'):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
@@ -94,6 +98,8 @@ class Milestone(db.Model):
         self.parent_milestone_id = parent_milestone_id
         self.scenario_id = scenario_id
         self.scenario_name = scenario_name
+        self.sub_scenario_id = sub_scenario_id
+        self.sub_scenario_name = sub_scenario_name
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -124,6 +130,8 @@ class Milestone(db.Model):
             'parent_milestone_id': self.parent_milestone_id,
             'scenario_id': self.scenario_id,
             'scenario_name': self.scenario_name,
+            'sub_scenario_id': self.sub_scenario_id,
+            'sub_scenario_name': self.sub_scenario_name,
             'goal_parameters': [goal.parameter for goal in self.goals if goal.is_goal],
             'scenario_parameter_values': {
                 param: [sv.value for sv in self.scenario_values if sv.parameter == param]
