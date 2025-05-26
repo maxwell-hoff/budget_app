@@ -46,8 +46,8 @@ class SubScenarioManager {
             const response = await fetch(`/api/sub-scenarios?scenario_id=${scenarioId}`);
             const subScenarios = await response.json();
 
-            // Remove existing options
-            this.subScenarioSelect.innerHTML = '';
+            // Remove existing options and restore placeholder
+            this.subScenarioSelect.innerHTML = '<option value="">Select a sub-scenario...</option>';
 
             // Populate options
             subScenarios.forEach(s => {
@@ -63,8 +63,13 @@ class SubScenarioManager {
                 this.subScenarioSelect.value = stored;
             }
 
-            // Default to first sub-scenario if none selected
-            if (!this.subScenarioSelect.value && subScenarios.length > 0) {
+            if (subScenarios.length === 0) {
+                // Ensure no residual value from previous scenario is shown
+                this.subScenarioSelect.value = '';
+                // Remove any stored selection for this scenario
+                localStorage.removeItem(this.storageKeyForScenario());
+            } else if (!this.subScenarioSelect.value) {
+                // Default to first sub-scenario if available
                 this.subScenarioSelect.value = subScenarios[0].id;
             }
 
