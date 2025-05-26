@@ -1,17 +1,22 @@
 class ScenarioManager {
     constructor() {
         this.scenarioSelect = document.getElementById('scenarioSelect');
-        this.saveButton = document.getElementById('saveScenario');
         this.newButton = document.getElementById('newScenario');
+        
+        // We lazily read localStorage each time we reload the list, but keep an initial copy for first paint.
+        this.storedScenarioId = localStorage.getItem('selectedScenarioId');
         
         this.setupEventListeners();
         this.loadScenarios();
     }
     
     setupEventListeners() {
-        this.saveButton.addEventListener('click', () => this.saveCurrentScenario());
         this.newButton.addEventListener('click', () => this.createNewScenario());
-        this.scenarioSelect.addEventListener('change', () => this.loadSelectedScenario());
+        this.scenarioSelect.addEventListener('change', () => {
+            // Persist selection so it survives full page reloads
+            localStorage.setItem('selectedScenarioId', this.scenarioSelect.value);
+            this.loadSelectedScenario();
+        });
     }
     
     async loadScenarios() {
@@ -19,10 +24,8 @@ class ScenarioManager {
             const response = await fetch('/api/scenarios');
             const scenarios = await response.json();
             
-            // Clear existing options except the first one
-            while (this.scenarioSelect.options.length > 1) {
-                this.scenarioSelect.remove(1);
-            }
+            // Remove all existing options (including placeholder)
+            this.scenarioSelect.innerHTML = '';
             
             // Add scenarios to select
             scenarios.forEach(scenario => {
@@ -31,6 +34,26 @@ class ScenarioManager {
                 option.textContent = scenario.name;
                 this.scenarioSelect.appendChild(option);
             });
+            
+            // Refresh storedScenarioId from localStorage (it may have changed, e.g. after creating a new scenario)
+            this.storedScenarioId = localStorage.getItem('selectedScenarioId');
+            const storedId = this.storedScenarioId;
+            
+            // Try to restore previously-selected scenario
+            if (storedId && this.scenarioSelect.querySelector(`option[value="${storedId}"]`)) {
+                this.scenarioSelect.value = storedId;
+            }
+            
+            // Fallback: auto-select first scenario if still none selected
+            if (!this.scenarioSelect.value && scenarios.length > 0) {
+                this.scenarioSelect.value = scenarios[0].id;
+                // Trigger load for selected scenario
+                this.loadSelectedScenario();
+            }
+            else if (this.scenarioSelect.value) {
+                // Ensure parameters load when restoring stored scenario
+                this.loadSelectedScenario();
+            }
         } catch (error) {
             console.error('Error loading scenarios:', error);
         }
@@ -40,7 +63,7 @@ class ScenarioManager {
         const selectedId = this.scenarioSelect.value;
         if (!selectedId) {
             alert('Please select a scenario to save to');
-            return;
+            return Promise.reject('No scenario selected');
         }
         
         try {
@@ -56,13 +79,15 @@ class ScenarioManager {
             });
             
             if (response.ok) {
-                alert('Scenario saved successfully');
+                // Optionally provide quiet confirmation in console instead of alert
+                console.log('Scenario saved automatically');
+                return true;
             } else {
                 throw new Error('Failed to save scenario');
             }
         } catch (error) {
             console.error('Error saving scenario:', error);
-            alert('Error saving scenario');
+            return Promise.reject(error);
         }
     }
     
@@ -86,6 +111,10 @@ class ScenarioManager {
             });
             
             if (response.ok) {
+                const newScenario = await response.json();
+                // Persist and select the new scenario
+                localStorage.setItem('selectedScenarioId', newScenario.id.toString());
+                this.storedScenarioId = newScenario.id.toString();
                 await this.loadScenarios();
                 alert('New scenario created successfully');
             } else {
@@ -106,7 +135,11 @@ class ScenarioManager {
             const scenario = await response.json();
             
             // Apply the loaded parameters
-            this.applyParameters(scenario.parameters);
+            this.applyParameters(scenario.milestones ? { milestones: scenario.milestones } : scenario.parameters);
+            
+            if (typeof loadMilestones === 'function') {
+                loadMilestones();
+            }
         } catch (error) {
             console.error('Error loading scenario:', error);
             alert('Error loading scenario');

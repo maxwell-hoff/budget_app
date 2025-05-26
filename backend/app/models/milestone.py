@@ -65,6 +65,9 @@ class Milestone(db.Model):
     __tablename__ = 'milestones'
     
     id = db.Column(db.Integer, primary_key=True)
+    # Scenario grouping columns (each milestone belongs to a scenario)
+    scenario_id = db.Column(db.Integer, nullable=False, default=1)
+    scenario_name = db.Column(db.String(100), nullable=False, default='Base Scenario')
     name = db.Column(db.String(100), nullable=False)
     age_at_occurrence = db.Column(db.Integer, nullable=False)
     milestone_type = db.Column(db.String(10), nullable=False, default='Expense')  # 'Income', 'Expense', 'Asset', or 'Liability'
@@ -79,7 +82,8 @@ class Milestone(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0, parent_milestone_id=None):
+    def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0, parent_milestone_id=None,
+                 scenario_id: int = 1, scenario_name: str = 'Base Scenario'):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
@@ -88,6 +92,8 @@ class Milestone(db.Model):
         self.payment = payment
         self.order = order
         self.parent_milestone_id = parent_milestone_id
+        self.scenario_id = scenario_id
+        self.scenario_name = scenario_name
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -116,6 +122,14 @@ class Milestone(db.Model):
             'rate_of_return': self.rate_of_return,
             'order': self.order,
             'parent_milestone_id': self.parent_milestone_id,
+            'scenario_id': self.scenario_id,
+            'scenario_name': self.scenario_name,
+            'goal_parameters': [goal.parameter for goal in self.goals if goal.is_goal],
+            'scenario_parameter_values': {
+                param: [sv.value for sv in self.scenario_values if sv.parameter == param]
+                for param in ['amount', 'age_at_occurrence', 'payment', 'occurrence', 'duration', 'rate_of_return']
+                if any(sv.parameter == param for sv in self.scenario_values)
+            },
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         } 

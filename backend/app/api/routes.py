@@ -3,6 +3,8 @@ from ..database import db
 from ..models.milestone import Milestone, ParentMilestone
 from ..models.user import User
 from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
+from ..models.goal import Goal
+from ..models.scenario_parameter_value import ScenarioParameterValue
 from ..services.dcf_calculator import DCFCalculator
 from ..services.net_worth_calculator import NetWorthCalculator
 from ..services.statement_parser import StatementParser
@@ -50,10 +52,59 @@ def update_parent_milestone(parent_id):
         parent.max_age = max_age
         db.session.commit()
 
+# -------------------------------------------------------------------------
+# Goal helpers
+# -------------------------------------------------------------------------
+
+ALLOWED_GOAL_PARAMS = {
+    'amount',
+    'age_at_occurrence',
+    'payment',
+    'occurrence',
+    'duration',
+    'rate_of_return'
+}
+
+
+def sync_goal_parameters(milestone: Milestone, goal_params: list):
+    """Synchronize Goal records for a milestone with the desired list of goal parameters.
+
+    Args:
+        milestone (Milestone): The milestone whose goals we are syncing.
+        goal_params (list): List of parameter names that should be marked as goals.
+    """
+    if goal_params is None:
+        return  # Nothing to sync
+
+    # Ensure only allowed parameters are considered
+    desired = {param for param in goal_params if param in ALLOWED_GOAL_PARAMS}
+
+    # Map existing goals by parameter name for quick lookup
+    existing_goals = {g.parameter: g for g in milestone.goals}
+
+    # Add or enable desired goals
+    for param in desired:
+        if param in existing_goals:
+            existing_goals[param].is_goal = True
+        else:
+            db.session.add(Goal(milestone_id=milestone.id, parameter=param, is_goal=True))
+
+    # Remove or disable goals that are no longer desired
+    for param, goal in existing_goals.items():
+        if param not in desired:
+            # We could soft disable by setting is_goal=False, but simpler to delete
+            db.session.delete(goal)
+
+    db.session.commit()
+
 @api_bp.route('/parent-milestones', methods=['GET'])
 def get_parent_milestones():
     """Get all parent milestones."""
-    parent_milestones = ParentMilestone.query.all()
+    scenario_id = request.args.get('scenario_id', type=int)
+    if scenario_id is None:
+        parent_milestones = ParentMilestone.query.all()
+    else:
+        parent_milestones = ParentMilestone.query.join(Milestone).filter(Milestone.scenario_id == scenario_id).all()
     return jsonify([milestone.to_dict() for milestone in parent_milestones])
 
 @api_bp.route('/parent-milestones', methods=['POST'])
@@ -144,7 +195,11 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
-    milestones = Milestone.query.order_by(Milestone.order).all()
+    scenario_id = request.args.get('scenario_id', type=int)
+    query = Milestone.query
+    if scenario_id is not None:
+        query = query.filter_by(scenario_id=scenario_id)
+    milestones = query.order_by(Milestone.order).all()
     return jsonify([milestone.to_dict() for milestone in milestones])
 
 @api_bp.route('/milestones/<int:milestone_id>/sub-milestones', methods=['GET'])
@@ -170,7 +225,9 @@ def create_milestone():
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
         order=data.get('order', 0),
-        parent_milestone_id=data.get('parent_milestone_id')
+        parent_milestone_id=data.get('parent_milestone_id'),
+        scenario_id=data.get('scenario_id', 1),
+        scenario_name=data.get('scenario_name', 'Base Scenario')
     )
     
     db.session.add(milestone)
@@ -190,6 +247,10 @@ def create_milestone():
     # Recalculate net worth
     recalculate_net_worth()
     
+    # Sync goal parameters if provided
+    if 'goal_parameters' in data:
+        sync_goal_parameters(milestone, data.get('goal_parameters'))
+    
     print(f"Created milestone: {milestone.to_dict()}")  # Debug log
     return jsonify(milestone.to_dict()), 201
 
@@ -203,9 +264,15 @@ def update_milestone(milestone_id):
     old_parent_id = milestone.parent_milestone_id
     
     for key, value in data.items():
-        setattr(milestone, key, value)
+        # Skip goal parameters here; we'll handle separately
+        if key != 'goal_parameters':
+            setattr(milestone, key, value)
     
     db.session.commit()
+    
+    # Sync goal parameters if provided
+    if 'goal_parameters' in data:
+        sync_goal_parameters(milestone, data.get('goal_parameters'))
     
     # Update both old and new parent milestones if parent changed
     if old_parent_id != milestone.parent_milestone_id:
@@ -329,4 +396,46 @@ def recalculate_net_worth_endpoint():
     """Recalculate net worth values."""
     if recalculate_net_worth():
         return jsonify({'message': 'Net worth recalculated successfully'})
-    return jsonify({'error': 'No user profile found'}), 404 
+    return jsonify({'error': 'No user profile found'}), 404
+
+@api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['POST'])
+def add_scenario_value(milestone_id):
+    """Add a scenario parameter value for a milestone."""
+    milestone = Milestone.query.get_or_404(milestone_id)
+    data = request.get_json()
+    parameter = data.get('parameter')
+    value = data.get('value')
+
+    if parameter not in ALLOWED_GOAL_PARAMS:
+        return jsonify({'error': 'Invalid parameter'}), 400
+
+    if value is None:
+        return jsonify({'error': 'Value is required'}), 400
+
+    value_str = str(value)
+    # Prevent duplicates
+    existing = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
+    if not existing:
+        db.session.add(ScenarioParameterValue(milestone_id=milestone_id, parameter=parameter, value=value_str))
+        db.session.commit()
+
+    return jsonify(milestone.to_dict())
+
+@api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['DELETE'])
+def delete_scenario_value(milestone_id):
+    """Delete a scenario parameter value for a milestone."""
+    data = request.get_json()
+    parameter = data.get('parameter')
+    value = data.get('value')
+
+    if parameter not in ALLOWED_GOAL_PARAMS:
+        return jsonify({'error': 'Invalid parameter'}), 400
+
+    value_str = str(value)
+    entry = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
+    if entry:
+        db.session.delete(entry)
+        db.session.commit()
+
+    milestone = Milestone.query.get(milestone_id)
+    return jsonify(milestone.to_dict()) 
