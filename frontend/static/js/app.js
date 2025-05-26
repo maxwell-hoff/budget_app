@@ -1,6 +1,8 @@
 // Global variables
 let currentAge = 0;
 let milestones = [];
+// Track the most recent loadMilestones request so we can ignore stale responses
+let milestonesLoadCounter = 0;
 
 // Initialize the application
 $(document).ready(function() {
@@ -254,6 +256,8 @@ function createDefaultMilestones() {
 }
 
 function loadMilestones() {
+    // Increment counter and capture the id for this invocation
+    const loadId = ++milestonesLoadCounter;
     console.log('Loading milestones...');
     const scenarioId = $('#scenarioSelect').val();
     const url = scenarioId ? `/api/milestones?scenario_id=${scenarioId}` : '/api/milestones';
@@ -261,6 +265,11 @@ function loadMilestones() {
         url: url,
         method: 'GET',
         success: function(response) {
+            // Ignore if this is not the latest request
+            if (loadId !== milestonesLoadCounter) {
+                console.log('Stale milestone load ignored');
+                return;
+            }
             console.log('Milestones loaded:', response);
             milestones = response;
             
@@ -275,12 +284,27 @@ function loadMilestones() {
                 return;
             }
             
-            // First, get all parent milestones
+            // Load parent milestones
             $.ajax({
                 url: scenarioId ? `/api/parent-milestones?scenario_id=${scenarioId}` : '/api/parent-milestones',
                 method: 'GET',
                 success: function(parentMilestones) {
+                    // Ignore if this is not the latest request (another load triggered after this one started)
+                    if (loadId !== milestonesLoadCounter) {
+                        console.log('Stale parent milestone load ignored');
+                        return;
+                    }
                     console.log('Parent milestones loaded:', parentMilestones);
+
+                    // Deduplicate parent milestones by ID in case the API returns duplicates (e.g., SQL join duplicates)
+                    const uniqueParentsMap = {};
+                    parentMilestones.forEach(pm => {
+                        if (!uniqueParentsMap[pm.id]) {
+                            uniqueParentsMap[pm.id] = pm;
+                        }
+                    });
+                    const uniqueParentMilestones = Object.values(uniqueParentsMap);
+                    console.log('Unique parent milestones:', uniqueParentMilestones);
                     
                     // Group milestones by their parent_milestone_id
                     const milestoneGroups = {};
@@ -295,8 +319,20 @@ function loadMilestones() {
                     console.log('Milestone groups:', milestoneGroups);
                     
                     // Create forms for each parent milestone and its sub-milestones
-                    parentMilestones.forEach(parentMilestone => {
-                        // Create a parent milestone form
+                    uniqueParentMilestones.forEach(parentMilestone => {
+                        // Determine sub-milestones for this parent first
+                        const subMilestones = milestoneGroups[parentMilestone.id] || [];
+
+                        // If there is exactly one sub-milestone, just render that sub-milestone directly to avoid duplicate-looking entries.
+                        if (subMilestones.length === 1) {
+                            const soloForm = createMilestoneForm(subMilestones[0]);
+                            $('#milestoneForms').append(soloForm);
+                            console.log('Appended single sub-milestone for', parentMilestone.name);
+                            return; // Skip rendering parent container
+                        }
+
+                        // Otherwise render a parent container followed by its sub-milestones
+                        // Create a parent milestone form (acts as a visual group header)
                         const parentForm = createMilestoneForm({
                             id: parentMilestone.id,
                             name: parentMilestone.name,
@@ -316,7 +352,6 @@ function loadMilestones() {
                         parentForm.append(subMilestonesContainer);
                         
                         // Add sub-milestones for this parent
-                        const subMilestones = milestoneGroups[parentMilestone.id] || [];
                         subMilestones.forEach(milestone => {
                             const subForm = createMilestoneForm(milestone);
                             subForm.addClass('sub-milestone-form');
