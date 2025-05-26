@@ -176,3 +176,4 @@ cython_debug/
 
 test_statement.CSV
 .venv_budget_app_py311/
+.venv_budget_app/

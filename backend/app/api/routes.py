@@ -196,9 +196,12 @@ def create_profile():
 def get_milestones():
     """Get all milestones."""
     scenario_id = request.args.get('scenario_id', type=int)
+    sub_scenario_id = request.args.get('sub_scenario_id', type=int)
     query = Milestone.query
     if scenario_id is not None:
         query = query.filter_by(scenario_id=scenario_id)
+    if sub_scenario_id is not None:
+        query = query.filter_by(sub_scenario_id=sub_scenario_id)
     milestones = query.order_by(Milestone.order).all()
     return jsonify([milestone.to_dict() for milestone in milestones])
 
@@ -227,7 +230,9 @@ def create_milestone():
         order=data.get('order', 0),
         parent_milestone_id=data.get('parent_milestone_id'),
         scenario_id=data.get('scenario_id', 1),
-        scenario_name=data.get('scenario_name', 'Base Scenario')
+        scenario_name=data.get('scenario_name', 'Base Scenario'),
+        sub_scenario_id=data.get('sub_scenario_id', 1),
+        sub_scenario_name=data.get('sub_scenario_name', 'Base Sub-Scenario')
     )
     
     db.session.add(milestone)

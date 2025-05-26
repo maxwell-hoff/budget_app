@@ -63,11 +63,17 @@
             <div class="col-md-9 main-content">
                 <!-- Scenario Bar -->
                 <div class="scenario-bar">
-                    <div class="scenario-controls">
+                    <div class="scenario-controls d-flex align-items-center gap-2">
                         <select id="scenarioSelect" class="form-control">
                             <option value="">Select a scenario...</option>
                         </select>
                         <button id="newScenario" class="btn btn-success">New</button>
+
+                        <!-- Sub-scenario controls -->
+                        <select id="subScenarioSelect" class="form-control">
+                            <option value="">Select a sub-scenario...</option>
+                        </select>
+                        <button id="newSubScenario" class="btn btn-success">New</button>
                     </div>
                 </div>
                 
@@ -141,6 +147,7 @@
     <script src="/static/js/net_worth_chart.js"></script>
     <script src="/static/js/liquidity_chart.js"></script>
     <script src="/static/js/scenarios.js"></script>
+    <script src="/static/js/sub_scenarios.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html> 
