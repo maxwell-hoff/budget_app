@@ -57,16 +57,22 @@ def get_scenario_table():
         return jsonify({'error': 'Missing query parameter "goal"'}), 400
 
     rows = (
-        SolvedParameterValue.query
-        .filter_by(goal_parameter=goal_param)
+        db.session.query(
+            SolvedParameterValue,
+            Milestone.scenario_name,
+            Milestone.sub_scenario_name,
+            Milestone.name.label('milestone_name')
+        )
+        .join(Milestone, Milestone.id == SolvedParameterValue.milestone_id)
+        .filter(SolvedParameterValue.goal_parameter == goal_param)
         .all()
     )
 
     return jsonify([{
-        'scenario_id': r.scenario_id,
-        'sub_scenario_id': r.sub_scenario_id,
-        'milestone_id': r.milestone_id,
-        'scenario_parameter': r.scenario_parameter,
-        'scenario_value': r.scenario_value,
-        'solved_value': r.solved_value,
-    } for r in rows]) 
+        'scenario': row.scenario_name,
+        'sub_scenario': row.sub_scenario_name,
+        'milestone': row.milestone_name,
+        'scenario_parameter': row.SolvedParameterValue.scenario_parameter,
+        'scenario_value': row.SolvedParameterValue.scenario_value,
+        'solved_value': row.SolvedParameterValue.solved_value,
+    } for row in rows]) 

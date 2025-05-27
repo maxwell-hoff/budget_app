@@ -33,16 +33,19 @@ def solve_for_goal(goal_parameter: str, milestones: List[Milestone]) -> None:
     parameter-at-a-time.
     """
 
+    # Build global mapping of scenario parameter -> set(values) across *all* milestones
+    global_param_values = {}
+    for sv in ScenarioParameterValue.query.all():
+        global_param_values.setdefault(sv.parameter, set()).add(sv.value)
+
+    # Convert sets to sorted lists for deterministic iteration
+    for k in global_param_values:
+        global_param_values[k] = sorted(global_param_values[k], key=lambda x: (str(x)))
+
     for ms in milestones:
         base_pv = _milestone_pv(ms)
 
-        # Gather scenario parameter values grouped by parameter name
-        param_to_values = {}
-        for sv in ms.scenario_values:
-            param_to_values.setdefault(sv.parameter, []).append(sv.value)
-
-        # For now solve each scenario parameter independently (not Cartesian product).
-        for scenario_parameter, values in param_to_values.items():
+        for scenario_parameter, values in global_param_values.items():
             for scenario_value in values:
                 # Clone milestone with overridden parameter
                 overridden = _clone_milestone(ms)
