@@ -8,6 +8,7 @@ from ..models.scenario_parameter_value import ScenarioParameterValue
 from ..services.dcf_calculator import DCFCalculator
 from ..services.net_worth_calculator import NetWorthCalculator
 from ..services.statement_parser import StatementParser
+from ..services.solver import solve_for_goal
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -96,6 +97,10 @@ def sync_goal_parameters(milestone: Milestone, goal_params: list):
             db.session.delete(goal)
 
     db.session.commit()
+
+    # Trigger solver for each goal parameter now associated with the milestone
+    for param in desired:
+        solve_for_goal(param, [milestone])
 
 @api_bp.route('/parent-milestones', methods=['GET'])
 def get_parent_milestones():
@@ -424,6 +429,11 @@ def add_scenario_value(milestone_id):
         db.session.add(ScenarioParameterValue(milestone_id=milestone_id, parameter=parameter, value=value_str))
         db.session.commit()
 
+        # After adding, re-solve for any goals tied to this milestone
+        for goal in milestone.goals:
+            if goal.is_goal:
+                solve_for_goal(goal.parameter, [milestone])
+
     return jsonify(milestone.to_dict())
 
 @api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['DELETE'])
@@ -442,5 +452,9 @@ def delete_scenario_value(milestone_id):
         db.session.delete(entry)
         db.session.commit()
 
-    milestone = Milestone.query.get(milestone_id)
+        milestone = Milestone.query.get(milestone_id)
+        for goal in milestone.goals:
+            if goal.is_goal:
+                solve_for_goal(goal.parameter, [milestone])
+
     return jsonify(milestone.to_dict()) 
