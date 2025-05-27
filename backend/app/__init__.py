@@ -10,6 +10,7 @@ from .api.routes import api_bp
 from .routes.scenarios import scenarios_bp
 from .routes.net_worth import net_worth_bp
 from .routes.sub_scenarios import sub_scenarios_bp
+from .routes.scenario_table import scenario_table_bp
 
 def create_app():
     """Create and configure the Flask application."""
@@ -30,6 +31,7 @@ def create_app():
     app.register_blueprint(scenarios_bp)
     app.register_blueprint(sub_scenarios_bp)
     app.register_blueprint(net_worth_bp)
+    app.register_blueprint(scenario_table_bp)
     
     @app.route('/')
     def index():

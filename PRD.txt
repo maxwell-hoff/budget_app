@@ -364,3 +364,68 @@ The personal finance app will help users plan for major life events and retireme
 - Comprehensive test coverage
 - Smooth sub-milestone transitions
 - Accurate parent/child relationships
+
+Scenario Table & Solved Parameter Values PRD
+============================================
+
+Objective
+---------
+Provide an "Excel-like" pivot table view ("Scenario Table") that shows, for every Scenario → Sub-scenario, the machine-calculated value that *solves* a chosen **goal parameter** while holding the milestone's present-value constant after applying arbitrary combinations of **scenario parameter values**.
+
+Glossary
+--------
+• **Goal Parameter** – any milestone field (`amount`, `duration`, …) that the user has flagged via the "goal" checkbox (table: `goals`).  Exactly one goal parameter is viewed in the table at a time (selected from a dropdown).
+• **Scenario Parameter Value** – a per-milestone override stored in `scenario_parameter_values`.
+• **Solved Value** – the number calculated for the chosen goal parameter that keeps the milestone's present-value unchanged once a specific combination of scenario parameter values is applied.
+
+Back-end Data Model
+-------------------
+Table: `solved_parameter_values`
+| column                    | type           | notes |
+|---------------------------|----------------|-------|
+| id                        | PK             | |
+| milestone_id              | FK -> milestones.id | |
+| scenario_id               | INT            | denormalised for fast filtering |
+| sub_scenario_id           | INT            | " |
+| goal_parameter            | VARCHAR(50)    | (`amount`, `duration`, …) |
+| scenario_parameter        | VARCHAR(50)    | name of the scenario parameter that was varied |
+| scenario_value            | VARCHAR(100)   | concrete value that was used (stringified) |
+| solved_value              | FLOAT          | machine-calculated result |
+| created_at / updated_at   | TIMESTAMP      | |
+
+A unique constraint (`milestone_id`, `goal_parameter`, `scenario_parameter`, `scenario_value`) prevents duplicates.
+
+Solving Logic (v1)
+------------------
+Invariant: **keep the milestone's present value (PV) identical to the PV in the base milestone**.
+1.  Build the full Cartesian product of scenario values for the milestone (one row per combination).
+2.  For each combination:
+    a. Overlay the values on a working copy of the milestone.
+    b. Numerically solve for the chosen goal parameter such that `PV_solved == PV_original`.
+3.  Persist/update the row in `solved_parameter_values`.
+
+Implementation triggers:
+• Whenever `scenario_parameter_values` are added/updated/deleted.
+• Whenever `goals.is_goal` toggles.
+• Manual "Re-solve" endpoint (optional, admin only).
+
+Initial API Endpoints
+---------------------
+GET  `/api/goals`  → `["amount", "duration", …]`  (distinct parameters flagged as goals)
+GET  `/api/scenario-table?goal=amount`  → JSON rows pulled from `solved_parameter_values`.
+
+Front-end (first pass)
+----------------------
+• Add a new section **Scenario Table** under the charts.
+• `<select id="goalDropdown">` populated from `/api/goals`.
+• Render table using Tabulator.js (or plain `<table>` + Bootstrap for v1).
+
+Performance / Volume
+--------------------
+• Expect thousands of rows; index (`scenario_id`, `sub_scenario_id`, `goal_parameter`) on `solved_parameter_values`.
+• No audit trail or versioning is required; rows are overwritten on re-solve.
+
+Future Considerations
+---------------------
+• Invariant may change (e.g., "die with $X at age 100" *plug*).  Solver service will accept a strategy enum; PV remains default.
+• Optimisation across milestones may require multi-variable solvers; not in scope for v1.
