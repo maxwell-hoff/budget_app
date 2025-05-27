@@ -45,20 +45,34 @@
     }
 
     function groupRows(rows) {
-        // Build list of unique scenario values (columns)
-        const uniqueValues = [...new Set(rows.map(r => r.scenario_value))].sort((a,b)=>a-b);
+        // paramValues = { param: [val1,val2,...] }
+        const paramValues = {};
+        rows.forEach(r => {
+            if (!paramValues[r.scenario_parameter]) paramValues[r.scenario_parameter] = new Set();
+            paramValues[r.scenario_parameter].add(r.scenario_value);
+        });
 
-        // Group by composite key
+        // convert sets to sorted arrays
+        Object.keys(paramValues).forEach(p => {
+            paramValues[p] = Array.from(paramValues[p]).sort((a,b)=>a-b);
+        });
+
+        const paramOrder = Object.keys(paramValues).sort();
+
+        // Group by row key
         const keyFn = r => `${r.scenario}|${r.sub_scenario}|${r.milestone}`;
         const groups = {};
         rows.forEach(r => {
             const k = keyFn(r);
             if (!groups[k]) {
-                groups[k] = { scenario: r.scenario, sub_scenario: r.sub_scenario, milestone: r.milestone };
+                groups[k] = { scenario: r.scenario, sub_scenario: r.sub_scenario, milestone: r.milestone, data: {} };
             }
-            groups[k][r.scenario_value] = r.solved_value;
+            const rowData = groups[k].data;
+            if (!rowData[r.scenario_parameter]) rowData[r.scenario_parameter] = {};
+            rowData[r.scenario_parameter][r.scenario_value] = r.solved_value;
         });
-        return {uniqueValues, grouped: Object.values(groups)};
+
+        return {paramValues, paramOrder, grouped: Object.values(groups)};
     }
 
     function renderTable(rows, goalParam) {
@@ -70,35 +84,51 @@
             return;
         }
 
-        const {uniqueValues, grouped} = groupRows(rows);
+        const {paramValues, paramOrder, grouped} = groupRows(rows);
+
+        const totalValueCols = paramOrder.reduce((acc,p)=>acc+paramValues[p].length,0);
 
         const table = document.createElement('table');
         table.className = 'table table-sm table-bordered';
-        table.style.minWidth = `${150 + uniqueValues.length*120}px`;
+        table.style.minWidth = `${150 + totalValueCols*120}px`;
 
         // Make container scrollable
         container.style.overflowX = 'auto';
 
         const thead = document.createElement('thead');
-        const hr = document.createElement('tr');
-        ['Scenario', 'Sub-Scenario', 'Milestone', ...uniqueValues.map(v => `${v}`)].forEach(text => {
-            const th = document.createElement('th');
-            th.textContent = text;
-            hr.appendChild(th);
+
+        // Row 1: parameter group labels
+        const r1 = document.createElement('tr');
+        ['Scenario','Sub-Scenario','Milestone'].forEach(text=>{
+            const th=document.createElement('th'); th.textContent=text; th.rowSpan=2; r1.appendChild(th);
         });
-        thead.appendChild(hr);
+        paramOrder.forEach(p=>{
+            const th=document.createElement('th');
+            th.textContent=p; th.colSpan=paramValues[p].length; r1.appendChild(th);
+        });
+        thead.appendChild(r1);
+
+        // Row 2: individual values
+        const r2=document.createElement('tr');
+        paramOrder.forEach(p=>{
+            paramValues[p].forEach(val=>{
+                const th=document.createElement('th'); th.textContent=val; r2.appendChild(th);
+            });
+        });
+        thead.appendChild(r2);
+
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
         grouped.forEach(row => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.scenario}</td>
-                <td>${row.sub_scenario}</td>
-                <td>${row.milestone}</td>`;
-            uniqueValues.forEach(val => {
-                const cellVal = row[val] !== undefined ? Number(row[val]).toLocaleString() : '';
-                tr.innerHTML += `<td>${cellVal}</td>`;
+            tr.innerHTML = `<td>${row.scenario}</td><td>${row.sub_scenario}</td><td>${row.milestone}</td>`;
+            paramOrder.forEach(p=>{
+                const vals=paramValues[p];
+                vals.forEach(v=>{
+                    const solved = (row.data[p] && row.data[p][v]!==undefined)? Number(row.data[p][v]).toLocaleString():'';
+                    tr.innerHTML+=`<td>${solved}</td>`;
+                });
             });
             tbody.appendChild(tr);
         });
