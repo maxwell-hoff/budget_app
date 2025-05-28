@@ -496,6 +496,8 @@ function createMilestoneForm(milestone) {
             </div>`;
     };
     
+    const isInheritance = milestone.name === 'Inheritance'; // NEW helper flag
+    
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
             <div class="milestone-header" draggable="true">
@@ -543,7 +545,7 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Amount${goalCheckbox('amount')}</label>
                     <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                        <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
                         ${scenarioControls('amount')}
                     </div>
                 </div>
@@ -906,6 +908,11 @@ function handleMilestoneUpdate(e, form) {
             disbursement_type: disbursementType,
             amount: parseFloat(form.find('[name="amount"]').val())
         };
+        
+        // Prevent manual amount updates for the system-managed Inheritance milestone
+        if (milestone.name === 'Inheritance') {
+            delete updatedMilestone.amount;
+        }
         
         // Add payment field for Asset and Liability types
         if (['Asset', 'Liability'].includes(milestoneType)) {

@@ -192,7 +192,53 @@ class NetWorthCalculator:
         
         db.session.commit()
     
+    def update_inheritance_amounts(self):
+        """Synchronise the amount of every "Inheritance" milestone to equal the
+        liquid assets *excluding that inheritance* at its age of occurrence.
+
+        This is run after an initial milestone-value refresh so that the
+        MilestoneValueByAge table has up-to-date balances we can query.
+        """
+        # Gather every milestone that represents an inheritance event
+        inheritance_milestones = Milestone.query.filter(Milestone.name == 'Inheritance').all()
+        if not inheritance_milestones:
+            return  # Nothing to do
+
+        for inh_ms in inheritance_milestones:
+            target_age = inh_ms.age_at_occurrence
+
+            # Sum liquid assets (Asset-type milestones) **at target_age** for the same
+            # scenario & sub-scenario, explicitly excluding the inheritance milestone
+            assets_query = (
+                MilestoneValueByAge.query
+                .join(Milestone, MilestoneValueByAge.milestone_id == Milestone.id)
+                .filter(
+                    MilestoneValueByAge.age == target_age,
+                    Milestone.milestone_type == 'Asset',
+                    Milestone.id != inh_ms.id,  # exclude the inheritance itself
+                    Milestone.scenario_id == inh_ms.scenario_id,
+                    Milestone.sub_scenario_id == inh_ms.sub_scenario_id,
+                )
+            )
+            liquid_assets = sum(row.value for row in assets_query.all())
+
+            # Update the inheritance amount only if it differs to avoid needless writes
+            if inh_ms.amount != liquid_assets:
+                inh_ms.amount = liquid_assets
+
+        # Persist any updates so that the next milestone-value calculation sees them
+        db.session.commit()
+    
     def recalculate_all(self):
-        """Recalculate all milestone values and net worth."""
+        """Recalculate milestone values, inheritance amounts and net worth."""
+        # 1. Initial milestone value refresh (based on current stored data)
         self.update_milestone_values()
+
+        # 2. Update inheritance amounts to mirror liquid assets at their age
+        self.update_inheritance_amounts()
+
+        # 3. Re-compute milestone values so inherited amounts are reflected
+        self.update_milestone_values()
+
+        # 4. Finally compute net worth using the refreshed milestone values
         self.update_net_worth() 

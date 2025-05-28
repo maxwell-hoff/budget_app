@@ -200,6 +200,9 @@ def create_profile():
 @api_bp.route('/milestones', methods=['GET'])
 def get_milestones():
     """Get all milestones."""
+    # Ensure inheritance amounts (and dependent values) are fresh on every fetch
+    recalculate_net_worth()
+
     scenario_id = request.args.get('scenario_id', type=int)
     sub_scenario_id = request.args.get('sub_scenario_id', type=int)
     query = Milestone.query
