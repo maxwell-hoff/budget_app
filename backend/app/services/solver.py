@@ -6,6 +6,7 @@ from ..models.goal import Goal
 from ..models.scenario_parameter_value import ScenarioParameterValue
 from ..models.solved_parameter_value import SolvedParameterValue
 from ..database import db
+from ..services.net_worth_calculator import NetWorthCalculator
 
 
 def _present_value(amount: float, years: float, rate: float) -> float:
@@ -20,6 +21,46 @@ def _milestone_pv(ms: Milestone) -> float:
     the richer logic already used by the net-worth or liquidity calculations."""
     years = max(ms.age_at_occurrence - 0, 0)  # Assume 0 = present age baseline
     return _present_value(ms.amount, years, ms.rate_of_return or 0.0)
+
+
+def _inheritance_age_for(ms: Milestone) -> int:
+    """Return the age of the (first) Inheritance milestone in the same scenario / sub-scenario.
+    Fallback to 100 if none exists."""
+    inh = (
+        Milestone.query.filter_by(
+            name='Inheritance',
+            scenario_id=ms.scenario_id,
+            sub_scenario_id=ms.sub_scenario_id,
+        ).first()
+    )
+    return inh.age_at_occurrence if inh else 100
+
+
+def _milestone_value_at_age(ms: Milestone, target_age: int) -> float:
+    """Proxy to NetWorthCalculator logic for a single milestone at *target_age*."""
+    # We create a throw-away calculator; current_age does not matter for value calculation.
+    calc = NetWorthCalculator(current_age=0)
+    return calc.calculate_milestone_value_at_age(ms, target_age)
+
+
+def _solve_age_for_value(match_value: float, proto_ms: Milestone, target_age: int, low: int, high: int, tol: float = 1.0) -> int:
+    """Brute-force search for age in [low, high] whose value at *target_age* is ~ match_value.
+
+    We evaluate every integer age in the range and return the one with smallest absolute
+    difference to match_value.  tol provides an early-exit threshold."""
+    best_age = proto_ms.age_at_occurrence
+    best_diff = abs(_milestone_value_at_age(proto_ms, target_age) - match_value)
+
+    for age in range(low, high + 1):
+        proto_ms.age_at_occurrence = age
+        val = _milestone_value_at_age(proto_ms, target_age)
+        diff = abs(val - match_value)
+        if diff < best_diff:
+            best_age, best_diff = age, diff
+            if best_diff <= tol:
+                break
+    # Restore (not strictly needed because object will be discarded)
+    return best_age
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +85,9 @@ def solve_for_goal(goal_parameter: str, milestones: List[Milestone]) -> None:
 
     for ms in milestones:
         base_pv = _milestone_pv(ms)
+        # Pre-compute base value at inheritance age for potential age solving
+        inh_age = _inheritance_age_for(ms)
+        base_val_at_inh = _milestone_value_at_age(ms, inh_age)
 
         for scenario_parameter, values in global_param_values.items():
             for scenario_value in values:
@@ -51,14 +95,27 @@ def solve_for_goal(goal_parameter: str, milestones: List[Milestone]) -> None:
                 overridden = _clone_milestone(ms)
                 setattr(overridden, scenario_parameter, _cast_value(scenario_value, overridden, scenario_parameter))
 
-                # Naïve solve: keep all non-goal parameters fixed, so solved_value equals
-                # the goal parameter value that makes PV match base.  We only support
-                # linear solve for 'amount'.
                 if goal_parameter == 'amount':
+                    # Keep PVs equal by scaling amount linearly.
                     pv_ratio = base_pv / max(1e-9, _milestone_pv(overridden))
                     solved_val = overridden.amount * pv_ratio
+
+                elif goal_parameter == 'age_at_occurrence':
+                    # Adjust age so that the milestone's contribution to liquid assets
+                    # at inheritance age remains unchanged despite scenario variation.
+                    low_bound = 0
+                    high_bound = inh_age  # cannot occur after inheritance
+                    solved_age = _solve_age_for_value(
+                        match_value=base_val_at_inh,
+                        proto_ms=overridden,
+                        target_age=inh_age,
+                        low=low_bound,
+                        high=high_bound,
+                    )
+                    solved_val = solved_age
+
                 else:
-                    # Placeholder: fall back to same value
+                    # Fallback: unchanged
                     solved_val = getattr(overridden, goal_parameter)
 
                 _upsert_solved_value(ms, goal_parameter, scenario_parameter, scenario_value, solved_val)
