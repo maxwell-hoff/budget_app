@@ -437,6 +437,13 @@ def add_scenario_value(milestone_id):
             if goal.is_goal:
                 solve_for_goal(goal.parameter, [milestone])
 
+        # Ensure all other goal milestones get refreshed for the newly added scenario value
+        # Gather all distinct goal parameters across the system
+        distinct_goal_params = {g.parameter for g in Goal.query.filter_by(is_goal=True).all()}
+        all_goaled_milestones = Milestone.query.join(Goal).filter(Goal.is_goal == True).all()
+        for gp in distinct_goal_params:
+            solve_for_goal(gp, all_goaled_milestones)
+
     return jsonify(milestone.to_dict())
 
 @api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['DELETE'])
@@ -460,4 +467,29 @@ def delete_scenario_value(milestone_id):
             if goal.is_goal:
                 solve_for_goal(goal.parameter, [milestone])
 
-    return jsonify(milestone.to_dict()) 
+    return jsonify(milestone.to_dict())
+
+@api_bp.route('/scenario-parameter-values', methods=['GET'])
+def get_scenario_parameter_values():
+    """Return distinct ScenarioParameterValue entries.
+
+    If ?parameter=<name> is supplied, returns list for that one parameter;
+    otherwise returns mapping parameter -> list(values).
+    """
+    param = request.args.get('parameter')
+    query = ScenarioParameterValue.query
+    if param is not None:
+        query = query.filter_by(parameter=param)
+
+    rows = query.all()
+
+    if param is not None:
+        values = sorted({row.value for row in rows}, key=lambda x: (str(x)))
+        return jsonify(values)
+
+    # Build mapping for all parameters
+    mapping = {}
+    for row in rows:
+        mapping.setdefault(row.parameter, set()).add(row.value)
+    mapping = {k: sorted(list(v), key=lambda x: (str(x))) for k, v in mapping.items()}
+    return jsonify(mapping) 
