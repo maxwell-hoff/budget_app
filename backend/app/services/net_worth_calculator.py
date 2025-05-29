@@ -109,14 +109,20 @@ class NetWorthCalculator:
                     
                 # Calculate cumulative impact
                 if milestone.occurrence == 'Monthly':
-                    return milestone.amount * 12 * years_elapsed
+                    value = milestone.amount * 12 * years_elapsed
                 else:  # Yearly
-                    return milestone.amount * years_elapsed
+                    value = milestone.amount * years_elapsed
             else:  # Perpetuity
                 if milestone.occurrence == 'Monthly':
-                    return milestone.amount * 12 * years_elapsed
+                    value = milestone.amount * 12 * years_elapsed
                 else:  # Yearly
-                    return milestone.amount * years_elapsed
+                    value = milestone.amount * years_elapsed
+
+            # Expenses reduce liquid assets, so make them negative
+            if milestone.milestone_type == 'Expense':
+                value = -value
+
+            return value
     
     def update_milestone_values(self):
         """Update milestone values for all ages."""
@@ -152,11 +158,16 @@ class NetWorthCalculator:
         milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
         
         # Sum up all asset values
-        liquid_assets = sum(
-            milestone_value.value 
-            for milestone_value in milestone_values 
-            if milestone_value.milestone.milestone_type == 'Asset'
-        )
+        liquid_assets = 0.0
+        for mv in milestone_values:
+            mt = mv.milestone.milestone_type
+            if mt == 'Asset':
+                liquid_assets += mv.value
+            elif mt == 'Liability':
+                # liabilities are ignored for liquid-assets metric
+                continue
+            else:  # Income or Expense values already carry sign (+ / -)
+                liquid_assets += mv.value
         
         return liquid_assets
     
@@ -177,11 +188,13 @@ class NetWorthCalculator:
             # Calculate asset and liability values
             for milestone_value in milestone_values:
                 milestone = milestone_value.milestone
-                if milestone.milestone_type in ['Asset', 'Liability']:
-                    if milestone.milestone_type == 'Asset':
-                        current_liquid_assets += milestone_value.value
-                    else:  # Liability
-                        current_debt += milestone_value.value
+                mt_type = milestone.milestone_type
+                if mt_type == 'Asset':
+                    current_liquid_assets += milestone_value.value
+                elif mt_type == 'Liability':
+                    current_debt += milestone_value.value
+                else:  # Income or Expense
+                    current_liquid_assets += milestone_value.value
             
             # Calculate net worth
             net_worth = current_liquid_assets - current_debt
