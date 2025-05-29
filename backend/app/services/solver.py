@@ -63,6 +63,73 @@ def _solve_age_for_value(match_value: float, proto_ms: Milestone, target_age: in
     return best_age
 
 
+def _liquid_assets_for_milestones(rows: List[Milestone], current_age: int, target_age: int) -> float:
+    """Return total liquid-asset balance at *target_age* for an *in-memory* list
+    of Milestone objects (rows may or may not be persisted).  The computation
+    mirrors NetWorthCalculator rules.  The list can safely include a clone of
+    every milestone; function ignores any with name == 'Inheritance' because
+    that row merely mirrors the total we are computing.
+    """
+    calc = NetWorthCalculator(current_age=current_age)
+    total = 0.0
+    for ms in rows:
+        if ms.name == 'Inheritance':
+            # The inheritance milestone amount equals liquid assets; exclude to
+            # avoid circularity.
+            continue
+        val = calc.calculate_milestone_value_at_age(ms, target_age)
+        if ms.milestone_type == 'Asset':
+            total += val
+        elif ms.milestone_type == 'Liability':
+            # debt not part of liquid assets metric
+            continue
+        else:  # Income (+) or Expense (−) already signed
+            total += val
+    return total
+
+
+def _search_goal_value(clone_ms: Milestone, all_rows: List[Milestone], goal_param: str,
+                       baseline_target: float, inh_age: int) -> float:
+    """Find the goal parameter value that makes liquid assets closest to the
+    baseline_target.  Integer goals (age, duration) use exhaustive search; all
+    others use a simple binary search and round to 1 decimal place."""
+
+    def objective(candidate):
+        setattr(clone_ms, goal_param, candidate)
+        return abs(_liquid_assets_for_milestones(all_rows, 0, inh_age) - baseline_target)
+
+    current_val = getattr(clone_ms, goal_param)
+
+    if goal_param in {'age_at_occurrence', 'duration'}:
+        best = current_val
+        best_err = objective(best)
+        for cand in range(0, inh_age + 1):
+            err = objective(cand)
+            if err < best_err:
+                best, best_err = cand, err
+        return best
+
+    # decimal goal param search
+    lo = 0.0
+    hi = current_val * 10 if current_val else 1.0
+    best = current_val
+    best_err = objective(best)
+
+    for _ in range(25):  # ~2^25 ≈ 3e7 resolution, plenty for 1-dp rounding
+        mid = (lo + hi) / 2
+        err_mid = objective(mid)
+        if err_mid < best_err:
+            best, best_err = mid, err_mid
+        # decide search direction by seeing which side overshoots
+        setattr(clone_ms, goal_param, mid)
+        overshoot = _liquid_assets_for_milestones(all_rows, 0, inh_age) - baseline_target
+        if overshoot > 0:
+            hi = mid
+        else:
+            lo = mid
+    return round(best, 1)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -83,40 +150,48 @@ def solve_for_goal(goal_parameter: str, milestones: List[Milestone]) -> None:
     for k in global_param_values:
         global_param_values[k] = sorted(global_param_values[k], key=lambda x: (str(x)))
 
+    baseline_cache = {}
+
     for ms in milestones:
-        base_pv = _milestone_pv(ms)
-        # Pre-compute base value at inheritance age for potential age solving
         inh_age = _inheritance_age_for(ms)
-        base_val_at_inh = _milestone_value_at_age(ms, inh_age)
+
+        # Cache baseline liquid assets (excluding inheritance) for this scenario/sub-scenario
+        scenario_key = (ms.scenario_id, ms.sub_scenario_id)
+        if scenario_key not in baseline_cache:
+            base_rows = Milestone.query.filter_by(
+                scenario_id=ms.scenario_id,
+                sub_scenario_id=ms.sub_scenario_id
+            ).all()
+            baseline_cache[scenario_key] = _liquid_assets_for_milestones(base_rows, 0, inh_age)
+
+        baseline_target = baseline_cache[scenario_key]
+
+        # Build a full clone list once per ms to reuse inside inner loop
+        original_group_rows = Milestone.query.filter_by(
+            scenario_id=ms.scenario_id,
+            sub_scenario_id=ms.sub_scenario_id
+        ).all()
+
+        try:
+            goal_index_in_group = next(i for i, r in enumerate(original_group_rows) if r.id == ms.id)
+        except StopIteration:
+            goal_index_in_group = None
 
         for scenario_parameter, values in global_param_values.items():
             for scenario_value in values:
-                # Clone milestone with overridden parameter
-                overridden = _clone_milestone(ms)
-                setattr(overridden, scenario_parameter, _cast_value(scenario_value, overridden, scenario_parameter))
+                # fresh clone list for this variant
+                clone_list = [_clone_milestone(r) for r in original_group_rows]
 
-                if goal_parameter == 'amount':
-                    # Keep PVs equal by scaling amount linearly.
-                    pv_ratio = base_pv / max(1e-9, _milestone_pv(overridden))
-                    solved_val = overridden.amount * pv_ratio
+                if goal_index_in_group is None:
+                    continue  # safety
+                clone_ms = clone_list[goal_index_in_group]
+                setattr(clone_ms, scenario_parameter, _cast_value(scenario_value, clone_ms, scenario_parameter))
 
-                elif goal_parameter == 'age_at_occurrence':
-                    # Adjust age so that the milestone's contribution to liquid assets
-                    # at inheritance age remains unchanged despite scenario variation.
-                    low_bound = 0
-                    high_bound = inh_age  # cannot occur after inheritance
-                    solved_age = _solve_age_for_value(
-                        match_value=base_val_at_inh,
-                        proto_ms=overridden,
-                        target_age=inh_age,
-                        low=low_bound,
-                        high=high_bound,
-                    )
-                    solved_val = solved_age
-
-                else:
-                    # Fallback: unchanged
-                    solved_val = getattr(overridden, goal_parameter)
+                # search for goal value
+                solved_val = _search_goal_value(
+                    clone_ms, clone_list, goal_parameter,
+                    baseline_target, inh_age
+                )
 
                 _upsert_solved_value(ms, goal_parameter, scenario_parameter, scenario_value, solved_val)
 
