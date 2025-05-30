@@ -1,6 +1,7 @@
 // Global variables
 let currentAge = 0;
 let milestones = [];
+let globalScenarioValues = {};
 // Track the most recent loadMilestones request so we can ignore stale responses
 let milestonesLoadCounter = 0;
 
@@ -23,6 +24,12 @@ $(document).ready(function() {
     } else {
         console.log('Milestone forms container found');
     }
+
+    // Fetch all scenario-parameter values globally for tooltips
+    fetch('/api/scenario-parameter-values')
+        .then(res => res.json())
+        .then(data => { globalScenarioValues = data; })
+        .catch(err => console.warn('Could not fetch global scenario values', err));
 });
 
 // Event Listeners
@@ -478,7 +485,10 @@ function createMilestoneForm(milestone) {
     
     // Helper to generate scenario control HTML (button + dropdown) for a parameter
     const scenarioControls = (param) => {
-        const values = (milestone.scenario_parameter_values && milestone.scenario_parameter_values[param]) || [];
+        // Merge local milestone-specific values with globally known ones
+        const localVals = (milestone.scenario_parameter_values && milestone.scenario_parameter_values[param]) || [];
+        const globalVals = globalScenarioValues[param] || [];
+        const values = Array.from(new Set([...localVals, ...globalVals]));
         const listItems = values.map(v => `
             <li>
                 <span class="dropdown-item d-flex justify-content-between align-items-center" data-value="${v}">
@@ -495,6 +505,8 @@ function createMilestoneForm(milestone) {
                 <ul class="dropdown-menu scenario-values-list" data-param="${param}">${listItems}</ul>
             </div>`;
     };
+    
+    const isInheritance = milestone.name === 'Inheritance'; // NEW helper flag
     
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
@@ -543,7 +555,7 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Amount${goalCheckbox('amount')}</label>
                     <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="amount" value="${milestone.amount}">
+                        <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
                         ${scenarioControls('amount')}
                     </div>
                 </div>
@@ -906,6 +918,11 @@ function handleMilestoneUpdate(e, form) {
             disbursement_type: disbursementType,
             amount: parseFloat(form.find('[name="amount"]').val())
         };
+        
+        // Prevent manual amount updates for the system-managed Inheritance milestone
+        if (milestone.name === 'Inheritance') {
+            delete updatedMilestone.amount;
+        }
         
         // Add payment field for Asset and Liability types
         if (['Asset', 'Liability'].includes(milestoneType)) {

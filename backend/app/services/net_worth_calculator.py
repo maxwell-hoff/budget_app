@@ -109,14 +109,20 @@ class NetWorthCalculator:
                     
                 # Calculate cumulative impact
                 if milestone.occurrence == 'Monthly':
-                    return milestone.amount * 12 * years_elapsed
+                    value = milestone.amount * 12 * years_elapsed
                 else:  # Yearly
-                    return milestone.amount * years_elapsed
+                    value = milestone.amount * years_elapsed
             else:  # Perpetuity
                 if milestone.occurrence == 'Monthly':
-                    return milestone.amount * 12 * years_elapsed
+                    value = milestone.amount * 12 * years_elapsed
                 else:  # Yearly
-                    return milestone.amount * years_elapsed
+                    value = milestone.amount * years_elapsed
+
+            # Expenses reduce liquid assets, so make them negative
+            if milestone.milestone_type == 'Expense':
+                value = -value
+
+            return value
     
     def update_milestone_values(self):
         """Update milestone values for all ages."""
@@ -152,11 +158,16 @@ class NetWorthCalculator:
         milestone_values = MilestoneValueByAge.query.filter_by(age=age).all()
         
         # Sum up all asset values
-        liquid_assets = sum(
-            milestone_value.value 
-            for milestone_value in milestone_values 
-            if milestone_value.milestone.milestone_type == 'Asset'
-        )
+        liquid_assets = 0.0
+        for mv in milestone_values:
+            mt = mv.milestone.milestone_type
+            if mt == 'Asset':
+                liquid_assets += mv.value
+            elif mt == 'Liability':
+                # liabilities are ignored for liquid-assets metric
+                continue
+            else:  # Income or Expense values already carry sign (+ / -)
+                liquid_assets += mv.value
         
         return liquid_assets
     
@@ -177,11 +188,13 @@ class NetWorthCalculator:
             # Calculate asset and liability values
             for milestone_value in milestone_values:
                 milestone = milestone_value.milestone
-                if milestone.milestone_type in ['Asset', 'Liability']:
-                    if milestone.milestone_type == 'Asset':
-                        current_liquid_assets += milestone_value.value
-                    else:  # Liability
-                        current_debt += milestone_value.value
+                mt_type = milestone.milestone_type
+                if mt_type == 'Asset':
+                    current_liquid_assets += milestone_value.value
+                elif mt_type == 'Liability':
+                    current_debt += milestone_value.value
+                else:  # Income or Expense
+                    current_liquid_assets += milestone_value.value
             
             # Calculate net worth
             net_worth = current_liquid_assets - current_debt
@@ -192,7 +205,53 @@ class NetWorthCalculator:
         
         db.session.commit()
     
+    def update_inheritance_amounts(self):
+        """Synchronise the amount of every "Inheritance" milestone to equal the
+        liquid assets *excluding that inheritance* at its age of occurrence.
+
+        This is run after an initial milestone-value refresh so that the
+        MilestoneValueByAge table has up-to-date balances we can query.
+        """
+        # Gather every milestone that represents an inheritance event
+        inheritance_milestones = Milestone.query.filter(Milestone.name == 'Inheritance').all()
+        if not inheritance_milestones:
+            return  # Nothing to do
+
+        for inh_ms in inheritance_milestones:
+            target_age = inh_ms.age_at_occurrence
+
+            # Sum liquid assets (Asset-type milestones) **at target_age** for the same
+            # scenario & sub-scenario, explicitly excluding the inheritance milestone
+            assets_query = (
+                MilestoneValueByAge.query
+                .join(Milestone, MilestoneValueByAge.milestone_id == Milestone.id)
+                .filter(
+                    MilestoneValueByAge.age == target_age,
+                    Milestone.milestone_type == 'Asset',
+                    Milestone.id != inh_ms.id,  # exclude the inheritance itself
+                    Milestone.scenario_id == inh_ms.scenario_id,
+                    Milestone.sub_scenario_id == inh_ms.sub_scenario_id,
+                )
+            )
+            liquid_assets = sum(row.value for row in assets_query.all())
+
+            # Update the inheritance amount only if it differs to avoid needless writes
+            if inh_ms.amount != liquid_assets:
+                inh_ms.amount = liquid_assets
+
+        # Persist any updates so that the next milestone-value calculation sees them
+        db.session.commit()
+    
     def recalculate_all(self):
-        """Recalculate all milestone values and net worth."""
+        """Recalculate milestone values, inheritance amounts and net worth."""
+        # 1. Initial milestone value refresh (based on current stored data)
         self.update_milestone_values()
+
+        # 2. Update inheritance amounts to mirror liquid assets at their age
+        self.update_inheritance_amounts()
+
+        # 3. Re-compute milestone values so inherited amounts are reflected
+        self.update_milestone_values()
+
+        # 4. Finally compute net worth using the refreshed milestone values
         self.update_net_worth() 
