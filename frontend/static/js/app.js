@@ -1179,13 +1179,8 @@ function updateCharts() {
         .catch(error => console.error('Error fetching liquidity data:', error));
 }
 
-// Add event listeners for milestone changes
-document.addEventListener('milestoneCreated', updateCharts);
-document.addEventListener('milestoneUpdated', updateCharts);
-document.addEventListener('milestoneDeleted', updateCharts);
-
 // Initial chart update
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing charts');
-    updateCharts();
-}); 
+// document.addEventListener('DOMContentLoaded', () => {
+//     console.log('DOM loaded, initializing charts');
+//     updateCharts();
+// }); 
