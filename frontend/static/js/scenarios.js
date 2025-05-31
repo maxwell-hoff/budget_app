@@ -2,6 +2,7 @@ class ScenarioManager {
     constructor() {
         this.scenarioSelect = document.getElementById('scenarioSelect');
         this.newButton = document.getElementById('newScenario');
+        this.renameButton = document.getElementById('renameScenario');
         
         // We lazily read localStorage each time we reload the list, but keep an initial copy for first paint.
         this.storedScenarioId = localStorage.getItem('selectedScenarioId');
@@ -12,6 +13,7 @@ class ScenarioManager {
     
     setupEventListeners() {
         this.newButton.addEventListener('click', () => this.createNewScenario());
+        this.renameButton.addEventListener('click', () => this.renameCurrentScenario());
         this.scenarioSelect.addEventListener('change', () => {
             // Persist selection so it survives full page reloads
             localStorage.setItem('selectedScenarioId', this.scenarioSelect.value);
@@ -214,6 +216,38 @@ class ScenarioManager {
         }
         if (window.netWorthChart) {
             updateCharts();
+        }
+    }
+    
+    async renameCurrentScenario() {
+        const selectedId = this.scenarioSelect.value;
+        if (!selectedId) {
+            alert('Please select a scenario to rename');
+            return;
+        }
+
+        const currentName = this.scenarioSelect.options[this.scenarioSelect.selectedIndex].textContent;
+        const name = prompt('Enter a new name for the scenario:', currentName);
+        if (!name || name.trim() === '') return;
+
+        try {
+            const response = await fetch(`/api/scenarios/${selectedId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name })
+            });
+
+            if (response.ok) {
+                await this.loadScenarios();
+                alert('Scenario renamed successfully');
+            } else {
+                throw new Error('Failed to rename scenario');
+            }
+        } catch (error) {
+            console.error('Error renaming scenario:', error);
+            alert('Error renaming scenario');
         }
     }
 }

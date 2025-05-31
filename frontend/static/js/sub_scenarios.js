@@ -2,6 +2,7 @@ class SubScenarioManager {
     constructor() {
         this.subScenarioSelect = document.getElementById('subScenarioSelect');
         this.newButton = document.getElementById('newSubScenario');
+        this.renameButton = document.getElementById('renameSubScenario');
 
         // Keep id in local storage per scenario for persistence
         this.parentScenarioSelect = document.getElementById('scenarioSelect');
@@ -27,6 +28,9 @@ class SubScenarioManager {
         this.parentScenarioSelect.addEventListener('change', () => {
             this.loadSubScenarios();
         });
+
+        // When user clicks to rename a sub-scenario
+        this.renameButton.addEventListener('click', () => this.renameCurrentSubScenario());
     }
 
     storageKeyForScenario() {
@@ -115,6 +119,38 @@ class SubScenarioManager {
         } catch (err) {
             console.error('Error creating sub-scenario', err);
             alert('Error creating sub-scenario');
+        }
+    }
+
+    async renameCurrentSubScenario() {
+        const subScenarioId = this.subScenarioSelect.value;
+        if (!subScenarioId) {
+            alert('Please select a sub-scenario to rename');
+            return;
+        }
+
+        const currentName = this.subScenarioSelect.options[this.subScenarioSelect.selectedIndex].textContent;
+        const name = prompt('Enter a new name for the sub-scenario:', currentName);
+        if (!name || name.trim() === '') return;
+
+        try {
+            const response = await fetch(`/api/sub-scenarios/${subScenarioId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name })
+            });
+
+            if (response.ok) {
+                await this.loadSubScenarios();
+                alert('Sub-scenario renamed successfully');
+            } else {
+                throw new Error('Failed to rename sub-scenario');
+            }
+        } catch (err) {
+            console.error('Error renaming sub-scenario', err);
+            alert('Error renaming sub-scenario');
         }
     }
 }
