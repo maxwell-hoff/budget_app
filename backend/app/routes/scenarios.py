@@ -186,7 +186,12 @@ def update_scenario(scenario_id):
 
 @scenarios_bp.route('/api/scenarios/<int:scenario_id>', methods=['DELETE'])
 def delete_scenario(scenario_id):
-    """Delete all milestones belonging to a scenario."""
+    """Delete a scenario including its milestones and sub-scenarios."""
+    # Delete milestones first (they reference sub-scenario & scenario ids)
     Milestone.query.filter_by(scenario_id=scenario_id).delete()
+
+    # Delete sub-scenarios for this scenario
+    SubScenario.query.filter_by(scenario_id=scenario_id).delete()
+
     db.session.commit()
     return '', 204 

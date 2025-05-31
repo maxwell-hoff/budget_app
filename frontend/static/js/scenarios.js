@@ -3,6 +3,7 @@ class ScenarioManager {
         this.scenarioSelect = document.getElementById('scenarioSelect');
         this.newButton = document.getElementById('newScenario');
         this.renameButton = document.getElementById('renameScenario');
+        this.deleteButton = document.getElementById('deleteScenario');
         
         // We lazily read localStorage each time we reload the list, but keep an initial copy for first paint.
         this.storedScenarioId = localStorage.getItem('selectedScenarioId');
@@ -14,6 +15,7 @@ class ScenarioManager {
     setupEventListeners() {
         this.newButton.addEventListener('click', () => this.createNewScenario());
         this.renameButton.addEventListener('click', () => this.renameCurrentScenario());
+        this.deleteButton.addEventListener('click', () => this.deleteCurrentScenario());
         this.scenarioSelect.addEventListener('change', () => {
             // Persist selection so it survives full page reloads
             localStorage.setItem('selectedScenarioId', this.scenarioSelect.value);
@@ -248,6 +250,38 @@ class ScenarioManager {
         } catch (error) {
             console.error('Error renaming scenario:', error);
             alert('Error renaming scenario');
+        }
+    }
+    
+    async deleteCurrentScenario() {
+        const selectedId = this.scenarioSelect.value;
+        if (!selectedId) {
+            alert('Please select a scenario to delete');
+            return;
+        }
+
+        const confirmDelete = confirm('Are you sure you want to delete this scenario? This action cannot be undone.');
+        if (!confirmDelete) return;
+
+        try {
+            const response = await fetch(`/api/scenarios/${selectedId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // If the deleted scenario was stored in localStorage, remove it
+                if (localStorage.getItem('selectedScenarioId') === selectedId) {
+                    localStorage.removeItem('selectedScenarioId');
+                }
+
+                await this.loadScenarios();
+                alert('Scenario deleted successfully');
+            } else {
+                throw new Error('Failed to delete scenario');
+            }
+        } catch (error) {
+            console.error('Error deleting scenario:', error);
+            alert('Error deleting scenario');
         }
     }
 }

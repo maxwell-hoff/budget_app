@@ -3,6 +3,7 @@ class SubScenarioManager {
         this.subScenarioSelect = document.getElementById('subScenarioSelect');
         this.newButton = document.getElementById('newSubScenario');
         this.renameButton = document.getElementById('renameSubScenario');
+        this.deleteButton = document.getElementById('deleteSubScenario');
 
         // Keep id in local storage per scenario for persistence
         this.parentScenarioSelect = document.getElementById('scenarioSelect');
@@ -31,6 +32,9 @@ class SubScenarioManager {
 
         // When user clicks to rename a sub-scenario
         this.renameButton.addEventListener('click', () => this.renameCurrentSubScenario());
+
+        // When user clicks to delete a sub-scenario
+        this.deleteButton.addEventListener('click', () => this.deleteCurrentSubScenario());
     }
 
     storageKeyForScenario() {
@@ -151,6 +155,38 @@ class SubScenarioManager {
         } catch (err) {
             console.error('Error renaming sub-scenario', err);
             alert('Error renaming sub-scenario');
+        }
+    }
+
+    async deleteCurrentSubScenario() {
+        const subScenarioId = this.subScenarioSelect.value;
+        if (!subScenarioId) {
+            alert('Please select a sub-scenario to delete');
+            return;
+        }
+
+        const confirmDelete = confirm('Are you sure you want to delete this sub-scenario? This action cannot be undone.');
+        if (!confirmDelete) return;
+
+        try {
+            const response = await fetch(`/api/sub-scenarios/${subScenarioId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Remove stored selection for this scenario-sub combination if it matches
+                if (localStorage.getItem(this.storageKeyForScenario()) === subScenarioId) {
+                    localStorage.removeItem(this.storageKeyForScenario());
+                }
+
+                await this.loadSubScenarios();
+                alert('Sub-scenario deleted successfully');
+            } else {
+                throw new Error('Failed to delete sub-scenario');
+            }
+        } catch (err) {
+            console.error('Error deleting sub-scenario', err);
+            alert('Error deleting sub-scenario');
         }
     }
 }
