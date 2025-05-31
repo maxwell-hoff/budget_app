@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy import func
 
 from ..models.milestone import Milestone
+from ..models.sub_scenario import SubScenario
 from ..database import db
 
 scenarios_bp = Blueprint('scenarios', __name__)
@@ -25,6 +26,12 @@ def create_scenario():
     # Determine next scenario_id
     max_id = db.session.query(func.max(Milestone.scenario_id)).scalar() or 1
     new_id = max_id + 1
+
+    # Create the default base sub-scenario for this new scenario so that it shows up in the UI
+    base_sub = SubScenario(scenario_id=new_id, name='Base Sub-Scenario')
+    db.session.add(base_sub)
+    db.session.flush()  # Assigns an ID without committing yet
+    base_sub_id = base_sub.id
 
     # If client provided milestones to start with, use them; otherwise clone milestones of scenario_id=1
     source_milestones_data = data.get('milestones')
@@ -107,7 +114,13 @@ def create_scenario():
             # Still malformed; skip
             continue
 
-        new_row = Milestone(**m_fields, scenario_id=new_id, scenario_name=data['name'])
+        new_row = Milestone(
+            **m_fields,
+            scenario_id=new_id,
+            scenario_name=data['name'],
+            sub_scenario_id=base_sub_id,
+            sub_scenario_name='Base Sub-Scenario'
+        )
         db.session.add(new_row)
         new_rows.append(new_row)
 

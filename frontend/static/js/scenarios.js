@@ -42,17 +42,19 @@ class ScenarioManager {
             // Try to restore previously-selected scenario
             if (storedId && this.scenarioSelect.querySelector(`option[value="${storedId}"]`)) {
                 this.scenarioSelect.value = storedId;
+                // Notify any listeners (e.g., SubScenarioManager) that the value has changed
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
             
             // Fallback: auto-select first scenario if still none selected
             if (!this.scenarioSelect.value && scenarios.length > 0) {
                 this.scenarioSelect.value = scenarios[0].id;
-                // Trigger load for selected scenario
-                this.loadSelectedScenario();
+                // Emit change so dependent components refresh
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
             else if (this.scenarioSelect.value) {
                 // Ensure parameters load when restoring stored scenario
-                this.loadSelectedScenario();
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
         } catch (error) {
             console.error('Error loading scenarios:', error);

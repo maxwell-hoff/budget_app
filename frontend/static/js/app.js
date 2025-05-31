@@ -795,7 +795,9 @@ function addSubMilestone(parentForm) {
         order: milestones.length,
         parent_milestone_id: parentId,
         scenario_id: parseInt($('#scenarioSelect').val()) || 1,
-        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario'
+        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario',
+        sub_scenario_id: parseInt($('#subScenarioSelect').val()) || 1,
+        sub_scenario_name: $('#subScenarioSelect option:selected').text() || 'Base Sub-Scenario'
     };
     
     $.ajax({
