@@ -225,15 +225,25 @@ def upsert_milestone_values_by_age(session: Session, records: Iterable[dict]) ->
 # 5. Quick smoke test when executed as a script
 # ---------------------------------------------------------------------------
 
+class ScenarioCalculator:
+    def __init__(self, data: Dict[str, List]):
+        self.data = data
+
+    def calculate_scenario(self, scenario_id: int):
+        pass
+
 if __name__ == "__main__":
     sess = get_session()
-    info = fetch_all_data(sess)
-    print("Milestones       :", len(info["milestones"]))
-    print("Goals            :", len(info["goals"]))
-    print("Scenario Params  :", len(info["scenario_parameter_values"]))
-    print("Milestone Values :", len(info["milestone_values_by_age"]))
+    data = fetch_all_data(sess)
+    print("Milestones               :", len(data["milestones"]))
+    print("Goals                    :", len(data["goals"]))
+    print("Scenario Params          :", len(data["scenario_parameter_values"]))
+    print("Milestone Values by Age  :", len(data["milestone_values_by_age"]))
 
     # Show the first milestone as a sanity check (if any)
-    if info["milestones"]:
+    if data["milestones"]:
         print("\nFirst milestone:")
-        print(info["milestones"][0].to_dict()) 
+        print(data["milestones"][0].to_dict())
+
+    ScenarioCalculator(data).calculate_scenario(1)
+    
