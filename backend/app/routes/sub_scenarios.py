@@ -15,6 +15,12 @@ def get_sub_scenarios():
         return jsonify({'error': 'scenario_id query parameter is required'}), 400
 
     rows = SubScenario.query.filter_by(scenario_id=scenario_id).order_by(SubScenario.id).all()
+    # Ensure every scenario always has at least one sub-scenario ("Base Sub-Scenario")
+    if not rows:
+        base_sub = SubScenario(scenario_id=scenario_id, name='Base Sub-Scenario')
+        db.session.add(base_sub)
+        db.session.commit()
+        rows = [base_sub]
     return jsonify([row.to_dict() for row in rows])
 
 
@@ -24,7 +30,11 @@ def create_sub_scenario():
     data = request.get_json()
     name = data.get('name')
     scenario_id = data.get('scenario_id')
-    source_sub_scenario_id = data.get('source_sub_scenario_id', 1)  # Default to base sub-scenario
+    # Determine the source sub-scenario to clone from (defaults to the base one for the scenario)
+    source_sub_scenario_id = data.get('source_sub_scenario_id')
+    if source_sub_scenario_id is None:
+        base_row = SubScenario.query.filter_by(scenario_id=scenario_id).order_by(SubScenario.id).first()
+        source_sub_scenario_id = base_row.id if base_row else 1  # Fallback to 1 if somehow none found
 
     if not name or not scenario_id:
         return jsonify({'error': 'name and scenario_id are required'}), 400

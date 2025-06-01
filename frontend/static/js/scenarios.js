@@ -2,6 +2,8 @@ class ScenarioManager {
     constructor() {
         this.scenarioSelect = document.getElementById('scenarioSelect');
         this.newButton = document.getElementById('newScenario');
+        this.renameButton = document.getElementById('renameScenario');
+        this.deleteButton = document.getElementById('deleteScenario');
         
         // We lazily read localStorage each time we reload the list, but keep an initial copy for first paint.
         this.storedScenarioId = localStorage.getItem('selectedScenarioId');
@@ -12,6 +14,8 @@ class ScenarioManager {
     
     setupEventListeners() {
         this.newButton.addEventListener('click', () => this.createNewScenario());
+        this.renameButton.addEventListener('click', () => this.renameCurrentScenario());
+        this.deleteButton.addEventListener('click', () => this.deleteCurrentScenario());
         this.scenarioSelect.addEventListener('change', () => {
             // Persist selection so it survives full page reloads
             localStorage.setItem('selectedScenarioId', this.scenarioSelect.value);
@@ -42,17 +46,19 @@ class ScenarioManager {
             // Try to restore previously-selected scenario
             if (storedId && this.scenarioSelect.querySelector(`option[value="${storedId}"]`)) {
                 this.scenarioSelect.value = storedId;
+                // Notify any listeners (e.g., SubScenarioManager) that the value has changed
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
             
             // Fallback: auto-select first scenario if still none selected
             if (!this.scenarioSelect.value && scenarios.length > 0) {
                 this.scenarioSelect.value = scenarios[0].id;
-                // Trigger load for selected scenario
-                this.loadSelectedScenario();
+                // Emit change so dependent components refresh
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
             else if (this.scenarioSelect.value) {
                 // Ensure parameters load when restoring stored scenario
-                this.loadSelectedScenario();
+                this.scenarioSelect.dispatchEvent(new Event('change'));
             }
         } catch (error) {
             console.error('Error loading scenarios:', error);
@@ -212,6 +218,70 @@ class ScenarioManager {
         }
         if (window.netWorthChart) {
             updateCharts();
+        }
+    }
+    
+    async renameCurrentScenario() {
+        const selectedId = this.scenarioSelect.value;
+        if (!selectedId) {
+            alert('Please select a scenario to rename');
+            return;
+        }
+
+        const currentName = this.scenarioSelect.options[this.scenarioSelect.selectedIndex].textContent;
+        const name = prompt('Enter a new name for the scenario:', currentName);
+        if (!name || name.trim() === '') return;
+
+        try {
+            const response = await fetch(`/api/scenarios/${selectedId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name })
+            });
+
+            if (response.ok) {
+                await this.loadScenarios();
+                alert('Scenario renamed successfully');
+            } else {
+                throw new Error('Failed to rename scenario');
+            }
+        } catch (error) {
+            console.error('Error renaming scenario:', error);
+            alert('Error renaming scenario');
+        }
+    }
+    
+    async deleteCurrentScenario() {
+        const selectedId = this.scenarioSelect.value;
+        if (!selectedId) {
+            alert('Please select a scenario to delete');
+            return;
+        }
+
+        const confirmDelete = confirm('Are you sure you want to delete this scenario? This action cannot be undone.');
+        if (!confirmDelete) return;
+
+        try {
+            const response = await fetch(`/api/scenarios/${selectedId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // If the deleted scenario was stored in localStorage, remove it
+                if (localStorage.getItem('selectedScenarioId') === selectedId) {
+                    localStorage.removeItem('selectedScenarioId');
+                }
+
+                await this.loadScenarios();
+                alert('Scenario deleted successfully');
+            } else {
+                throw new Error('Failed to delete scenario');
+            }
+        } catch (error) {
+            console.error('Error deleting scenario:', error);
+            alert('Error deleting scenario');
         }
     }
 }

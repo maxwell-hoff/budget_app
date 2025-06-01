@@ -795,7 +795,9 @@ function addSubMilestone(parentForm) {
         order: milestones.length,
         parent_milestone_id: parentId,
         scenario_id: parseInt($('#scenarioSelect').val()) || 1,
-        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario'
+        scenario_name: $('#scenarioSelect option:selected').text() || 'Base Scenario',
+        sub_scenario_id: parseInt($('#subScenarioSelect').val()) || 1,
+        sub_scenario_name: $('#subScenarioSelect option:selected').text() || 'Base Sub-Scenario'
     };
     
     $.ajax({
@@ -1177,13 +1179,8 @@ function updateCharts() {
         .catch(error => console.error('Error fetching liquidity data:', error));
 }
 
-// Add event listeners for milestone changes
-document.addEventListener('milestoneCreated', updateCharts);
-document.addEventListener('milestoneUpdated', updateCharts);
-document.addEventListener('milestoneDeleted', updateCharts);
-
 // Initial chart update
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing charts');
-    updateCharts();
-}); 
+// document.addEventListener('DOMContentLoaded', () => {
+//     console.log('DOM loaded, initializing charts');
+//     updateCharts();
+// }); 

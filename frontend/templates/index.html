@@ -68,12 +68,16 @@
                             <option value="">Select a scenario...</option>
                         </select>
                         <button id="newScenario" class="btn btn-success">New</button>
+                        <button id="renameScenario" class="btn btn-secondary">Rename</button>
+                        <button id="deleteScenario" class="btn btn-danger">Delete</button>
 
                         <!-- Sub-scenario controls -->
                         <select id="subScenarioSelect" class="form-control">
                             <option value="">Select a sub-scenario...</option>
                         </select>
                         <button id="newSubScenario" class="btn btn-success">New</button>
+                        <button id="renameSubScenario" class="btn btn-secondary">Rename</button>
+                        <button id="deleteSubScenario" class="btn btn-danger">Delete</button>
                     </div>
                 </div>
                 
@@ -135,6 +139,9 @@
                 <div class="chart-container">
                     <h3>Scenario Table</h3>
                     <div class="mb-2">
+                        <button id="calculateButton" class="btn btn-primary">Calculate</button>
+                    </div>
+                    <div class="mb-2">
                         <label for="goalDropdown" class="form-label">Goal parameter:</label>
                         <select id="goalDropdown" class="form-select d-inline-block w-auto"></select>
                     </div>
@@ -160,5 +167,6 @@
     <script src="/static/js/sub_scenarios.js"></script>
     <script src="/static/js/scenario_table.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/calculate_button.js"></script>
 </body>
 </html> 
