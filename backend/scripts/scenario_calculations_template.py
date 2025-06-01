@@ -32,14 +32,20 @@ from sqlalchemy.orm import Session, sessionmaker
 # classes – we will **NOT** start the full web server.
 # ---------------------------------------------------------------
 
-from backend.app.models.milestone import Milestone  # type: ignore
-from backend.app.models.net_worth import MilestoneValueByAge  # type: ignore
-from backend.app.models.goal import Goal  # type: ignore
-from backend.app.models.scenario_parameter_value import ScenarioParameterValue  # type: ignore
-from backend.app.models.solved_parameter_value import SolvedParameterValue  # type: ignore
+import sys
+from pathlib import Path
 
-from backend.app.database import db  # type: ignore  # SQLAlchemy() instance that defines `metadata`
-from backend.app import create_app
+# Add the parent directory to sys.path so we can import from app
+sys.path.append(str(Path(__file__).parent.parent))
+
+from app.models.milestone import Milestone  # type: ignore
+from app.models.net_worth import MilestoneValueByAge  # type: ignore
+from app.models.goal import Goal  # type: ignore
+from app.models.scenario_parameter_value import ScenarioParameterValue  # type: ignore
+from app.models.solved_parameter_value import SolvedParameterValue  # type: ignore
+
+from app.database import db  # type: ignore  # SQLAlchemy() instance that defines `metadata`
+from app import create_app
 
 # ---------------------------------------------------------------
 # 2. Low-level DB helpers
@@ -66,11 +72,6 @@ def _create_app_context() -> Flask:
     # When OVERRIDE_DATABASE_URI is *not* None we honour it here.
     if OVERRIDE_DATABASE_URI:
         app.config["SQLALCHEMY_DATABASE_URI"] = OVERRIDE_DATABASE_URI
-
-    # The app factory already called `init_db` which initialised ``db`` but to be absolutely
-    # sure that the metadata is available we call ``db.init_app`` once more.  The operation
-    # is idempotent so there is no harm in doing so.
-    db.init_app(app)
 
     # We need an *active* application context for things like `Model.query` to work, the `push`
     # makes the context the current one on this (main) thread.
