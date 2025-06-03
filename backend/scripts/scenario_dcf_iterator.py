@@ -1,84 +1,134 @@
 from db_connector import DBConnector
 from dcf_calculator_manual import DCFModel, Assumptions
+from app.models.dcf import DCF  # type: ignore
+
+
+# ---------------------------------------------------------------------------
+#  Helper functions to derive DCF inputs from milestones
+# ---------------------------------------------------------------------------
+
+
+def _sum_amount(milestones, m_type, age):
+    """Sum *amount* for milestones of *m_type* that occur at *age*."""
+    return sum(m.amount or 0 for m in milestones if m.milestone_type == m_type and m.age_at_occurrence == age)
 
 
 class ScenarioDCF:
-    def __init__(self, scenario_id, sub_scenario_id):
-        db_connector = DBConnector()
-        sess = db_connector.get_session()
-        self.data = db_connector.fetch_all_data(sess)    
+    """Handle the end-to-end DCF projection for one Scenario → Sub-scenario pair."""
+
+    def __init__(self, db: DBConnector, scenario_id: int, sub_scenario_id: int):
+        self.db = db
+        self.session = db.get_session()
+
+        data = self.db.fetch_all_data(self.session)
+        self.milestones = [
+            m for m in data["milestones"]
+            if m.scenario_id == scenario_id and m.sub_scenario_id == sub_scenario_id
+        ]
+
         self.scenario_id = scenario_id
         self.sub_scenario_id = sub_scenario_id
-        
 
-    def get_scenario_milestones(self):
-        self.scenario_milestones = []
-        for milestone in self.data["milestones"]:
-            if milestone["scenario_id"] == self.scenario_id and milestone["sub_scenario_id"] == self.sub_scenario_id:
-                self.scenario_milestones.append(milestone)
+        if not self.milestones:
+            raise ValueError(f"No milestones found for scenario {scenario_id}/{sub_scenario_id}")
 
-    def get_scenario_min_max_age(self):
-        self.min_age = min(self.data["milestones"], key=lambda x: x['age'])['age']
-        self.max_age = max(self.data["milestone_values_by_age"], key=lambda x: x['age'])['age']
-    
-    def get_initial_assets(self):
-        pass
+        # — derive base inputs —
+        self.start_age = min(m.age_at_occurrence for m in self.milestones)
+        self.end_age = max(m.age_at_occurrence for m in self.milestones)
 
-    def get_initial_liabilities(self):
-        pass
+        self.initial_assets = _sum_amount(self.milestones, "Asset", self.start_age)
+        self.initial_liabilities = _sum_amount(self.milestones, "Liability", self.start_age)
+        self.base_salary = _sum_amount(self.milestones, "Income", self.start_age)
+        self.base_expenses = _sum_amount(self.milestones, "Expense", self.start_age)
 
-    def get_base_salary(self):
-        pass
+        # Fallbacks so that DCFModel always sees non-zero numbers
+        self.initial_assets = self.initial_assets or 0.0
+        self.initial_liabilities = self.initial_liabilities or 0.0
+        self.base_salary = self.base_salary or 0.0
+        self.base_expenses = self.base_expenses or 0.0
 
-    def get_base_expenses(self):
-        pass
+    # ---------------------------------------------------------------------
+    #  DCF calculation & persistence
+    # ---------------------------------------------------------------------
 
-    def get_dcf_parameters(self):
-        self.get_scenario_milestones()
-        self.get_scenario_min_max_age()
-        self.get_initial_assets()
-        self.get_initial_liabilities()
-
-
-    def model_dcf(self):
+    def run(self):
         params = dict(
             start_age=self.start_age,
             end_age=self.end_age,
             assumptions=Assumptions(inflation=0.03, rate_of_return=0.08, cost_of_debt=0.06),
-            initial_assets=50_000,
-            initial_liabilities=30_000,
-            base_salary=75_000,
-            base_expenses=60_000,
+            initial_assets=self.initial_assets,
+            initial_liabilities=self.initial_liabilities,
+            base_salary=self.base_salary,
+            base_expenses=self.base_expenses,
         )
 
-        self.model = DCFModel(**params).run()
-        full_dcf_table = self.model.as_frame()
-        print(full_dcf_table)
-    
-    def write_dcf_to_db(self):
-        pass
+        model = DCFModel(**params).run()
+        df = model.as_frame()
 
-class ScenarioDCFIterator(ScenarioDCF):
+        # Map DataFrame → ORM rows (snake_case col names match DCF table)
+        records = [
+            DCF(
+                scenario_id=self.scenario_id,
+                sub_scenario_id=self.sub_scenario_id,
+                age=int(row.Age),
+                beginning_assets=row["Beginning Assets"],
+                assets_income=row["Assets Income"],
+                beginning_liabilities=row["Beginning Liabilities"],
+                liabilities_expense=row["Liabilities Expense"],
+                salary=row["Salary"],
+                expenses=row["Expenses"],
+            )
+            for _, row in df.iterrows()
+        ]
+
+        self._upsert_rows(records)
+
+    # ------------------------------------------------------------------
+    #  Private helpers
+    # ------------------------------------------------------------------
+
+    def _upsert_rows(self, rows):
+        """Insert or update the *rows* in the dcf table (idempotent)."""
+        for r in rows:
+            obj = (
+                self.session.query(DCF)
+                .filter_by(scenario_id=r.scenario_id, sub_scenario_id=r.sub_scenario_id, age=r.age)
+                .one_or_none()
+            )
+            if obj is None:
+                obj = r
+            else:
+                # Update all flow columns
+                obj.beginning_assets = r.beginning_assets
+                obj.assets_income = r.assets_income
+                obj.beginning_liabilities = r.beginning_liabilities
+                obj.liabilities_expense = r.liabilities_expense
+                obj.salary = r.salary
+                obj.expenses = r.expenses
+
+            self.session.add(obj)
+
+        self.session.commit()
+
+
+class ScenarioDCFIterator:
+    """Iterates over all Scenario → Sub-scenario combinations and calculates DCFs."""
+
     def __init__(self):
-        super().__init__()
-    
-    def get_all_scenario_sub_scenarios_combinations(self):
-        for milestone in self.data["milestones"]:
-            milestone['scenario']
-        
-    def dcf_iterator(self, write_to_db=True):
-        min_age, max_age = self.get_min_max_age()
-        for age in range(min_age, max_age + 1):
-            self.model_dcf(age)
-            if write_to_db:
-                self.write_dcf_to_db(age)
-    
-    def scenario_dcf_iterator(self):
-        for scenario in self.data["scenario_parameter_values"]:
-            self.dcf_iterator(scenario, write_to_db=True)
-    
+        self.db = DBConnector()
+        self.session = self.db.get_session()
+
+    def run(self):
+        data = self.db.fetch_all_data(self.session)
+        combos = {
+            (m.scenario_id, m.sub_scenario_id)
+            for m in data["milestones"]
+        }
+
+        for scenario_id, sub_scenario_id in combos:
+            sc_dcf = ScenarioDCF(self.db, scenario_id, sub_scenario_id)
+            sc_dcf.run()
 
 
 if __name__ == "__main__":
-    scenario_dcf_iterator = ScenarioDCFIterator()
-    scenario_dcf_iterator.get_all_scenario_sub_scenarios_combinations()
+    ScenarioDCFIterator().run()
