@@ -1,5 +1,5 @@
-from db_connector import DBConnector
-from dcf_calculator_manual import DCFModel, Assumptions
+from .db_connector import DBConnector
+from .dcf_calculator_manual import DCFModel, Assumptions
 from app.models.dcf import DCF  # type: ignore
 
 
