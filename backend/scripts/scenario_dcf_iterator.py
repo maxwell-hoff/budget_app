@@ -1,5 +1,7 @@
+from collections import defaultdict
+
 from .db_connector import DBConnector
-from .dcf_calculator_manual import DCFModel, Assumptions
+from .dcf_calculator_manual import DCFModel, Assumptions, GrowingSeries
 
 # Reuse the Flask-SQLAlchemy session for writes so that data is visible everywhere
 from backend.app.database import db  # type: ignore
@@ -11,9 +13,39 @@ from backend.app.models.dcf import DCF  # type: ignore
 # ---------------------------------------------------------------------------
 
 
+def _norm_name(s: str | None) -> str:
+    """Normalise milestone *name* for comparison.
+
+    1. Convert to lower-case.
+    2. Replace spaces and hyphens with an underscore so that
+       "Current Salary" → "current_salary".
+    """
+    if s is None:
+        return ""
+    return s.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+# Map of milestone *name* → which DCF base input it controls ----------------
+_CURRENT_MAP = {
+    "current_salary": "income",
+    "current_expenses": "expense",
+    "current_liquid_assets": "asset",
+    "current_liabilities": "liability",
+}
+
+
+def _is_current_ms(ms) -> bool:
+    """Return *True* when *ms* represents a "current_*" milestone."""
+    return _norm_name(ms.name) in _CURRENT_MAP
+
+
 def _sum_amount(milestones, m_type, age):
     """Sum *amount* for milestones of *m_type* that occur at *age*."""
-    return sum(m.amount or 0 for m in milestones if m.milestone_type == m_type and m.age_at_occurrence == age)
+    return sum(
+        m.amount or 0
+        for m in milestones
+        if (m.milestone_type == m_type and m.age_at_occurrence == age)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -45,16 +77,98 @@ class ScenarioDCF:
         if not self.milestones:
             raise ValueError(f"No milestones found for scenario {scenario_id}/{sub_scenario_id}")
 
-        # — derive base inputs —
+        # — derive timeline bounds ------------------------------------------------
         self.start_age = min(m.age_at_occurrence for m in self.milestones)
-        self.end_age = max(m.age_at_occurrence for m in self.milestones)
 
-        self.initial_assets = _sum_amount(self.milestones, "Asset", self.start_age)
-        self.initial_liabilities = _sum_amount(self.milestones, "Liability", self.start_age)
-        self.base_salary = _sum_amount(self.milestones, "Income", self.start_age)
-        self.base_expenses = _sum_amount(self.milestones, "Expense", self.start_age)
+        # When a milestone has a finite duration we need to project until the very
+        # last year of that stream.  Otherwise we could truncate a salary that
+        # ends at retirement, for example.
+        end_candidates = [
+            (m.age_at_occurrence + (m.duration or 0) - 1) if (m.duration and m.duration > 0) else m.age_at_occurrence
+            for m in self.milestones
+        ]
+        self.end_age = max(end_candidates)
 
-        # Fallbacks so that DCFModel always sees non-zero numbers
+        # ------------------------------------------------------------------
+        # 1. Identify "current_*" milestones (single row each, occurring at
+        #    start_age) that define the opening balances/flows.
+        # ------------------------------------------------------------------
+        current_vals = defaultdict(float)  # groups: asset/liability/income/expense
+
+        for ms in self.milestones:
+            if not _is_current_ms(ms):
+                continue
+
+            group_key = _CURRENT_MAP[_norm_name(ms.name)]
+            current_vals[group_key] += ms.amount or 0.0
+
+        self.initial_assets = current_vals.get("asset", None)
+        self.initial_liabilities = current_vals.get("liability", None)
+        self.base_salary = current_vals.get("income", None)
+        self.base_expenses = current_vals.get("expense", None)
+
+        # Legacy fallback – when the database does *not* yet store dedicated
+        # current_* milestones we revert to the previous behaviour that summed
+        # everything at *start_age*.
+        if self.initial_assets is None:
+            self.initial_assets = _sum_amount(self.milestones, "Asset", self.start_age)
+        if self.initial_liabilities is None:
+            self.initial_liabilities = _sum_amount(self.milestones, "Liability", self.start_age)
+        if self.base_salary is None:
+            self.base_salary = _sum_amount(self.milestones, "Income", self.start_age)
+        if self.base_expenses is None:
+            self.base_expenses = _sum_amount(self.milestones, "Expense", self.start_age)
+
+        # ------------------------------------------------------------------
+        # 2. Build cash-flow streams & one-off events from the remaining
+        #    milestones.
+        # ------------------------------------------------------------------
+        self.income_streams: list[GrowingSeries] = []
+        self.expense_streams: list[GrowingSeries] = []
+        self.asset_events: list[tuple[int, float]] = []
+        self.liability_events: list[tuple[int, float]] = []
+
+        inflation_default = 0.03  # Same as used in run() call below
+
+        legacy_assets_used = "asset" not in current_vals
+        legacy_liabilities_used = "liability" not in current_vals
+
+        for ms in self.milestones:
+            # Skip the current_* milestones – already processed above
+            if _is_current_ms(ms):
+                continue
+
+            mt = ms.milestone_type
+            amt = ms.amount or 0.0
+
+            # Convert monthly amounts to yearly so that the DCF (which works on
+            # yearly periods) sees a like-for-like value.
+            if (ms.occurrence or "Yearly") == "Monthly":
+                amt *= 12
+
+            start_step = ms.age_at_occurrence - self.start_age
+            duration = ms.duration if (ms.disbursement_type == "Fixed Duration") else None
+            growth = ms.rate_of_return if ms.rate_of_return is not None else inflation_default
+
+            if mt == "Income":
+                self.income_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
+            elif mt == "Expense":
+                self.expense_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
+            elif mt == "Asset":
+                # Avoid double-counting: when we *did not* use current_liquid_assets
+                # we already summed all assets at start_age into the opening balance.
+                if legacy_assets_used and ms.age_at_occurrence == self.start_age:
+                    # Already reflected in initial_assets
+                    continue
+                self.asset_events.append((ms.age_at_occurrence, amt))
+            elif mt == "Liability":
+                if legacy_liabilities_used and ms.age_at_occurrence == self.start_age:
+                    continue
+                self.liability_events.append((ms.age_at_occurrence, amt))
+
+        # ------------------------------------------------------------------
+        # 3. Guarantee non-zero defaults so the DCF always runs.
+        # ------------------------------------------------------------------
         self.initial_assets = self.initial_assets or 0.0
         self.initial_liabilities = self.initial_liabilities or 0.0
         self.base_salary = self.base_salary or 0.0
@@ -65,17 +179,21 @@ class ScenarioDCF:
     # ---------------------------------------------------------------------
 
     def run(self):
-        params = dict(
+        assumptions = Assumptions(inflation=0.03, rate_of_return=0.08, cost_of_debt=0.06)
+
+        model = DCFModel(
             start_age=self.start_age,
             end_age=self.end_age,
-            assumptions=Assumptions(inflation=0.03, rate_of_return=0.08, cost_of_debt=0.06),
+            assumptions=assumptions,
             initial_assets=self.initial_assets,
             initial_liabilities=self.initial_liabilities,
             base_salary=self.base_salary,
             base_expenses=self.base_expenses,
-        )
-
-        model = DCFModel(**params).run()
+            income_streams=self.income_streams,
+            expense_streams=self.expense_streams,
+            asset_events=self.asset_events,
+            liability_events=self.liability_events,
+        ).run()
         df = model.as_frame()
 
         # Map DataFrame → ORM rows (snake_case col names match DCF table)
@@ -144,8 +262,12 @@ class ScenarioDCFIterator:
         }
 
         for scenario_id, sub_scenario_id in combos:
-            sc_dcf = ScenarioDCF(self.db_connector, scenario_id, sub_scenario_id)
-            sc_dcf.run()
+            try:
+                sc_dcf = ScenarioDCF(self.db_connector, scenario_id, sub_scenario_id)
+                sc_dcf.run()
+            except ValueError:
+                # Skip combinations without milestones – keeps behaviour identical
+                continue
 
 
 if __name__ == "__main__":

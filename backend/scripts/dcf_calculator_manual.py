@@ -30,12 +30,48 @@ class Assumptions:
 # ────────────────────────────────────────────────────────────────────
 @dataclass
 class GrowingSeries:
-    """A geometric series—e.g., salary growing with inflation."""
+    """A geometric series—e.g., salary growing with inflation.
+
+    Parameters
+    ----------
+    initial_value : float
+        Cash-flow amount at *start_step* (per period, i.e. per year in our model).
+    growth_rate : float
+        Geometric growth applied *yearly* (e.g. inflation).
+    start_step : int, default 0
+        Offset (in model steps/years) **relative to the model's ``start_age``** at
+        which the cash-flow starts.  A value of ``5`` means the flow begins five
+        years after the projection start.
+    duration : int | None, default None
+        Number of periods the cash-flow lasts.  ``None`` means it continues
+        indefinitely (i.e. until ``end_age``).
+    """
+
     initial_value: float
     growth_rate: float
+    start_step: int = 0
+    duration: int | None = None
 
+    # ------------------------------------------------------------------
+    # Public helpers
+    # ------------------------------------------------------------------
     def value_at(self, step: int) -> float:
-        return self.initial_value * (1 + self.growth_rate) ** step
+        """Return the cash-flow at *step* (0-based from model start).
+
+        The series is **inactive** outside the half-open interval
+        ``[start_step, start_step + duration)``.  When *duration* is ``None`` the
+        interval extends to infinity.
+        """
+
+        if step < self.start_step:
+            return 0.0
+
+        rel_step = step - self.start_step
+
+        if self.duration is not None and rel_step >= self.duration:
+            return 0.0
+
+        return self.initial_value * (1 + self.growth_rate) ** rel_step
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -43,7 +79,7 @@ class GrowingSeries:
 # ────────────────────────────────────────────────────────────────────
 class DCFModel:
     """
-    Finite-horizon, yearly projection that mirrors ‘Budget Test.xlsx’.
+    Finite-horizon, yearly projection that mirrors 'Budget Test.xlsx'.
 
     Required parameters (everything must be supplied explicitly!):
         start_age, end_age,
@@ -60,21 +96,35 @@ class DCFModel:
         assumptions: Assumptions,
         initial_assets: float,
         initial_liabilities: float,
-        base_salary: float,
-        base_expenses: float,
+        base_salary: float = 0.0,
+        base_expenses: float = 0.0,
+        income_streams: List[GrowingSeries] | None = None,
+        expense_streams: List[GrowingSeries] | None = None,
+        asset_events: List[tuple[int, float]] | None = None,
+        liability_events: List[tuple[int, float]] | None = None,
     ):
         # ── store scenario settings ────────────────────────────────
         self.start_age = start_age
         self.end_age = end_age
         self.assump = assumptions
 
-        # ── cash-flow drivers ──────────────────────────────────────
-        self.salary_stream = GrowingSeries(base_salary, self.assump.inflation)
-        self.expense_stream = GrowingSeries(base_expenses, self.assump.inflation)
+        # ── cash-flow drivers ─────────────────────────────────────
+        self.income_streams: List[GrowingSeries] = [] if income_streams is None else list(income_streams)
+        self.expense_streams: List[GrowingSeries] = [] if expense_streams is None else list(expense_streams)
+
+        # Maintain backward compatibility with the old API ------------------
+        if base_salary:
+            self.income_streams.append(GrowingSeries(base_salary, self.assump.inflation))
+        if base_expenses:
+            self.expense_streams.append(GrowingSeries(base_expenses, self.assump.inflation))
 
         # ── state variables over time ──────────────────────────────
-        self.assets:  List[float] = [initial_assets]
+        self.assets: List[float] = [initial_assets]
         self.liabilities: List[float] = [initial_liabilities]
+
+        # one-off balance adjustments (e.g. inheritance at age 40) ----------
+        self._asset_events = {age: amt for age, amt in (asset_events or [])}
+        self._liability_events = {age: amt for age, amt in (liability_events or [])}
 
         # results populated by run()
         self._table: pd.DataFrame | None = None
@@ -87,14 +137,18 @@ class DCFModel:
 
         for t in range(years + 1):
             age = self.start_age + t
-            a_begin = self.assets[-1]
-            l_begin = self.liabilities[-1]
 
-            # yearly flows
-            salary = self.salary_stream.value_at(t)
-            expenses = self.expense_stream.value_at(t)
+            # Apply one-off balance events at *beginning* of the year ---------
+            a_begin_prev = self.assets[-1]
+            l_begin_prev = self.liabilities[-1]
+            a_begin = a_begin_prev + self._asset_events.get(age, 0.0)
+            l_begin = l_begin_prev + self._liability_events.get(age, 0.0)
+
+            # yearly flows ----------------------------------------------------
+            salary = sum(s.value_at(t) for s in self.income_streams)
+            expenses = sum(s.value_at(t) for s in self.expense_streams)
             a_income = a_begin * self.assump.rate_of_return
-            l_interest = l_begin * self.assump.cost_of_debt      # also equals principal repayment
+            l_interest = l_begin * self.assump.cost_of_debt  # also equals principal repayment
 
             net_saving = salary - expenses - l_interest
             a_next = a_begin + a_income + net_saving
@@ -133,7 +187,10 @@ class DCFModel:
 
     # ── extension hooks (empty for now, ready for overrides) ───────
     def add_income_stream(self, stream: GrowingSeries) -> None:
-        self.extra_income = stream
+        self.income_streams.append(stream)
+
+    def add_expense_stream(self, stream: GrowingSeries) -> None:
+        self.expense_streams.append(stream)
 
 
 # ────────────────────────────────────────────────────────────────────
