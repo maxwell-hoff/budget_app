@@ -2,7 +2,7 @@ import pytest
 
 from .scenario_dcf_iterator import ScenarioDCFIterator
 from .db_connector import DBConnector
-from app.models.dcf import DCF
+from backend.app.models.dcf import DCF
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +38,7 @@ def test_projection_covers_age_range(seeded_session):
     # Pull min/max ages from milestones for each combo
     db = DBConnector()
     session = db.get_session()
-    milestones = session.query(pytest.importorskip("app.models.milestone").Milestone).all()
+    milestones = session.query(pytest.importorskip("backend.app.models.milestone").Milestone).all()
 
     combo_to_age_range = {}
     for m in milestones:

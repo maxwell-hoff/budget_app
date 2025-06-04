@@ -1,6 +1,9 @@
 from .db_connector import DBConnector
 from .dcf_calculator_manual import DCFModel, Assumptions
-from app.models.dcf import DCF  # type: ignore
+
+# Reuse the Flask-SQLAlchemy session for writes so that data is visible everywhere
+from backend.app.database import db  # type: ignore
+from backend.app.models.dcf import DCF  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -13,14 +16,24 @@ def _sum_amount(milestones, m_type, age):
     return sum(m.amount or 0 for m in milestones if m.milestone_type == m_type and m.age_at_occurrence == age)
 
 
+# ---------------------------------------------------------------------------
+#  ScenarioDCF – projection & persistence for a single scenario/sub-scenario
+# ---------------------------------------------------------------------------
+
+
 class ScenarioDCF:
     """Handle the end-to-end DCF projection for one Scenario → Sub-scenario pair."""
 
-    def __init__(self, db: DBConnector, scenario_id: int, sub_scenario_id: int):
-        self.db = db
-        self.session = db.get_session()
+    def __init__(self, db_connector: DBConnector, scenario_id: int, sub_scenario_id: int):
+        """Prepare a run for one (scenario_id, sub_scenario_id) pair."""
 
-        data = self.db.fetch_all_data(self.session)
+        # shared write-session
+        self.session = db.session  # type: ignore
+
+        # independent read-only session (avoids locking long transactions)
+        self.read_session = db_connector.get_session()
+
+        data = db_connector.fetch_all_data(self.read_session)
         self.milestones = [
             m for m in data["milestones"]
             if m.scenario_id == scenario_id and m.sub_scenario_id == sub_scenario_id
@@ -111,22 +124,27 @@ class ScenarioDCF:
         self.session.commit()
 
 
+# ---------------------------------------------------------------------------
+#  ScenarioDCFIterator – loop over all combinations
+# ---------------------------------------------------------------------------
+
+
 class ScenarioDCFIterator:
     """Iterates over all Scenario → Sub-scenario combinations and calculates DCFs."""
 
     def __init__(self):
-        self.db = DBConnector()
-        self.session = self.db.get_session()
+        self.db_connector = DBConnector()
+        self.read_session = self.db_connector.get_session()
 
     def run(self):
-        data = self.db.fetch_all_data(self.session)
+        data = self.db_connector.fetch_all_data(self.read_session)
         combos = {
             (m.scenario_id, m.sub_scenario_id)
             for m in data["milestones"]
         }
 
         for scenario_id, sub_scenario_id in combos:
-            sc_dcf = ScenarioDCF(self.db, scenario_id, sub_scenario_id)
+            sc_dcf = ScenarioDCF(self.db_connector, scenario_id, sub_scenario_id)
             sc_dcf.run()
 
 

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List
 
-from flask import Flask
+from flask import Flask, current_app, has_app_context
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -38,14 +38,14 @@ from pathlib import Path
 # Add the parent directory to sys.path so we can import from app
 sys.path.append(str(Path(__file__).parent.parent))
 
-from app.models.milestone import Milestone  # type: ignore
-from app.models.net_worth import MilestoneValueByAge  # type: ignore
-from app.models.goal import Goal  # type: ignore
-from app.models.scenario_parameter_value import ScenarioParameterValue  # type: ignore
-from app.models.solved_parameter_value import SolvedParameterValue  # type: ignore
+from backend.app.models.milestone import Milestone  # type: ignore
+from backend.app.models.net_worth import MilestoneValueByAge  # type: ignore
+from backend.app.models.goal import Goal  # type: ignore
+from backend.app.models.scenario_parameter_value import ScenarioParameterValue  # type: ignore
+from backend.app.models.solved_parameter_value import SolvedParameterValue  # type: ignore
 
-from app.database import db  # type: ignore  # SQLAlchemy() instance that defines `metadata`
-from app import create_app
+from backend.app.database import db  # type: ignore  # SQLAlchemy() instance that defines `metadata`
+from backend.app import create_app
 
 # ---------------------------------------------------------------
 # 2. Low-level DB helpers
@@ -60,34 +60,29 @@ class DBConnector:
         self._SessionFactory: sessionmaker | None = None
 
     def _create_app_context(self) -> Flask:
-        """Create a minimal Flask app and push an application context.
+        """Ensure a **single** application context is active on the current thread.
 
-        We *reuse* the existing ``create_app`` factory so that the app's configuration (most
-        importantly the SQLALCHEMY_DATABASE_URI) is identical to the one used in production.
-        This function must be called before we can use the model classes because they rely on
-        the global ``db`` instance which needs an active context.
+        • When this helper is invoked *inside* a Flask request handler there is already an
+          application context on the stack – in that case we simply reuse it and *do not* push
+          a second one (otherwise Flask will complain when the outer handler pops its context).
+
+        • When called from a background script / Jupyter notebook there is *no* active context;
+          we create a minimal app via `create_app()` and push a fresh context so that the model
+          classes work as expected.
         """
 
+        if has_app_context():
+            # Re-use the existing context to avoid double-push/pop mismatches.
+            return current_app._get_current_object()  # type: ignore[attr-defined]
+
+        # ---- no active context → create one lazily ------------------------
         app: Flask = create_app()
 
-        # The caller might want to use a different DB (e.g. a temp DB while tinkering in a
-        # Jupyter Notebook).  Simply change the URI **before** the first call to this module's
-        # public helpers, for example:
-        #
-        #     import scenario_calculations_template as sct
-        #     sct.OVERRIDE_DATABASE_URI = "sqlite:///my_scratch.db"
-        #
-        # When OVERRIDE_DATABASE_URI is *not* None we honour it here.
         if self.OVERRIDE_DATABASE_URI:
             app.config["SQLALCHEMY_DATABASE_URI"] = self.OVERRIDE_DATABASE_URI
 
-        # We need an *active* application context for things like `Model.query` to work, the `push`
-        # makes the context the current one on this (main) thread.
         app.app_context().push()
         return app
-
-    
-
 
     def get_session(self) -> Session:
         """Return a *plain* SQLAlchemy session bound to the configured database.
@@ -99,15 +94,23 @@ class DBConnector:
 
         if self._SessionFactory is None:
             # Ensure application context exists so that the metadata is bound
-            self._create_app_context()
-            engine = create_engine(db.engine.url)  # reuse the URL from the Flask app's engine
+            app_ctx = self._create_app_context()  # returns the active app (needed for tests)
+
+            # Reuse the same database URL that the Flask app was configured with. We avoid
+            # touching `db.engine` directly here because the Flask-SQLAlchemy extension may
+            # not yet have initialised an engine for *this* application instance (especially
+            # during unit tests).  Pulling the URI straight from the app config is safe and
+            # side-steps "current app is not registered with this SQLAlchemy instance" errors.
+
+            from flask import current_app  # late import to keep module-level deps minimal
+
+            engine = create_engine(current_app.config["SQLALCHEMY_DATABASE_URI"])
             self._SessionFactory = sessionmaker(bind=engine)
         return self._SessionFactory()
 
     # ---------------------------------------------------------------------------
     # 3. Data retrieval helpers
     # ---------------------------------------------------------------------------
-
 
     def fetch_all_data(self, session: Session, *, scenario_id: int | None = None) -> Dict[str, List]:
         """Fetch raw data from the database.
@@ -150,7 +153,6 @@ class DBConnector:
     # ---------------------------------------------------------------------------
     # 4. Persistence helpers
     # ---------------------------------------------------------------------------
-
 
     def upsert_solved_parameter_values(self, session: Session, records: Iterable[dict]) -> None:
         """Insert *or* update rows in ``solved_parameter_values``.
@@ -198,7 +200,6 @@ class DBConnector:
             session.add(obj)
 
         session.commit()
-
 
     def upsert_milestone_values_by_age(self, session: Session, records: Iterable[dict]) -> None:
         """Insert *or* update rows in ``milestone_values_by_age``.
