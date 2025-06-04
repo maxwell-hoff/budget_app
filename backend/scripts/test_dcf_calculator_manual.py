@@ -44,6 +44,50 @@ def simple_dcf_model() -> DCFModel:
     return DCFModel(**params).run()
 
 
+@pytest.fixture(scope="module")
+def dcf_with_car_purchase() -> DCFModel:
+    """DCF that includes a one-off car purchase two years into the horizon.
+
+    We keep all income/expense/interest flows at *zero* so the only change to
+    the asset balance stems from the purchase event.  This isolates the
+    behaviour we want to test.
+    """
+
+    params = dict(
+        start_age=30,
+        end_age=33,  # few years to see the effect propagate
+        assumptions=Assumptions(inflation=0.0, rate_of_return=0.0, cost_of_debt=0.0),
+        initial_assets=50_000,
+        initial_liabilities=0.0,
+        base_salary=0.0,
+        base_expenses=0.0,
+        asset_events=[(32, -20_000)],  # car purchase at age 32
+    )
+
+    return DCFModel(**params).run()
+
+@pytest.fixture(scope="module")
+def dcf_with_car_and_retirement_purchase() -> DCFModel:
+    """DCF that includes a one-off car purchase two years into the horizon.
+
+    We keep all income/expense/interest flows at *zero* so the only change to
+    the asset balance stems from the purchase event.  This isolates the
+    behaviour we want to test.
+    """
+
+    params = dict(
+        start_age=30,
+        end_age=33,  # few years to see the effect propagate
+        assumptions=Assumptions(inflation=0.0, rate_of_return=0.0, cost_of_debt=0.0),
+        initial_assets=50_000,
+        initial_liabilities=0.0,
+        base_salary=0.0,
+        base_expenses=0.0,
+        asset_events=[(32, -20_000)],  # car purchase at age 32
+    )
+
+    return DCFModel(**params).run()
+
 # --------------------------------------------------------------------
 #  Tests
 # --------------------------------------------------------------------
@@ -85,4 +129,21 @@ def test_summary_matches_internal_state(simple_dcf_model: DCFModel):
     assert math.isclose(summary["Ending liabilities"], simple_dcf_model.liabilities[-1])
     assert math.isclose(
         summary["Net worth"], simple_dcf_model.assets[-1] - simple_dcf_model.liabilities[-1]
+    )
+
+
+def test_asset_event_applied_at_correct_age(dcf_with_car_purchase: DCFModel):
+    """Beginning Assets at the event age must include the event amount."""
+
+    df = dcf_with_car_purchase.as_frame()
+
+    # Extract Beginning Assets for ages 30 and 32
+    ba_age30 = float(df.loc[df.Age == 30, "Beginning Assets"].iloc[0])
+    ba_age32 = float(df.loc[df.Age == 32, "Beginning Assets"].iloc[0])
+
+    # The only cash-flow between 30 and 32 is the -20k event at 32, so the
+    # beginning balance should step down exactly by that amount.
+    expected_ba_age32 = ba_age30 - 20_000
+    assert math.isclose(ba_age32, expected_ba_age32, rel_tol=1e-9), (
+        f"Expected Beginning Assets at age 32 to be {expected_ba_age32:,} but got {ba_age32:,}"
     )
