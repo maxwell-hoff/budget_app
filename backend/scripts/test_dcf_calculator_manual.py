@@ -89,8 +89,95 @@ def dcf_with_car_and_retirement_purchase() -> DCFModel:
     return DCFModel(**params).run()
 
 # --------------------------------------------------------------------
-#  Tests
+#  Milestone-driven test using the new from_milestones() helper
 # --------------------------------------------------------------------
+
+
+def _mock_ms(**kwargs):  # tiny helper to build dot-accessible mock milestones
+    return type("MockMilestone", (), kwargs)()
+
+
+@pytest.fixture(scope="module")
+def dcf_from_db() -> DCFModel:
+    """Build a DCF purely from mocked milestone rows (no DB involved)."""
+
+    milestones = [
+        # Opening balances & flows (current_*) --------------------------------
+        _mock_ms(
+            name="Current Liquid Assets",
+            milestone_type="Asset",
+            age_at_occurrence=30,
+            disbursement_type="Perpetuity",
+            amount=100_000.0,
+            occurrence="Yearly",
+            duration=None,
+            rate_of_return=0.1,
+        ),
+        _mock_ms(
+            name="Current Debt",
+            milestone_type="Liability",
+            age_at_occurrence=30,
+            disbursement_type="Fixed Duration",
+            amount=5000.0,
+            occurrence="Monthly",
+            duration=4,
+            rate_of_return=0.04,
+        ),
+        _mock_ms(
+            name="Current Salary",
+            milestone_type="Income",
+            age_at_occurrence=30,
+            disbursement_type="Fixed Duration",
+            amount=110_000.0,
+            occurrence="Yearly",
+            duration=5,  # salary stops after five years
+            rate_of_return=0.04,
+        ),
+        _mock_ms(
+            name="Current Expenses",
+            milestone_type="Expense",
+            age_at_occurrence=30,
+            disbursement_type="Fixed Duration",
+            amount=60_000.0,
+            occurrence="Yearly",
+            duration=5,
+            rate_of_return=0.02,
+        ),
+        _mock_ms(
+            name="Retirement",
+            milestone_type="Asset",
+            age_at_occurrence=35,
+            disbursement_type="Fixed Duration",
+            amount=55_000.0,
+            occurrence="Yearly",
+            duration=5,
+            rate_of_return=0.02,
+        )#,
+        # _mock_ms(
+        #     name="Inheritance",
+        #     milestone_type="Asset",
+        #     age_at_occurrence=40,
+        #     disbursement_type="Fixed Duration",
+        #     amount=100_000.0,
+        #     occurrence="Yearly",
+        #     duration=1,
+        #     rate_of_return=None,
+        # ),
+    ]
+
+    model = DCFModel.from_milestones(milestones).run()
+    return model
+
+
+def test_from_db_projection_runs(dcf_from_db: DCFModel):
+    """Basic smoke – the DataFrame should not be empty."""
+
+    df = dcf_from_db.as_frame()
+    assert not df.empty
+
+    # Check that age range covers exactly min→max milestone age (inclusive)
+    expected_ages = set(range(int(df.Age.min()), int(df.Age.max()) + 1))
+    assert set(df.Age) == expected_ages
 
 
 def test_as_frame_row_count(simple_dcf_model: DCFModel):
@@ -146,4 +233,16 @@ def test_asset_event_applied_at_correct_age(dcf_with_car_purchase: DCFModel):
     expected_ba_age32 = ba_age30 - 20_000
     assert math.isclose(ba_age32, expected_ba_age32, rel_tol=1e-9), (
         f"Expected Beginning Assets at age 32 to be {expected_ba_age32:,} but got {ba_age32:,}"
+    )
+
+def test_from_db_end_value(dcf_from_db: DCFModel):
+    """Ending assets must match hand-calculated values."""
+
+    df = dcf_from_db.as_frame()
+
+    ba_age40 = float(df.loc[df.Age == 40, "Beginning Assets"].iloc[0])
+    print(ba_age40)
+    expected_ba_age40 = 1_068
+    assert math.isclose(ba_age40, expected_ba_age40, rel_tol=1e-9), (
+        f"Expected Beginning Assets at age 32 to be {expected_ba_age40:,} but got {ba_age40:,}"
     )

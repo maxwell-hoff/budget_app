@@ -192,6 +192,159 @@ class DCFModel:
     def add_expense_stream(self, stream: GrowingSeries) -> None:
         self.expense_streams.append(stream)
 
+    # ------------------------------------------------------------------
+    #  Convenience constructor – build a DCFModel directly from milestones
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def from_milestones(
+        cls,
+        milestones: List[object],
+        *,
+        assumptions: Assumptions | None = None,
+        inflation_default: float = 0.03,
+    ) -> "DCFModel":
+        """Create a DCFModel from a list of milestone *records*.
+
+        The *records* may either be the real ORM objects (having attributes like
+        ``name``, ``milestone_type`` …) **or** plain dictionaries with the same
+        keys.  This mirrors the database schema so that unit tests can easily
+        supply mocked-up data without touching SQLAlchemy.
+        """
+
+        # ------------------------------------------------------------------
+        # 1. Helper closures – kept local to avoid polluting the class API
+        # ------------------------------------------------------------------
+
+        def _get(attr: str, obj):
+            """Return *attr* from *obj* whether it is an object or a dict."""
+            if isinstance(obj, dict):
+                return obj.get(attr)
+            return getattr(obj, attr)
+
+        def _norm_name(s: str | None) -> str:
+            if s is None:
+                return ""
+            return s.strip().lower().replace(" ", "_").replace("-", "_")
+
+        _CURRENT_MAP = {
+            "current_salary": "income",
+            "current_expenses": "expense",
+            "current_liquid_assets": "asset",
+            "current_liabilities": "liability",
+        }
+
+        def _is_current(ms) -> bool:
+            return _norm_name(_get("name", ms)) in _CURRENT_MAP
+
+        # ------------------------------------------------------------------
+        # 2. Derive projection horizon
+        # ------------------------------------------------------------------
+
+        ages = [_get("age_at_occurrence", m) for m in milestones]
+        if not ages:
+            raise ValueError("No milestones supplied – cannot build DCF model.")
+
+        start_age = min(ages)
+
+        end_candidates = [
+            (_get("age_at_occurrence", m) + ((_get("duration", m) or 0) - 1))
+            if (_get("duration", m) and _get("duration", m) > 0)
+            else _get("age_at_occurrence", m)
+            for m in milestones
+        ]
+        end_age = max(end_candidates)
+
+        # ------------------------------------------------------------------
+        # 3. Opening balances & base flows from "current_*" milestones
+        # ------------------------------------------------------------------
+
+        current_vals: Dict[str, float] = {"asset": 0.0, "liability": 0.0, "income": 0.0, "expense": 0.0}
+
+        for ms in milestones:
+            if not _is_current(ms):
+                continue
+            key = _CURRENT_MAP[_norm_name(_get("name", ms))]
+            current_vals[key] += _get("amount", ms) or 0.0
+
+        # Fallback to legacy behaviour if explicit current_* milestones are absent
+        def _sum_amount(m_type, age):
+            return sum(
+                (_get("amount", x) or 0.0)
+                for x in milestones
+                if (_get("milestone_type", x) == m_type and _get("age_at_occurrence", x) == age)
+            )
+
+        if current_vals["asset"] == 0.0:
+            current_vals["asset"] = _sum_amount("Asset", start_age)
+        if current_vals["liability"] == 0.0:
+            current_vals["liability"] = _sum_amount("Liability", start_age)
+        if current_vals["income"] == 0.0:
+            current_vals["income"] = _sum_amount("Income", start_age)
+        if current_vals["expense"] == 0.0:
+            current_vals["expense"] = _sum_amount("Expense", start_age)
+
+        # ------------------------------------------------------------------
+        # 4. Convert remaining milestones → streams / events
+        # ------------------------------------------------------------------
+
+        income_streams: List[GrowingSeries] = []
+        expense_streams: List[GrowingSeries] = []
+        asset_events: List[tuple[int, float]] = []
+        liability_events: List[tuple[int, float]] = []
+
+        legacy_assets_used = current_vals["asset"] == _sum_amount("Asset", start_age)
+        legacy_liabs_used = current_vals["liability"] == _sum_amount("Liability", start_age)
+
+        for ms in milestones:
+            if _is_current(ms):
+                continue  # already processed
+
+            mt = _get("milestone_type", ms)
+            amt = _get("amount", ms) or 0.0
+
+            # Convert monthly occurrence to yearly amounts so that the DCF (yearly model) is consistent.
+            if (_get("occurrence", ms) or "Yearly") == "Monthly":
+                amt *= 12
+
+            start_step = _get("age_at_occurrence", ms) - start_age
+            duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+            growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+
+            if mt == "Income":
+                income_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
+            elif mt == "Expense":
+                expense_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
+            elif mt == "Asset":
+                if legacy_assets_used and _get("age_at_occurrence", ms) == start_age:
+                    continue
+                asset_events.append((_get("age_at_occurrence", ms), amt))
+            elif mt == "Liability":
+                if legacy_liabs_used and _get("age_at_occurrence", ms) == start_age:
+                    continue
+                liability_events.append((_get("age_at_occurrence", ms), amt))
+
+        # ------------------------------------------------------------------
+        # 5. Build the DCFModel instance
+        # ------------------------------------------------------------------
+
+        if assumptions is None:
+            assumptions = Assumptions(inflation=inflation_default, rate_of_return=0.08, cost_of_debt=0.06)
+
+        return cls(
+            start_age=start_age,
+            end_age=end_age,
+            assumptions=assumptions,
+            initial_assets=current_vals["asset"],
+            initial_liabilities=current_vals["liability"],
+            base_salary=current_vals["income"],
+            base_expenses=current_vals["expense"],
+            income_streams=income_streams,
+            expense_streams=expense_streams,
+            asset_events=asset_events,
+            liability_events=liability_events,
+        )
+
 
 # ────────────────────────────────────────────────────────────────────
 #  Example quick-start (remove when packaging as a library)
