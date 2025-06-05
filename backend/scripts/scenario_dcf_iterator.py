@@ -84,7 +84,7 @@ class ScenarioDCF:
         # last year of that stream.  Otherwise we could truncate a salary that
         # ends at retirement, for example.
         end_candidates = [
-            (m.age_at_occurrence + (m.duration or 0) - 1) if (m.duration and m.duration > 0) else m.age_at_occurrence
+            (m.age_at_occurrence + (m.duration or 0)) if (m.duration and m.duration > 0) else m.age_at_occurrence
             for m in self.milestones
         ]
         self.end_age = max(end_candidates)

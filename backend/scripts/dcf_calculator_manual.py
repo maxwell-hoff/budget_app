@@ -248,7 +248,7 @@ class DCFModel:
         start_age = min(ages)
 
         end_candidates = [
-            (_get("age_at_occurrence", m) + ((_get("duration", m) or 0) - 1))
+            (_get("age_at_occurrence", m) + (_get("duration", m) or 0))
             if (_get("duration", m) and _get("duration", m) > 0)
             else _get("age_at_occurrence", m)
             for m in milestones
