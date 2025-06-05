@@ -145,7 +145,7 @@ def dcf_from_db() -> DCFModel:
         ),
         _mock_ms(
             name="Retirement",
-            milestone_type="Asset",
+            milestone_type="Expense",
             age_at_occurrence=35,
             disbursement_type="Fixed Duration",
             amount=55_000.0,
