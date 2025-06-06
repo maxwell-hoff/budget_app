@@ -148,7 +148,13 @@ class DCFModel:
             salary = sum(s.value_at(t) for s in self.income_streams)
             expenses = sum(s.value_at(t) for s in self.expense_streams)
             a_income = a_begin * self.assump.rate_of_return
-            l_interest = l_begin * self.assump.cost_of_debt  # also equals principal repayment
+
+            # Apply interest only when at least one liability tranche is still active
+            liab_years: set[int] = getattr(self, "_liab_interest_years", set(range(self.start_age, self.end_age + 1)))
+            if age in liab_years:
+                l_interest = l_begin * self.assump.cost_of_debt  # also equals principal repayment
+            else:
+                l_interest = 0.0
 
             net_saving = salary - expenses - l_interest
             a_next = a_begin + a_income + net_saving
@@ -355,7 +361,20 @@ class DCFModel:
         if assumptions is None:
             assumptions = Assumptions(inflation=inflation_default, rate_of_return=0.08, cost_of_debt=0.06)
 
-        return cls(
+        # (model build moved below so we can attach liability interest ranges)
+
+        # ------------------------------------------------------------------
+        # 6. Mark years with active liability interest so that run() can skip
+        #    payments once the duration ends.
+        # ------------------------------------------------------------------
+
+        liab_years: set[int] = set()
+        for ms in milestones:
+            if _get("milestone_type", ms) == "Liability" and _get("duration", ms):
+                start = _get("age_at_occurrence", ms)
+                liab_years.update(range(start, start + _get("duration", ms)))
+
+        model: "DCFModel" = cls(
             start_age=start_age,
             end_age=end_age,
             assumptions=assumptions,
@@ -368,6 +387,9 @@ class DCFModel:
             asset_events=asset_events,
             liability_events=liability_events,
         )
+
+        model._liab_interest_years = liab_years
+        return model
 
 
 # ────────────────────────────────────────────────────────────────────
