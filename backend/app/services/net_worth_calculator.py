@@ -2,6 +2,22 @@ from ..database import db
 from ..models.milestone import Milestone
 from ..models.net_worth import MilestoneValueByAge, NetWorthByAge
 from datetime import datetime
+import math
+
+# ---------------------------------------------------------------------------
+#  Utility helpers
+# ---------------------------------------------------------------------------
+
+def _safe_pow(base: float, exp: int | float) -> float:
+    """Compute ``base ** exp`` but clamp to `float('inf')` on overflow.
+
+    This prevents extremely large scenario parameters (e.g. very long durations)
+    from blowing up the net-worth calculation with an OverflowError.
+    """
+    try:
+        return base ** exp
+    except OverflowError:
+        return float("inf")
 
 class NetWorthCalculator:
     """Service for calculating net worth values over time."""
@@ -48,9 +64,8 @@ class NetWorthCalculator:
                     if rate == 0:
                         balance = milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
-                        # Calculate remaining balance
-                        balance = milestone.amount * (1 + rate) ** remaining_periods - \
-                                (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        comp = _safe_pow(1 + rate, remaining_periods)
+                        balance = milestone.amount * comp - (milestone.payment or 0) * (comp - 1) / rate
                     
                     # For liabilities, ensure balance doesn't go negative
                     if milestone.milestone_type == 'Liability':
@@ -63,9 +78,8 @@ class NetWorthCalculator:
                     if rate == 0:
                         balance = milestone.amount - (milestone.payment or 0) * remaining_periods
                     else:
-                        # Calculate remaining balance
-                        balance = milestone.amount * (1 + rate) ** remaining_periods - \
-                                (milestone.payment or 0) * ((1 + rate) ** remaining_periods - 1) / rate
+                        comp = _safe_pow(1 + rate, remaining_periods)
+                        balance = milestone.amount * comp - (milestone.payment or 0) * (comp - 1) / rate
                     
                     # For liabilities, ensure balance doesn't go negative
                     if milestone.milestone_type == 'Liability':
@@ -81,9 +95,8 @@ class NetWorthCalculator:
                     if rate == 0:
                         balance = milestone.amount - payment * periods
                     else:
-                        # Calculate balance with compound interest and regular payments
-                        balance = milestone.amount * (1 + rate) ** periods - \
-                                payment * ((1 + rate) ** periods - 1) / rate
+                        comp = _safe_pow(1 + rate, periods)
+                        balance = milestone.amount * comp - payment * (comp - 1) / rate
                 else:  # Yearly
                     rate = milestone.rate_of_return
                     periods = years_elapsed
@@ -92,9 +105,8 @@ class NetWorthCalculator:
                     if rate == 0:
                         balance = milestone.amount - payment * periods
                     else:
-                        # Calculate balance with compound interest and regular payments
-                        balance = milestone.amount * (1 + rate) ** periods - \
-                                payment * ((1 + rate) ** periods - 1) / rate
+                        comp = _safe_pow(1 + rate, periods)
+                        balance = milestone.amount * comp - payment * (comp - 1) / rate
                 
                 # For liabilities, ensure balance doesn't go negative
                 if milestone.milestone_type == 'Liability':

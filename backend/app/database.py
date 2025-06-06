@@ -1,12 +1,28 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from pathlib import Path  # Local import to avoid polluting module scope at import time
 
 db = SQLAlchemy()
 ma = Marshmallow()
 
 def init_db(app):
     """Initialize the database with the Flask app."""
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///finance.db'
+    # ------------------------------------------------------------------
+    # Use an *absolute* path for the SQLite file so that the application
+    # works no matter what the current working directory is.
+    # ------------------------------------------------------------------
+
+    # The project root is two levels up from this file (backend/app → backend → project root)
+    project_root = Path(__file__).resolve().parent.parent.parent
+
+    # Ensure the instance directory exists (otherwise SQLite cannot create the DB file)
+    instance_dir = project_root / 'instance'
+    instance_dir.mkdir(parents=True, exist_ok=True)
+
+    db_path = instance_dir / 'finance.db'
+
+    # Absolute path with three leading slashes for SQLAlchemy/SQLite URI
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path.as_posix()}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     ma.init_app(app)

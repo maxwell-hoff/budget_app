@@ -336,32 +336,45 @@ def delete_milestone(milestone_id):
 @api_bp.route('/calculate-dcf', methods=['POST'])
 def calculate_dcf():
     """Calculate discounted cash flow for milestones."""
-    data = request.get_json()
-    current_age = data['current_age']
-    milestones = data['milestones']
-    
+    # 1) Import and run the comprehensive Scenario→Sub-scenario iterator *lazily* to avoid
+    #    circular import issues during application start-up.
+    from backend.scripts.scenario_dcf_iterator import ScenarioDCFIterator  # type: ignore
+    ScenarioDCFIterator().run()
+
+    # 2) For now keep returning the original per-milestone PV calculation so the front-end
+    #    doesn't break.  If the request body is empty we simply skip this part.
+
+    data = request.get_json(silent=True) or {}
+    if not data:
+        return jsonify({'message': 'DCF projections recalculated for all scenarios.'})
+
+    current_age = data.get('current_age')
+    milestones = data.get('milestones', [])
+
+    if current_age is None:
+        # No traditional calculation requested – just report success.
+        return jsonify({'message': 'DCF projections recalculated for all scenarios.'})
+
     calculator = DCFCalculator(current_age)
     results = []
-    
+
     for milestone in milestones:
-        if milestone['expense_type'] == 'lump_sum':
+        if milestone.get('expense_type') == 'lump_sum':
             pv = calculator.calculate_present_value(
                 milestone['amount'],
                 milestone['age_at_occurrence'] - current_age
             )
         else:  # annuity
             pv = calculator.calculate_annuity_present_value(
-                milestone['amount'] * 12,  # Convert monthly to annual
+                milestone['amount'] * 12,  # monthly → annual
                 milestone['duration_years'],
                 milestone['age_at_occurrence'] - current_age
             )
-        
-        results.append({
-            'milestone_id': milestone['id'],
-            'present_value': pv
-        })
-    
-    return jsonify(results)
+
+        results.append({'milestone_id': milestone['id'], 'present_value': pv})
+
+    # Combine both outputs
+    return jsonify({'message': 'DCF projections recalculated for all scenarios.', 'present_values': results})
 
 @api_bp.route('/parse-statement', methods=['POST'])
 def parse_statement():
