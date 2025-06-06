@@ -254,7 +254,8 @@ def test_from_db_le_end_value(dcf_from_db: DCFModel):
 
     le_age40 = float(df.loc[df.Age == 40, "Liabilities Expense"].iloc[0])
     print(df)
-    print(f'full df: {df[['Age', 'Liabilities Expense']]}')
+    # print(f'full df: {df[['Age', 'Liabilities Expense']]}')
+    print(f'full df: {df["Age","Liabilities Expense"]}')
     expected_le_age40 = 1_068 # manually calculated using a spreadsheet
     assert math.isclose(le_age40, expected_le_age40, rel_tol=1e-9), (
         f"Expected Beginning Assets at age 40 to be {expected_le_age40:,} but got {le_age40:,}"
