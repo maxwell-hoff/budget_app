@@ -118,10 +118,10 @@ def dcf_from_db() -> DCFModel:
             milestone_type="Liability",
             age_at_occurrence=30,
             disbursement_type="Fixed Duration",
-            amount=5000.0,
-            occurrence="Monthly",
+            amount=20000.0,
+            occurrence="Yearly",
             duration=4,
-            rate_of_return=0.04,
+            rate_of_return=0.00,
         ),
         _mock_ms(
             name="Current Salary",
@@ -130,7 +130,7 @@ def dcf_from_db() -> DCFModel:
             disbursement_type="Fixed Duration",
             amount=110_000.0,
             occurrence="Yearly",
-            duration=5,  # salary stops after five years
+            duration=6,  # salary stops after five years
             rate_of_return=0.04,
         ),
         _mock_ms(
@@ -140,13 +140,13 @@ def dcf_from_db() -> DCFModel:
             disbursement_type="Fixed Duration",
             amount=60_000.0,
             occurrence="Yearly",
-            duration=5,
+            duration=6,
             rate_of_return=0.02,
         ),
         _mock_ms(
             name="Retirement",
             milestone_type="Expense",
-            age_at_occurrence=35,
+            age_at_occurrence=36,
             disbursement_type="Fixed Duration",
             amount=55_000.0,
             occurrence="Yearly",
@@ -242,20 +242,20 @@ def test_from_db_ba_end_value(dcf_from_db: DCFModel):
 
     ba_age40 = float(df.loc[df.Age == 40, "Beginning Assets"].iloc[0])
     print(f"balance at age 40: {ba_age40}")
-    print(f'full df: {df}')
     expected_ba_age40 = 606_019 # manually calculated using a spreadsheet
     assert math.isclose(ba_age40, expected_ba_age40, rel_tol=1e-9), (
         f"Expected Beginning Assets at age 40 to be {expected_ba_age40:,} but got {ba_age40:,}"
     )
 
-# def test_from_db_ba_end_value(dcf_from_db: DCFModel):
-#     """Ending assets must match hand-calculated values."""
+def test_from_db_le_end_value(dcf_from_db: DCFModel):
+    """Ending assets must match hand-calculated values."""
 
-#     df = dcf_from_db.as_frame()
+    df = dcf_from_db.as_frame()
 
-#     ba_age40 = float(df.loc[df.Age == 40, "Beginning Assets"].iloc[0])
-#     print(df)
-#     expected_ba_age40 = 1_068 # manually calculated using a spreadsheet
-#     assert math.isclose(ba_age40, expected_ba_age40, rel_tol=1e-9), (
-#         f"Expected Beginning Assets at age 40 to be {expected_ba_age40:,} but got {ba_age40:,}"
-#     )
+    le_age40 = float(df.loc[df.Age == 40, "Liabilities Expense"].iloc[0])
+    print(df)
+    print(f'full df: {df[['Age', 'Liabilities Expense']]}')
+    expected_le_age40 = 1_068 # manually calculated using a spreadsheet
+    assert math.isclose(le_age40, expected_le_age40, rel_tol=1e-9), (
+        f"Expected Beginning Assets at age 40 to be {expected_le_age40:,} but got {le_age40:,}"
+    )

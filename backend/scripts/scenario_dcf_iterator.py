@@ -181,19 +181,7 @@ class ScenarioDCF:
     def run(self):
         assumptions = Assumptions(inflation=0.03, rate_of_return=0.08, cost_of_debt=0.06)
 
-        model = DCFModel(
-            start_age=self.start_age,
-            end_age=self.end_age,
-            assumptions=assumptions,
-            initial_assets=self.initial_assets,
-            initial_liabilities=self.initial_liabilities,
-            base_salary=self.base_salary,
-            base_expenses=self.base_expenses,
-            income_streams=self.income_streams,
-            expense_streams=self.expense_streams,
-            asset_events=self.asset_events,
-            liability_events=self.liability_events,
-        ).run()
+        model = DCFModel.from_milestones(self.milestones, assumptions=assumptions).run()
         df = model.as_frame()
 
         # Map DataFrame → ORM rows (snake_case col names match DCF table)

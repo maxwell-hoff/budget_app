@@ -256,16 +256,41 @@ class DCFModel:
         end_age = max(end_candidates)
 
         # ------------------------------------------------------------------
-        # 3. Opening balances & base flows from "current_*" milestones
+        # 3. Prepare containers for streams & balances
         # ------------------------------------------------------------------
 
-        current_vals: Dict[str, float] = {"asset": 0.0, "liability": 0.0, "income": 0.0, "expense": 0.0}
+        income_streams: List[GrowingSeries] = []
+        expense_streams: List[GrowingSeries] = []
+        asset_events: List[tuple[int, float]] = []
+        liability_events: List[tuple[int, float]] = []
+
+        current_vals: Dict[str, float] = {"asset": 0.0, "liability": 0.0}
+
+        # Flags so we later know whether to fall back to legacy base_salary/expense
+        current_income_found = False
+        current_expense_found = False
 
         for ms in milestones:
             if not _is_current(ms):
                 continue
+
             key = _CURRENT_MAP[_norm_name(_get("name", ms))]
-            current_vals[key] += _get("amount", ms) or 0.0
+
+            if key in ("asset", "liability"):
+                # Opening balances -------------------
+                current_vals[key] += _get("amount", ms) or 0.0
+            elif key == "income":
+                current_income_found = True
+                amt = _get("amount", ms) or 0.0
+                duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+                income_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
+            elif key == "expense":
+                current_expense_found = True
+                amt = _get("amount", ms) or 0.0
+                duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+                expense_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
 
         # Fallback to legacy behaviour if explicit current_* milestones are absent
         def _sum_amount(m_type, age):
@@ -275,23 +300,22 @@ class DCFModel:
                 if (_get("milestone_type", x) == m_type and _get("age_at_occurrence", x) == age)
             )
 
-        if current_vals["asset"] == 0.0:
+        if current_vals.get("asset", 0.0) == 0.0:
             current_vals["asset"] = _sum_amount("Asset", start_age)
-        if current_vals["liability"] == 0.0:
+        if current_vals.get("liability", 0.0) == 0.0:
             current_vals["liability"] = _sum_amount("Liability", start_age)
-        if current_vals["income"] == 0.0:
-            current_vals["income"] = _sum_amount("Income", start_age)
-        if current_vals["expense"] == 0.0:
-            current_vals["expense"] = _sum_amount("Expense", start_age)
+
+        base_salary = 0.0
+        base_expenses = 0.0
+
+        if not current_income_found:
+            base_salary = _sum_amount("Income", start_age)
+        if not current_expense_found:
+            base_expenses = _sum_amount("Expense", start_age)
 
         # ------------------------------------------------------------------
         # 4. Convert remaining milestones → streams / events
         # ------------------------------------------------------------------
-
-        income_streams: List[GrowingSeries] = []
-        expense_streams: List[GrowingSeries] = []
-        asset_events: List[tuple[int, float]] = []
-        liability_events: List[tuple[int, float]] = []
 
         legacy_assets_used = current_vals["asset"] == _sum_amount("Asset", start_age)
         legacy_liabs_used = current_vals["liability"] == _sum_amount("Liability", start_age)
@@ -337,8 +361,8 @@ class DCFModel:
             assumptions=assumptions,
             initial_assets=current_vals["asset"],
             initial_liabilities=current_vals["liability"],
-            base_salary=current_vals["income"],
-            base_expenses=current_vals["expense"],
+            base_salary=base_salary,
+            base_expenses=base_expenses,
             income_streams=income_streams,
             expense_streams=expense_streams,
             asset_events=asset_events,
