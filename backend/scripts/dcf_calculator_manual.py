@@ -3,6 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Dict
+import math
 import pandas as pd
 
 
@@ -75,6 +76,42 @@ class GrowingSeries:
 
 
 # ────────────────────────────────────────────────────────────────────
+#  Liability helper – amortising loan schedule
+# ────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class AmortisingLoan:
+    """Simple amortising (or interest-only) loan schedule."""
+
+    principal_remaining: float
+    annual_rate: float
+    duration_remaining: int | float  # years; ``math.inf`` for interest-only loans
+    payment: float                   # fixed periodic payment (interest + principal)
+
+    def make_payment(self) -> tuple[float, float]:
+        """Apply one payment period and return ``(total_payment, principal_repaid)``."""
+
+        if self.principal_remaining <= 0:
+            return 0.0, 0.0
+
+        interest = self.principal_remaining * self.annual_rate
+
+        if self.duration_remaining is math.inf:
+            # Interest-only structure
+            total_payment = interest
+            principal_repaid = 0.0
+        else:
+            total_payment = self.payment
+            principal_repaid = max(total_payment - interest, 0.0)
+            principal_repaid = min(principal_repaid, self.principal_remaining)
+            self.duration_remaining -= 1
+
+        self.principal_remaining -= principal_repaid
+        return total_payment, principal_repaid
+
+
+# ────────────────────────────────────────────────────────────────────
 #  Main DCF engine
 # ────────────────────────────────────────────────────────────────────
 class DCFModel:
@@ -102,6 +139,8 @@ class DCFModel:
         expense_streams: List[GrowingSeries] | None = None,
         asset_events: List[tuple[int, float]] | None = None,
         liability_events: List[tuple[int, float]] | None = None,
+        # Mapping ``age → List[Tuple[principal, custom_rate | None, duration]]``
+        liability_templates: Dict[int, List[tuple]] | None = None,
     ):
         # ── store scenario settings ────────────────────────────────
         self.start_age = start_age
@@ -125,40 +164,74 @@ class DCFModel:
         # one-off balance adjustments (e.g. inheritance at age 40) ----------
         self._asset_events = {age: amt for age, amt in (asset_events or [])}
         self._liability_events = {age: amt for age, amt in (liability_events or [])}
+        # Detailed loan descriptions coming from milestone parsing
+        self._loan_templates: Dict[int, List[tuple]] = liability_templates or {}
 
         # results populated by run()
         self._table: pd.DataFrame | None = None
 
     # ─────────────────────── public API ─────────────────────────────
     def run(self) -> "DCFModel":
-        """Iterates year by year and fills the internal DataFrame."""
+        """Iterate year-by-year to build the projection table."""
+
         years = self.end_age - self.start_age
         rows: List[Dict] = []
 
+        # ── 1. Initialise loan schedules ───────────────────────────────
+        active_loans: List[AmortisingLoan] = []
+
+        def _make_loan(principal: float, rate: float, duration: int | None) -> AmortisingLoan:
+            if duration is None:
+                payment = principal * rate  # interest-only
+                dur_remaining: int | float = math.inf
+            else:
+                payment = (principal * rate) / (1 - (1 + rate) ** (-duration)) if rate else principal / duration
+                dur_remaining = duration
+            return AmortisingLoan(principal, rate, dur_remaining, payment)
+
+        # Loans commencing at the projection start -----------------------
+        for spec in self._loan_templates.get(self.start_age, []):
+            principal, rate_override, duration = spec
+            rate = rate_override if rate_override is not None else self.assump.cost_of_debt
+            active_loans.append(_make_loan(principal, rate, duration))
+
+        # Backwards-compatible fallback (no templates) --------------------
+        if not active_loans and self.liabilities[0] > 0:
+            active_loans.append(_make_loan(self.liabilities[0], self.assump.cost_of_debt, None))
+
+        # ── 2. Projection loop ───────────────────────────────────────────
         for t in range(years + 1):
             age = self.start_age + t
 
-            # Apply one-off balance events at *beginning* of the year ---------
-            a_begin_prev = self.assets[-1]
-            l_begin_prev = self.liabilities[-1]
-            a_begin = a_begin_prev + self._asset_events.get(age, 0.0)
-            l_begin = l_begin_prev + self._liability_events.get(age, 0.0)
+            # Inject loans that start this year (skip t=0 ones already added)
+            if age in self._loan_templates and (age != self.start_age or t != 0):
+                for spec in self._loan_templates[age]:
+                    principal, rate_override, duration = spec
+                    rate = rate_override if rate_override is not None else self.assump.cost_of_debt
+                    active_loans.append(_make_loan(principal, rate, duration))
 
-            # yearly flows ----------------------------------------------------
+            # Beginning of year balances ---------------------------------
+            a_begin_prev = self.assets[-1]
+            a_begin = a_begin_prev + self._asset_events.get(age, 0.0)
+            l_begin = sum(l.principal_remaining for l in active_loans)
+
+            # Regular income / expenses ----------------------------------
             salary = sum(s.value_at(t) for s in self.income_streams)
             expenses = sum(s.value_at(t) for s in self.expense_streams)
             a_income = a_begin * self.assump.rate_of_return
 
-            # Apply interest only when at least one liability tranche is still active
-            liab_years: set[int] = getattr(self, "_liab_interest_years", set(range(self.start_age, self.end_age + 1)))
-            if age in liab_years:
-                l_interest = l_begin * self.assump.cost_of_debt  # also equals principal repayment
-            else:
-                l_interest = 0.0
+            # Debt service ----------------------------------------------
+            liab_expense = 0.0
+            for loan in list(active_loans):  # copy -> safe removal
+                payment, _ = loan.make_payment()
+                liab_expense += payment
+                if loan.principal_remaining <= 1e-8:
+                    active_loans.remove(loan)
 
-            net_saving = salary - expenses - l_interest
+            # Update year-end balances -----------------------------------
+            net_saving = salary - expenses - liab_expense
             a_next = a_begin + a_income + net_saving
-            l_next = l_begin - l_interest
+            l_next = sum(l.principal_remaining for l in active_loans)
 
             if t < years:
                 self.assets.append(a_next)
@@ -169,7 +242,7 @@ class DCFModel:
                 "Beginning Assets": round(a_begin, 10),
                 "Assets Income": round(a_income, 10),
                 "Beginning Liabilities": round(l_begin, 10),
-                "Liabilities Expense": round(l_interest, 10),
+                "Liabilities Expense": round(liab_expense, 10),
                 "Salary": round(salary, 10),
                 "Expenses": round(expenses, 10),
             })
@@ -268,13 +341,17 @@ class DCFModel:
         income_streams: List[GrowingSeries] = []
         expense_streams: List[GrowingSeries] = []
         asset_events: List[tuple[int, float]] = []
-        liability_events: List[tuple[int, float]] = []
+        liability_events: List[tuple[int, float]] = []  # kept for backwards-compat
 
         current_vals: Dict[str, float] = {"asset": 0.0, "liability": 0.0}
 
         # Flags so we later know whether to fall back to legacy base_salary/expense
         current_income_found = False
         current_expense_found = False
+
+        # Detailed liability descriptors (age → list[ (principal, rate_override, duration) ])
+        from collections import defaultdict
+        liability_templates: Dict[int, List[tuple]] = defaultdict(list)
 
         for ms in milestones:
             if not _is_current(ms):
@@ -309,7 +386,7 @@ class DCFModel:
         if current_vals.get("asset", 0.0) == 0.0:
             current_vals["asset"] = _sum_amount("Asset", start_age)
         if current_vals.get("liability", 0.0) == 0.0:
-            current_vals["liability"] = _sum_amount("Liability", start_age)
+            current_vals["liability"] = 0.0
 
         base_salary = 0.0
         base_expenses = 0.0
@@ -350,9 +427,12 @@ class DCFModel:
                     continue
                 asset_events.append((_get("age_at_occurrence", ms), amt))
             elif mt == "Liability":
-                if legacy_liabs_used and _get("age_at_occurrence", ms) == start_age:
-                    continue
-                liability_events.append((_get("age_at_occurrence", ms), amt))
+                # Build amortising loan template ---------------------------
+                age_at = _get("age_at_occurrence", ms)
+                principal = amt
+                duration_ms = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                rate_override = _get("rate_of_return", ms)
+                liability_templates[age_at].append((principal, rate_override, duration_ms))
 
         # ------------------------------------------------------------------
         # 5. Build the DCFModel instance
@@ -386,6 +466,7 @@ class DCFModel:
             expense_streams=expense_streams,
             asset_events=asset_events,
             liability_events=liability_events,
+            liability_templates=liability_templates,
         )
 
         model._liab_interest_years = liab_years
