@@ -345,11 +345,15 @@ class DCFModel:
 
         current_vals: Dict[str, float] = {"asset": 0.0, "liability": 0.0}
 
-        # Flags so we later know whether to fall back to legacy base_salary/expense
+        # Flags for fallback behaviour and containers ---------------------
         current_income_found = False
         current_expense_found = False
 
-        # Detailed liability descriptors (age → list[ (principal, rate_override, duration) ])
+        # Track rate_of_return on 'current' asset milestones so we can
+        # override the global asset growth assumption when provided.
+        asset_roi_data: List[tuple[float, float]] = []  # (amount, roi)
+
+        # Detailed liability descriptors (age → list[(principal, roi_override, duration)])
         from collections import defaultdict
         liability_templates: Dict[int, List[tuple]] = defaultdict(list)
 
@@ -361,7 +365,12 @@ class DCFModel:
 
             if key in ("asset", "liability"):
                 # Opening balances -------------------
-                current_vals[key] += _get("amount", ms) or 0.0
+                amt = _get("amount", ms) or 0.0
+                current_vals[key] += amt
+
+                roi_val = _get("rate_of_return", ms)
+                if roi_val is not None:
+                    asset_roi_data.append((amt, roi_val))
             elif key == "income":
                 current_income_found = True
                 amt = _get("amount", ms) or 0.0
@@ -439,7 +448,16 @@ class DCFModel:
         # ------------------------------------------------------------------
 
         if assumptions is None:
-            assumptions = Assumptions(inflation=inflation_default, rate_of_return=0.08, cost_of_debt=0.06)
+            # If at least one current asset milestone specified a rate_of_return
+            # compute the weighted average across the supplied opening balances.
+            if asset_roi_data:
+                total_amt = sum(a for a, _ in asset_roi_data)
+                weighted_roi = sum(a * r for a, r in asset_roi_data) / total_amt if total_amt else 0.0
+                asset_return = weighted_roi
+            else:
+                asset_return = 0.08  # legacy default
+
+            assumptions = Assumptions(inflation=inflation_default, rate_of_return=asset_return, cost_of_debt=0.06)
 
         # (model build moved below so we can attach liability interest ranges)
 

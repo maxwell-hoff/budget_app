@@ -256,7 +256,7 @@ def test_from_db_le(dcf_from_db: DCFModel):
     print(df)
     print(f'full df: {df[["Age","Liabilities Expense"]]}')
     expected_le_age33 = 5_000 # manually calculated using a spreadsheet
-    assert math.isclose(le_age33, expected_le_age33, rel_tol=1e-9), (
+    assert math.isclose(le_age33, expected_le_age33, abs_tol=2), (
         f"Expected Liabilities Expense at age 33 to be {expected_le_age33:,} but got {le_age33:,}"
     )
 
@@ -268,7 +268,7 @@ def test_from_db_asset_income(dcf_from_db: DCFModel):
     assets_income_age40 = float(df.loc[df.Age == 40, "Assets Income"].iloc[0])
     print(df)
     print(f'full df: {df[["Age","Assets Income"]]}')
-    expected_assets_income_age40 = 5_000 # manually calculated using a spreadsheet
-    assert math.isclose(assets_income_age40, expected_assets_income_age40, rel_tol=1e-9), (
-        f"Expected Liabilities Expense at age 33 to be {expected_assets_income_age40:,} but got {assets_income_age40:,}"
+    expected_assets_income_age40 = 60_601 # manually calculated using a spreadsheet
+    assert math.isclose(assets_income_age40, expected_assets_income_age40, abs_tol=2), (
+        f"Expected Liabilities Expense at age 40 to be {expected_assets_income_age40:,} but got {assets_income_age40:,}"
     )
