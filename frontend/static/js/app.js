@@ -747,6 +747,15 @@ function createMilestoneForm(milestone) {
                 if (index !== -1) {
                     milestones[index] = updatedMilestone;
                 }
+
+                // The scenario value should now be available for every related
+                // milestone across all scenarios/sub-scenarios.  The simplest
+                // way to guarantee the UI reflects this without re-implementing
+                // the grouping logic in JavaScript is to reload the data.
+                // A full page refresh will trigger the usual AJAX loaders that
+                // repopulate the `milestones` array for the newly selected
+                // scenario & sub-scenario selections.
+                window.location.reload();
             },
             error: function(err) { console.error('Error adding scenario value', err); }
         });
@@ -769,6 +778,9 @@ function createMilestoneForm(milestone) {
                 if (index !== -1) {
                     milestones[index] = updatedMilestone;
                 }
+
+                // Ensure UI stays in sync across all milestones after deletion.
+                window.location.reload();
             },
             error: function(err) { console.error('Error deleting scenario value', err); }
         });

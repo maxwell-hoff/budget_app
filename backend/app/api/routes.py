@@ -424,6 +424,33 @@ def recalculate_net_worth_endpoint():
         return jsonify({'message': 'Net worth recalculated successfully'})
     return jsonify({'error': 'No user profile found'}), 404
 
+# Helper ---------------------------------------------------------------
+# When a scenario parameter value is added to a milestone we want that
+# value to automatically apply to *all* milestones that represent the
+# same logical item across every scenario/sub-scenario.  The simplest
+# heuristic is:
+#   1. If this milestone belongs to a parent_milestone group, use that
+#      parent_milestone_id to find all siblings.
+#   2. Otherwise fall back to matching by (name, age_at_occurrence,
+#      milestone_type) which is how we deduplicate milestones elsewhere
+#      in the code base (see scenarios.py).
+#
+# This helper returns a list of IDs (including the original one).
+
+def _get_related_milestone_ids(milestone: Milestone):
+    """Return IDs of milestones that should share scenario parameter values."""
+    if milestone.parent_milestone_id:
+        rows = Milestone.query.filter_by(parent_milestone_id=milestone.parent_milestone_id).all()
+        return [m.id for m in rows]
+
+    # Fallback grouping when no parent_milestone_id is defined.
+    rows = Milestone.query.filter_by(
+        name=milestone.name,
+        age_at_occurrence=milestone.age_at_occurrence,
+        milestone_type=milestone.milestone_type
+    ).all()
+    return [m.id for m in rows]
+
 @api_bp.route('/milestones/<int:milestone_id>/scenario-values', methods=['POST'])
 def add_scenario_value(milestone_id):
     """Add a scenario parameter value for a milestone."""
@@ -439,19 +466,31 @@ def add_scenario_value(milestone_id):
         return jsonify({'error': 'Value is required'}), 400
 
     value_str = str(value)
-    # Prevent duplicates
-    existing = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
-    if not existing:
-        db.session.add(ScenarioParameterValue(milestone_id=milestone_id, parameter=parameter, value=value_str))
+
+    # ------------------------------------------------------------------
+    # NEW: Propagate this value to *all* related milestones.
+    # ------------------------------------------------------------------
+    related_ids = _get_related_milestone_ids(milestone)
+    added_any = False
+    for mid in related_ids:
+        exists = ScenarioParameterValue.query.filter_by(
+            milestone_id=mid, parameter=parameter, value=value_str
+        ).first()
+        if not exists:
+            db.session.add(ScenarioParameterValue(milestone_id=mid, parameter=parameter, value=value_str))
+            added_any = True
+
+    if added_any:
         db.session.commit()
 
-        # After adding, re-solve for any goals tied to this milestone
-        for goal in milestone.goals:
-            if goal.is_goal:
-                solve_for_goal(goal.parameter, [milestone])
+        # Re-solve goals for every affected milestone
+        affected_milestones = Milestone.query.filter(Milestone.id.in_(related_ids)).all()
+        for m in affected_milestones:
+            for goal in m.goals:
+                if goal.is_goal:
+                    solve_for_goal(goal.parameter, [m])
 
-        # Ensure all other goal milestones get refreshed for the newly added scenario value
-        # Gather all distinct goal parameters across the system
+        # Refresh all global goal calculations (unchanged logic)
         distinct_goal_params = {g.parameter for g in Goal.query.filter_by(is_goal=True).all()}
         all_goaled_milestones = Milestone.query.join(Goal).filter(Goal.is_goal == True).all()
         for gp in distinct_goal_params:
@@ -470,17 +509,28 @@ def delete_scenario_value(milestone_id):
         return jsonify({'error': 'Invalid parameter'}), 400
 
     value_str = str(value)
-    entry = ScenarioParameterValue.query.filter_by(milestone_id=milestone_id, parameter=parameter, value=value_str).first()
-    if entry:
-        db.session.delete(entry)
+
+    # ------------------------------------------------------------------
+    # NEW: Remove this value from *all* related milestones.
+    # ------------------------------------------------------------------
+    related_ids = _get_related_milestone_ids(Milestone.query.get_or_404(milestone_id))
+    deleted_any = False
+    for mid in related_ids:
+        entry = ScenarioParameterValue.query.filter_by(milestone_id=mid, parameter=parameter, value=value_str).first()
+        if entry:
+            db.session.delete(entry)
+            deleted_any = True
+
+    if deleted_any:
         db.session.commit()
 
-        milestone = Milestone.query.get(milestone_id)
-        for goal in milestone.goals:
-            if goal.is_goal:
-                solve_for_goal(goal.parameter, [milestone])
+        affected_milestones = Milestone.query.filter(Milestone.id.in_(related_ids)).all()
+        for m in affected_milestones:
+            for goal in m.goals:
+                if goal.is_goal:
+                    solve_for_goal(goal.parameter, [m])
 
-    return jsonify(milestone.to_dict())
+    return jsonify(Milestone.query.get(milestone_id).to_dict())
 
 @api_bp.route('/scenario-parameter-values', methods=['GET'])
 def get_scenario_parameter_values():
