@@ -18,10 +18,10 @@ def sample_data():
             milestone_type="Income",
             age_at_occurrence=30,
             disbursement_type="Fixed Duration",
-            amount=100_000.0,
+            amount=110_000.0,
             occurrence="Yearly",
-            duration=10,
-            rate_of_return=0.03,
+            duration=6,
+            rate_of_return=0.04,
             scenario_id=1,
             sub_scenario_id=1,
         ),
@@ -32,8 +32,20 @@ def sample_data():
             disbursement_type="Fixed Duration",
             amount=60_000.0,
             occurrence="Yearly",
-            duration=10,
+            duration=6,
             rate_of_return=0.02,
+            scenario_id=1,
+            sub_scenario_id=1,
+        ),
+        Milestone(
+            name="Current Debt",
+            milestone_type="Liability",
+            age_at_occurrence=30,
+            disbursement_type="Fixed Duration",
+            amount=20_000.0,
+            occurrence="Yearly",
+            duration=4,
+            rate_of_return=0.00,
             scenario_id=1,
             sub_scenario_id=1,
         ),
@@ -41,24 +53,24 @@ def sample_data():
 
     # Simple liquid asset + salary + expense baseline (like earlier unit-tests)Milestone(
     liquid_assets = Milestone(
-            name="Current Liquid Assets",
-            milestone_type="Asset",
-            age_at_occurrence=30,
-            disbursement_type="Perpetuity",
-            amount=100_000.0,
-            occurrence="Yearly",
-            duration=None,
-            rate_of_return=0.08,
-            scenario_id=1,
-            sub_scenario_id=1,
-        )
+        name="Current Liquid Assets",
+        milestone_type="Asset",
+        age_at_occurrence=30,
+        disbursement_type="Perpetuity",
+        amount=100_000.0,
+        occurrence="Yearly",
+        duration=None,
+        rate_of_return=0.10,
+        scenario_id=1,
+        sub_scenario_id=1,
+    )
     # Goal: solve for *amount* of a new retirement milestone so that BA@40 == BA baseline
     retirement = Milestone(
         name="Retirement",
         milestone_type="Expense",
-        age_at_occurrence=35,
+        age_at_occurrence=36,
         disbursement_type="Fixed Duration",
-        amount=50_000.0,
+        amount=55_000.0,
         occurrence="Yearly",
         duration=5,
         rate_of_return=0.02,
@@ -70,8 +82,8 @@ def sample_data():
 
     goal = Goal(milestone_id=retirement.id, parameter="age_at_occurrence", is_goal=True)
 
-    # Scenario parameter: shift retirement age (age_at_occurrence) to 34 instead of 35
-    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.06")
+    # Scenario parameter: shift rate of return to 6% instead of 8%
+    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.105")
 
     return milestones, goal, spv
 

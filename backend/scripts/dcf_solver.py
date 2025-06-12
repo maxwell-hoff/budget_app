@@ -52,24 +52,39 @@ class DCFGoalSolver:
         solved_val = initial_val
         is_age_attr = attr == "age_at_occurrence"
 
+        # --- ensure the target BA lies between the BA at the bounds -------
+        ba_low = self._ba_for_value(working_ms, goal_ms, attr, low, is_age_attr)
+        ba_high = self._ba_for_value(working_ms, goal_ms, attr, high, is_age_attr)
+
+        expand_iter = 0
+        while not (min(ba_low, ba_high) <= self.target_ba <= max(ba_low, ba_high)) and expand_iter < 10:
+            # Expand the interval exponentially until the target is bracketed
+            span = (high - low) if high > low else (low - high)
+            low -= span
+            high += span
+            ba_low = self._ba_for_value(working_ms, goal_ms, attr, low, is_age_attr)
+            ba_high = self._ba_for_value(working_ms, goal_ms, attr, high, is_age_attr)
+            expand_iter += 1
+
+        # --- bisection -----------------------------------------------------
         for _ in range(self.MAX_ITER):
             mid = (low + high) / 2
 
-            if is_age_attr:
-                mid = int(round(mid))  # ages must be integers
+            ba_mid = self._ba_for_value(working_ms, goal_ms, attr, mid, is_age_attr)
 
-            setattr(goal_ms, attr, mid)
-
-            ba = self._ending_beginning_assets(working_ms)
-            if abs(ba - self.target_ba) <= self.TOL:
-                solved_val = mid
+            if abs(ba_mid - self.target_ba) <= self.TOL:
+                solved_val = int(round(mid)) if is_age_attr else mid
                 break
 
-            if ba > self.target_ba:
+            # Maintain the bracket
+            if (ba_low - self.target_ba) * (ba_mid - self.target_ba) < 0:
                 high = mid
+                ba_high = ba_mid
             else:
                 low = mid
-            solved_val = mid
+                ba_low = ba_mid
+
+            solved_val = int(round(mid)) if is_age_attr else mid
 
         # Ensure final milestone list has the converged value
         setattr(goal_ms, attr, solved_val)
@@ -101,8 +116,8 @@ class DCFGoalSolver:
             low, high = 0, 120
             return float(low), float(high)
 
-        low = 0.0 if start >= 0 else start * 2
-        high = start * 2 + 1 if start > 0 else 1.0
+        low = 0.0 if start >= 0 else start * 3
+        high = start * 3 + 1 if start > 0 else 1.0
         if high <= low + 1e-9:
             high = low + 1.0
         return low, high
@@ -110,6 +125,15 @@ class DCFGoalSolver:
     def _ending_beginning_assets(self, milestones: List[Milestone]) -> float:
         df = DCFModel.from_milestones(milestones).run().as_frame()
         return float(df.loc[df.Age == df.Age.max(), "Beginning Assets"].iloc[0])
+
+    def _ba_for_value(self, milestones: List[Milestone], goal_ms: Milestone,
+                      attr: str, val: float, is_age: bool) -> float:
+        """Temporarily set *attr* on *goal_ms* to *val*, compute BA for *milestones*."""
+        original = getattr(goal_ms, attr)
+        setattr(goal_ms, attr, int(round(val)) if is_age else val)
+        ba = self._ending_beginning_assets(milestones)
+        setattr(goal_ms, attr, original)
+        return ba
 
 
 # ---------------------------------------------------------------------------
