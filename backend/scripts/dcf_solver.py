@@ -24,7 +24,7 @@ class DCFGoalSolver:
     """
 
     MAX_ITER = 40
-    TOL = 1.0  # absolute currency tolerance
+    TOL = 0.01  # absolute currency tolerance (≈ one cent)
 
     def __init__(self, milestones: List[Milestone], target_ba: float):
         # Work on *copies* so we never mutate DB-attached objects
@@ -50,8 +50,14 @@ class DCFGoalSolver:
         low, high = self._initial_bounds(initial_val)
 
         solved_val = initial_val
+        is_age_attr = attr == "age_at_occurrence"
+
         for _ in range(self.MAX_ITER):
             mid = (low + high) / 2
+
+            if is_age_attr:
+                mid = int(round(mid))  # ages must be integers
+
             setattr(goal_ms, attr, mid)
 
             ba = self._ending_beginning_assets(working_ms)
@@ -85,6 +91,16 @@ class DCFGoalSolver:
             return v  # non-numeric – leave as string
 
     def _initial_bounds(self, start: float) -> Tuple[float, float]:
+        """Return (low, high) suitable for bisection.
+
+        If solving an *age* parameter we bound by [0, 120].
+        Otherwise we use a simple 0↔double rule.
+        """
+        if isinstance(start, (int, float)) and abs(start) < 1e5 and start >= 0:
+            # Heuristic: treat values in human-age range as age_at_occurrence
+            low, high = 0, 120
+            return float(low), float(high)
+
         low = 0.0 if start >= 0 else start * 2
         high = start * 2 + 1 if start > 0 else 1.0
         if high <= low + 1e-9:

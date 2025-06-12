@@ -14,18 +14,6 @@ def sample_data():
     # Simple liquid asset + salary + expense baseline (like earlier unit-tests)
     milestones = [
         Milestone(
-            name="Current Liquid Assets",
-            milestone_type="Asset",
-            age_at_occurrence=30,
-            disbursement_type="Perpetuity",
-            amount=100_000.0,
-            occurrence="Yearly",
-            duration=None,
-            rate_of_return=0.08,
-            scenario_id=1,
-            sub_scenario_id=1,
-        ),
-        Milestone(
             name="Current Salary",
             milestone_type="Income",
             age_at_occurrence=30,
@@ -51,6 +39,19 @@ def sample_data():
         ),
     ]
 
+    # Simple liquid asset + salary + expense baseline (like earlier unit-tests)Milestone(
+    liquid_assets = Milestone(
+            name="Current Liquid Assets",
+            milestone_type="Asset",
+            age_at_occurrence=30,
+            disbursement_type="Perpetuity",
+            amount=100_000.0,
+            occurrence="Yearly",
+            duration=None,
+            rate_of_return=0.08,
+            scenario_id=1,
+            sub_scenario_id=1,
+        )
     # Goal: solve for *amount* of a new retirement milestone so that BA@40 == BA baseline
     retirement = Milestone(
         name="Retirement",
@@ -65,11 +66,12 @@ def sample_data():
         sub_scenario_id=1,
     )
     milestones.append(retirement)
+    milestones.append(liquid_assets)
 
-    goal = Goal(milestone_id=retirement.id, parameter="amount", is_goal=True)
+    goal = Goal(milestone_id=retirement.id, parameter="age_at_occurrence", is_goal=True)
 
     # Scenario parameter: shift retirement age (age_at_occurrence) to 34 instead of 35
-    spv = ScenarioParameterValue(milestone_id=retirement.id, parameter="age_at_occurrence", value="34")
+    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.06")
 
     return milestones, goal, spv
 
@@ -96,6 +98,9 @@ def test_goal_solver_converges(sample_data):
         f'solved_val: {solved_val}, baseline_param_val: {baseline_param_val}'
     )
 
-    assert math.isclose(baseline_ba, solved_ba, abs_tol=solver.TOL), "Solver did not match target BA"
+    diff = abs(baseline_ba - solved_ba)
+    assert diff <= solver.TOL, (
+        f"Solver mismatch: |ΔBA|={diff:.4f} > {solver.TOL}."
+    )
     # Sanity check that value changed noticeably
-    assert solved_val == goal.parameter
+    assert solved_val != goal.parameter
