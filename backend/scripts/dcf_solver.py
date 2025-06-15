@@ -154,8 +154,8 @@ class DCFGoalSolver:
             low, high = 0, 120
             return float(low), float(high)
 
-        low = 0.0 if start >= 0 else start * 3
-        high = start * 3 + 1 if start > 0 else 1.0
+        low = 0.0 if start >= 0 else start * 2
+        high = start * 2 + 1 if start > 0 else 1.0
         if high <= low + 1e-9:
             high = low + 1.0
         return low, high

@@ -82,8 +82,8 @@ def sample_data():
 
     goal = Goal(milestone_id=retirement.id, parameter="age_at_occurrence", is_goal=True)
 
-    # Scenario parameter: shift rate of return to 6% instead of 8%
-    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.105")
+    # Scenario parameter: shift rate of return to 12% instead of 10%
+    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.15")
 
     return milestones, goal, spv
 
