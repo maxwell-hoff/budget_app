@@ -108,6 +108,7 @@ def test_goal_solver_converges(sample_data):
     print(
         f'solved_ba: {solved_ba}, baseline_ba: {baseline_ba}, '
         f'solved_val: {solved_val}, baseline_param_val: {baseline_param_val}'
+        f'solver progress: {solver.progress}'
     )
 
     diff = abs(baseline_ba - solved_ba)

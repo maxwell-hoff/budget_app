@@ -31,6 +31,10 @@ class DCFGoalSolver:
         self.base_ms: List[Milestone] = copy.deepcopy(milestones)
         self.target_ba = target_ba
 
+        # Container tracking the solver path – useful for unit-tests / debugging.
+        # Each element is a tuple ``(candidate_value, resulting_ba)``.
+        self.progress: List[tuple[float, float]] = []
+
     # ------------------------------------------------------------------
     #  Public API
     # ------------------------------------------------------------------
@@ -56,6 +60,10 @@ class DCFGoalSolver:
         ba_low = self._ba_for_value(working_ms, goal_ms, attr, low, is_age_attr)
         ba_high = self._ba_for_value(working_ms, goal_ms, attr, high, is_age_attr)
 
+        # Record initial probes
+        self.progress.append((low, ba_low))
+        self.progress.append((high, ba_high))
+
         expand_iter = 0
         while not (min(ba_low, ba_high) <= self.target_ba <= max(ba_low, ba_high)) and expand_iter < 10:
             # Expand the interval exponentially until the target is bracketed
@@ -64,13 +72,43 @@ class DCFGoalSolver:
             high += span
             ba_low = self._ba_for_value(working_ms, goal_ms, attr, low, is_age_attr)
             ba_high = self._ba_for_value(working_ms, goal_ms, attr, high, is_age_attr)
+
+            # Track expansion probes
+            self.progress.append((low, ba_low))
+            self.progress.append((high, ba_high))
             expand_iter += 1
+
+        # ------------------------------------------------------------------
+        # Special handling for age parameters: if we still failed to bracket
+        # the target after the limited expansion attempts, fall back to a
+        # *discrete* search over the plausible human-age range.  Because the
+        # model is evaluated yearly, being off by ±1 year is acceptable and
+        # avoids runaway intervals that trigger floating-point overflow.
+        # ------------------------------------------------------------------
+        if is_age_attr and not (min(ba_low, ba_high) <= self.target_ba <= max(ba_low, ba_high)):
+            best_age = None
+            best_diff = float("inf")
+
+            for age in range(0, 121):  # inclusive upper bound for clarity
+                ba_val = self._ba_for_value(working_ms, goal_ms, attr, age, True)
+                self.progress.append((age, ba_val))
+                diff = abs(ba_val - self.target_ba)
+                if diff < best_diff:
+                    best_diff = diff
+                    best_age = age
+
+            solved_val = best_age if best_age is not None else initial_val
+            setattr(goal_ms, attr, solved_val)
+            return solved_val, working_ms
 
         # --- bisection -----------------------------------------------------
         for _ in range(self.MAX_ITER):
             mid = (low + high) / 2
 
             ba_mid = self._ba_for_value(working_ms, goal_ms, attr, mid, is_age_attr)
+
+            # Log bisection probe -------------------------------------------------
+            self.progress.append((mid, ba_mid))
 
             if abs(ba_mid - self.target_ba) <= self.TOL:
                 solved_val = int(round(mid)) if is_age_attr else mid
@@ -129,8 +167,13 @@ class DCFGoalSolver:
     def _ba_for_value(self, milestones: List[Milestone], goal_ms: Milestone,
                       attr: str, val: float, is_age: bool) -> float:
         """Temporarily set *attr* on *goal_ms* to *val*, compute BA for *milestones*."""
+        # Clamp age values to a sensible human range to avoid extreme horizon
+        # lengths that can cause numerical overflow.
+        if is_age:
+            val = max(0, min(120, int(round(val))))
+
         original = getattr(goal_ms, attr)
-        setattr(goal_ms, attr, int(round(val)) if is_age else val)
+        setattr(goal_ms, attr, val)
         ba = self._ending_beginning_assets(milestones)
         setattr(goal_ms, attr, original)
         return ba
