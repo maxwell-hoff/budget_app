@@ -296,10 +296,15 @@ class DCFModel:
         # ------------------------------------------------------------------
 
         def _get(attr: str, obj):
-            """Return *attr* from *obj* whether it is an object or a dict."""
+            """Return *attr* from *obj* whether it is an object or a dict.
+
+            Gracefully returns ``None`` when the attribute is missing so that
+            optional fields like ``duration_end_at_milestone`` do not raise
+            errors in older tests/scenarios that omit them.
+            """
             if isinstance(obj, dict):
                 return obj.get(attr)
-            return getattr(obj, attr)
+            return getattr(obj, attr, None)
 
         def _norm_name(s: str | None) -> str:
             if s is None:
@@ -317,6 +322,39 @@ class DCFModel:
             return _norm_name(_get("name", ms)) in _CURRENT_MAP
 
         # ------------------------------------------------------------------
+        #  Dynamic duration helper  (placed early so subsequent code can use it)
+        # ------------------------------------------------------------------
+
+        # Build a quick lookup so we can find milestones by (normalised) name
+        name_to_ms = { _norm_name(_get("name", m)): m for m in milestones }
+
+        def _effective_duration(ms) -> int | None:
+            """Return the *actual* duration taking dynamic rules into account.
+
+            Supports dynamic durations via the custom attribute
+            ``duration_end_at_milestone`` which specifies that the milestone
+            lasts until *another* milestone *starts*.
+            """
+
+            dyn_target_name = _get("duration_end_at_milestone", ms)
+            if dyn_target_name:
+                target_ms = name_to_ms.get(_norm_name(dyn_target_name))
+                if target_ms is None:
+                    raise ValueError(
+                        f"Dynamic duration error: target milestone '{dyn_target_name}' not found."
+                    )
+                target_start_age = _get("age_at_occurrence", target_ms)
+                own_start_age = _get("age_at_occurrence", ms)
+                return max(target_start_age - own_start_age, 0)
+
+            # Fallback to explicit fixed durations --------------------------------
+            if (_get("disbursement_type", ms) == "Fixed Duration") and (_get("duration", ms) is not None):
+                return _get("duration", ms)
+
+            # Perpetuity / open-ended stream --------------------------------------
+            return None
+
+        # ------------------------------------------------------------------
         # 2. Derive projection horizon
         # ------------------------------------------------------------------
 
@@ -327,8 +365,8 @@ class DCFModel:
         start_age = min(ages)
 
         end_candidates = [
-            (_get("age_at_occurrence", m) + (_get("duration", m) or 0))
-            if (_get("duration", m) and _get("duration", m) > 0)
+            (_get("age_at_occurrence", m) + (_effective_duration(m) or 0))
+            if (_effective_duration(m) and _effective_duration(m) > 0)
             else _get("age_at_occurrence", m)
             for m in milestones
         ]
@@ -374,13 +412,13 @@ class DCFModel:
             elif key == "income":
                 current_income_found = True
                 amt = _get("amount", ms) or 0.0
-                duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                duration = _effective_duration(ms)
                 growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
                 income_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
             elif key == "expense":
                 current_expense_found = True
                 amt = _get("amount", ms) or 0.0
-                duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                duration = _effective_duration(ms)
                 growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
                 expense_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
 
@@ -424,7 +462,7 @@ class DCFModel:
                 amt *= 12
 
             start_step = _get("age_at_occurrence", ms) - start_age
-            duration = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+            duration = _effective_duration(ms)
             growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
 
             if mt == "Income":
@@ -439,7 +477,7 @@ class DCFModel:
                 # Build amortising loan template ---------------------------
                 age_at = _get("age_at_occurrence", ms)
                 principal = amt
-                duration_ms = _get("duration", ms) if (_get("disbursement_type", ms) == "Fixed Duration") else None
+                duration_ms = _effective_duration(ms)
                 rate_override = _get("rate_of_return", ms)
                 liability_templates[age_at].append((principal, rate_override, duration_ms))
 
@@ -468,9 +506,9 @@ class DCFModel:
 
         liab_years: set[int] = set()
         for ms in milestones:
-            if _get("milestone_type", ms) == "Liability" and _get("duration", ms):
+            if _get("milestone_type", ms) == "Liability" and _effective_duration(ms):
                 start = _get("age_at_occurrence", ms)
-                liab_years.update(range(start, start + _get("duration", ms)))
+                liab_years.update(range(start, start + _effective_duration(ms)))
 
         model: "DCFModel" = cls(
             start_age=start_age,
