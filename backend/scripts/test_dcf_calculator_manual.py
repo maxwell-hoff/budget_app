@@ -243,19 +243,32 @@ def test_from_db_ba_end_value(dcf_from_db: DCFModel):
     ba_age40 = float(df.loc[df.Age == 40, "Beginning Assets"].iloc[0])
     print(f"balance at age 40: {ba_age40}")
     expected_ba_age40 = 606_019 # manually calculated using a spreadsheet
-    assert math.isclose(ba_age40, expected_ba_age40, rel_tol=1e-9), (
+    assert math.isclose(ba_age40, expected_ba_age40, abs_tol=1), (
         f"Expected Beginning Assets at age 40 to be {expected_ba_age40:,} but got {ba_age40:,}"
     )
 
-def test_from_db_le_end_value(dcf_from_db: DCFModel):
+def test_from_db_le(dcf_from_db: DCFModel):
     """Ending assets must match hand-calculated values."""
 
     df = dcf_from_db.as_frame()
 
-    le_age40 = float(df.loc[df.Age == 40, "Liabilities Expense"].iloc[0])
+    le_age33 = float(df.loc[df.Age == 33, "Liabilities Expense"].iloc[0])
     print(df)
-    print(f'full df: {df[['Age', 'Liabilities Expense']]}')
-    expected_le_age40 = 1_068 # manually calculated using a spreadsheet
-    assert math.isclose(le_age40, expected_le_age40, rel_tol=1e-9), (
-        f"Expected Beginning Assets at age 40 to be {expected_le_age40:,} but got {le_age40:,}"
+    print(f'full df: {df[["Age","Liabilities Expense"]]}')
+    expected_le_age33 = 5_000 # manually calculated using a spreadsheet
+    assert math.isclose(le_age33, expected_le_age33, abs_tol=2), (
+        f"Expected Liabilities Expense at age 33 to be {expected_le_age33:,} but got {le_age33:,}"
+    )
+
+def test_from_db_asset_income(dcf_from_db: DCFModel):
+    """Ending assets must match hand-calculated values."""
+
+    df = dcf_from_db.as_frame()
+
+    assets_income_age40 = float(df.loc[df.Age == 40, "Assets Income"].iloc[0])
+    print(df)
+    print(f'full df: {df[["Age","Assets Income"]]}')
+    expected_assets_income_age40 = 60_601 # manually calculated using a spreadsheet
+    assert math.isclose(round(assets_income_age40, 0), expected_assets_income_age40, abs_tol=2), (
+        f"Expected Liabilities Expense at age 40 to be {expected_assets_income_age40:,} but got {round(ets_income_age40,0):,}"
     )

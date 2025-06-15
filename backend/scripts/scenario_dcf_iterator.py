@@ -179,9 +179,9 @@ class ScenarioDCF:
     # ---------------------------------------------------------------------
 
     def run(self):
-        assumptions = Assumptions(inflation=0.03, rate_of_return=0.08, cost_of_debt=0.06)
-
-        model = DCFModel.from_milestones(self.milestones, assumptions=assumptions).run()
+        # Let DCFModel derive macro assumptions (inflation, ROI, cost_of_debt)
+        # directly from milestones so that scenario-specific parameters are honoured.
+        model = DCFModel.from_milestones(self.milestones).run()
         df = model.as_frame()
 
         # Map DataFrame → ORM rows (snake_case col names match DCF table)
