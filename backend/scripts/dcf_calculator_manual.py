@@ -355,19 +355,41 @@ class DCFModel:
             return None
 
         # ------------------------------------------------------------------
+        #  Effective start age helper – supports dynamic "starts after" rule
+        # ------------------------------------------------------------------
+
+        def _effective_age(ms) -> int:
+            """Return the age at which *ms* becomes active, accounting for dynamic
+            dependencies ("starts when another milestone ends").
+            """
+
+            dyn_ref_name = _get("start_after_milestone", ms)
+            if dyn_ref_name:
+                target = name_to_ms.get(_norm_name(dyn_ref_name))
+                if target is None:
+                    raise ValueError(
+                        f"Dynamic age error: reference milestone '{dyn_ref_name}' not found."
+                    )
+                target_start = _get("age_at_occurrence", target)
+                dur = _effective_duration(target) or 0
+                return target_start + dur
+
+            return _get("age_at_occurrence", ms)
+
+        # ------------------------------------------------------------------
         # 2. Derive projection horizon
         # ------------------------------------------------------------------
 
-        ages = [_get("age_at_occurrence", m) for m in milestones]
+        ages = [_effective_age(m) for m in milestones]
         if not ages:
             raise ValueError("No milestones supplied – cannot build DCF model.")
 
         start_age = min(ages)
 
         end_candidates = [
-            (_get("age_at_occurrence", m) + (_effective_duration(m) or 0))
+            (_effective_age(m) + (_effective_duration(m) or 0))
             if (_effective_duration(m) and _effective_duration(m) > 0)
-            else _get("age_at_occurrence", m)
+            else _effective_age(m)
             for m in milestones
         ]
         end_age = max(end_candidates)
@@ -427,7 +449,7 @@ class DCFModel:
             return sum(
                 (_get("amount", x) or 0.0)
                 for x in milestones
-                if (_get("milestone_type", x) == m_type and _get("age_at_occurrence", x) == age)
+                if (_get("milestone_type", x) == m_type and _effective_age(x) == age)
             )
 
         if current_vals.get("asset", 0.0) == 0.0:
@@ -461,7 +483,7 @@ class DCFModel:
             if (_get("occurrence", ms) or "Yearly") == "Monthly":
                 amt *= 12
 
-            start_step = _get("age_at_occurrence", ms) - start_age
+            start_step = _effective_age(ms) - start_age
             duration = _effective_duration(ms)
             growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
 
@@ -470,12 +492,12 @@ class DCFModel:
             elif mt == "Expense":
                 expense_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
             elif mt == "Asset":
-                if legacy_assets_used and _get("age_at_occurrence", ms) == start_age:
+                if legacy_assets_used and _effective_age(ms) == start_age:
                     continue
-                asset_events.append((_get("age_at_occurrence", ms), amt))
+                asset_events.append((_effective_age(ms), amt))
             elif mt == "Liability":
                 # Build amortising loan template ---------------------------
-                age_at = _get("age_at_occurrence", ms)
+                age_at = _effective_age(ms)
                 principal = amt
                 duration_ms = _effective_duration(ms)
                 rate_override = _get("rate_of_return", ms)
@@ -507,7 +529,7 @@ class DCFModel:
         liab_years: set[int] = set()
         for ms in milestones:
             if _get("milestone_type", ms) == "Liability" and _effective_duration(ms):
-                start = _get("age_at_occurrence", ms)
+                start = _effective_age(ms)
                 liab_years.update(range(start, start + _effective_duration(ms)))
 
         model: "DCFModel" = cls(

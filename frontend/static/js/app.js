@@ -531,8 +531,17 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Age at Occurrence${goalCheckbox('age_at_occurrence')}</label>
                     <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="age_at_occurrence" value="${milestone.age_at_occurrence}">
+                        <input type="number" class="form-control age-input" name="age_at_occurrence" value="${milestone.age_at_occurrence}" ${milestone.start_after_milestone ? 'disabled' : ''}>
                         ${scenarioControls('age_at_occurrence')}
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input dynamic-start-checkbox" type="checkbox" ${milestone.start_after_milestone ? 'checked' : ''}>
+                        <label class="form-check-label">Dynamic (starts when another milestone ends)</label>
+                    </div>
+                    <div class="dynamic-start-settings mt-2" style="display:${milestone.start_after_milestone ? 'block' : 'none'}">
+                        <select class="form-select form-select-sm dynamic-start-target-select">
+                            ${milestones.filter(m=>m.id!==milestone.id).map(m=>`<option value="${m.name}" ${m.name===milestone.start_after_milestone?'selected':''}>${m.name}</option>`).join('')}
+                        </select>
                     </div>
                 </div>
                 <div class="mb-3">
@@ -580,8 +589,19 @@ function createMilestoneForm(milestone) {
                 </div>
                 <div class="mb-3 annuity-fields duration-field" style="display: ${milestone.disbursement_type === 'Fixed Duration' ? 'block' : 'none'}">
                     <label class="form-label">Duration${goalCheckbox('duration')}</label>
-                    <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}">
+                    <input type="number" class="form-control" name="duration" value="${milestone.duration || ''}" ${milestone.duration_end_at_milestone ? 'disabled' : ''}>
                     ${scenarioControls('duration')}
+
+                    <!-- Dynamic duration toggle -->
+                    <div class="form-check mt-2">
+                        <input class="form-check-input dynamic-duration-checkbox" type="checkbox" ${milestone.duration_end_at_milestone ? 'checked' : ''}>
+                        <label class="form-check-label">Dynamic (ends when another milestone starts)</label>
+                    </div>
+                    <div class="dynamic-duration-settings mt-2" style="display:${milestone.duration_end_at_milestone ? 'block' : 'none'}">
+                        <select class="form-select form-select-sm dynamic-target-select">
+                            ${milestones.filter(m=>m.id!==milestone.id).map(m=>`<option value="${m.name}" ${m.name===milestone.duration_end_at_milestone?'selected':''}>${m.name}</option>`).join('')}
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Rate of Return (%)${goalCheckbox('rate_of_return')}</label>
@@ -786,6 +806,32 @@ function createMilestoneForm(milestone) {
         });
     });
     
+    // After other listeners, add dynamic duration toggle handler
+    form.find('.dynamic-duration-checkbox').on('change', function(){
+        const wrapper = form.find('.dynamic-duration-settings');
+        const durationInput = form.find('[name="duration"]');
+        if(this.checked){
+            wrapper.show();
+            durationInput.prop('disabled', true);
+        }else{
+            wrapper.hide();
+            durationInput.prop('disabled', false);
+        }
+    });
+    
+    // After start listener I add:
+    form.find('.dynamic-start-checkbox').on('change', function(){
+        const wrap = form.find('.dynamic-start-settings');
+        const ageInput = form.find('.age-input');
+        if(this.checked){
+            wrap.show();
+            ageInput.prop('disabled', true);
+        } else {
+            wrap.hide();
+            ageInput.prop('disabled', false);
+        }
+    });
+    
     return form;
 }
 
@@ -943,14 +989,20 @@ function handleMilestoneUpdate(e, form) {
             updatedMilestone.payment = parseFloat(form.find('[name="payment"]').val()) || null;
         }
         
+        const dynCheckboxActive = form.find('.dynamic-duration-checkbox').is(':checked');
+        const startDynActive = form.find('.dynamic-start-checkbox').is(':checked');
+
+        if (dynCheckboxActive) {
+            updatedMilestone.duration = null;
+            updatedMilestone.duration_end_at_milestone = form.find('.dynamic-target-select').val();
+        }
+
         if (disbursementType) {
             updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
             updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
             
-            if (disbursementType === 'Fixed Duration') {
+            if (!dynCheckboxActive && disbursementType === 'Fixed Duration') {
                 updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
-            } else {  // Perpetuity
-                updatedMilestone.duration = null;
             }
         } else {
             updatedMilestone.occurrence = null;
@@ -964,6 +1016,14 @@ function handleMilestoneUpdate(e, form) {
             goalParameters.push($(this).data('param'));
         });
         updatedMilestone.goal_parameters = goalParameters;
+        
+        if (startDynActive){
+            updatedMilestone.age_at_occurrence = null;
+            updatedMilestone.start_after_milestone = form.find('.dynamic-start-target-select').val();
+        } else {
+            updatedMilestone.age_at_occurrence = parseInt(form.find('[name="age_at_occurrence"]').val());
+            updatedMilestone.start_after_milestone = null;
+        }
         
         $.ajax({
             url: `/api/milestones/${milestoneId}`,
