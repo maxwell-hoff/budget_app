@@ -253,8 +253,8 @@ def test_from_db_le(dcf_from_db: DCFModel):
     df = dcf_from_db.as_frame()
 
     le_age33 = float(df.loc[df.Age == 33, "Liabilities Expense"].iloc[0])
-    print(df)
-    print(f'full df: {df[["Age","Liabilities Expense"]]}')
+    # print(df)
+    # print(f'full df: {df[["Age","Liabilities Expense"]]}')
     expected_le_age33 = 5_000 # manually calculated using a spreadsheet
     assert math.isclose(le_age33, expected_le_age33, abs_tol=2), (
         f"Expected Liabilities Expense at age 33 to be {expected_le_age33:,} but got {le_age33:,}"
@@ -266,9 +266,124 @@ def test_from_db_asset_income(dcf_from_db: DCFModel):
     df = dcf_from_db.as_frame()
 
     assets_income_age40 = float(df.loc[df.Age == 40, "Assets Income"].iloc[0])
-    print(df)
-    print(f'full df: {df[["Age","Assets Income"]]}')
+    print(f"Base df: \n{df}")
+    # print(f'full df: {df[["Age","Assets Income"]]}')
     expected_assets_income_age40 = 60_601 # manually calculated using a spreadsheet
     assert math.isclose(round(assets_income_age40, 0), expected_assets_income_age40, abs_tol=2), (
-        f"Expected Liabilities Expense at age 40 to be {expected_assets_income_age40:,} but got {round(ets_income_age40,0):,}"
+        f"Expected Liabilities Expense at age 40 to be {expected_assets_income_age40:,} but got {round(assets_income_age40,0):,}"
     )
+
+# --------------------------------------------------------------------
+#  New tests – dynamic duration parameters
+# --------------------------------------------------------------------
+
+
+# Helper to build a DCF with dynamic salary/expense durations tied to retirement
+
+
+def _build_dynamic_milestones(retirement_age: int):
+    """Return a list of mock milestones where salary/expense durations are dynamic.
+
+    The *Current Salary* and *Current Expenses* milestones omit the explicit
+    ``duration`` field and instead define ``duration_end_at_milestone='Retirement'``.
+    The effective duration is therefore computed as
+
+        retirement_age - current_age
+
+    which means both streams stop exactly when the *Retirement* milestone
+    starts.
+    """
+
+    current_age = 30
+
+    milestones = [
+        # Opening balances ----------------------------------------------------
+        _mock_ms(
+            name="Current Liquid Assets",
+            milestone_type="Asset",
+            age_at_occurrence=current_age,
+            disbursement_type="Perpetuity",
+            amount=100_000.0,
+            occurrence="Yearly",
+            duration=None,
+            rate_of_return=0.10,
+        ),
+        # Dynamic salary ------------------------------------------------------
+        _mock_ms(
+            name="Current Salary",
+            milestone_type="Income",
+            age_at_occurrence=current_age,
+            disbursement_type="Fixed Duration",  # type kept for consistency
+            amount=110_000.0,
+            occurrence="Yearly",
+            duration=None,  # explicit duration omitted – will be dynamic
+            duration_end_at_milestone="Retirement",
+            rate_of_return=0.04,
+        ),
+        # Dynamic expenses ----------------------------------------------------
+        _mock_ms(
+            name="Current Expenses",
+            milestone_type="Expense",
+            age_at_occurrence=current_age,
+            disbursement_type="Fixed Duration",
+            amount=60_000.0,
+            occurrence="Yearly",
+            duration=None,
+            duration_end_at_milestone="Retirement",
+            rate_of_return=0.02,
+        ),
+        _mock_ms(
+            name="Current Debt",
+            milestone_type="Liability",
+            age_at_occurrence=30,
+            disbursement_type="Fixed Duration",
+            amount=20000.0,
+            occurrence="Yearly",
+            duration=4,
+            rate_of_return=0.00,
+        ),
+        # Retirement – the reference milestone -------------------------------
+        _mock_ms(
+            name="Retirement",
+            milestone_type="Expense",
+            age_at_occurrence=retirement_age,
+            disbursement_type="Fixed Duration",
+            amount=55_000.0,
+            occurrence="Yearly",
+            duration=5,
+            rate_of_return=0.02,
+        ),
+    ]
+
+    return milestones
+
+
+@pytest.mark.parametrize("ret_age, expected_duration", [(36, 6), (35, 5)])
+def test_dynamic_duration_current_flows(ret_age, expected_duration):
+    """Salary & expense durations must equal retirement_age - current_age."""
+
+    milestones = _build_dynamic_milestones(ret_age)
+    model = DCFModel.from_milestones(milestones)
+
+    # Locate salary & expense streams that start at step 0 (age 30)
+    salary_stream = next(
+        s for s in model.income_streams if math.isclose(s.initial_value, 110_000.0) and s.start_step == 0
+    )
+    expense_stream = next(
+        s for s in model.expense_streams if math.isclose(s.initial_value, 60_000.0) and s.start_step == 0
+    )
+
+    assert salary_stream.duration == expected_duration, (
+        f"Expected salary duration {expected_duration} but got {salary_stream.duration}"
+    )
+    assert expense_stream.duration == expected_duration, (
+        f"Expected expense duration {expected_duration} but got {expense_stream.duration}"
+    )
+
+    # Run the projection to ensure the model still executes without errors
+    model.run()
+    df = model.as_frame()
+    print(f"Dynamic df at age {ret_age}: \n{df}")
+
+    # Quick sanity: the projection should include all ages up to retirement
+    assert (df.Age.max() >= ret_age), "Projection truncated before retirement milestone."
