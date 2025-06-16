@@ -20,8 +20,14 @@ def sample_data():
     milestones = []
 
     def _new_ms(**kwargs):
+        dyn_target = kwargs.pop("duration_end_at_milestone", None)
         obj = Milestone(**kwargs)
         obj.id = _next_id()
+        if dyn_target is not None:
+            # Attach the dynamic-duration attribute manually so that it is
+            # available even though the SQLAlchemy model does not define it
+            # as a mapped column.
+            setattr(obj, "duration_end_at_milestone", dyn_target)
         return obj
 
     milestones.extend([
@@ -97,7 +103,7 @@ def sample_data():
     goal = Goal(milestone_id=retirement.id, parameter="age_at_occurrence", is_goal=True)
 
     # Scenario parameter: shift rate of return to 15% instead of 10%
-    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.08")
+    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.05")
 
     return milestones, goal, spv
 
@@ -123,10 +129,10 @@ def test_goal_solver_converges(sample_data):
     # Fetch baseline value of the goal parameter before solving for clearer debug output
     baseline_param_val = next(m for m in milestones if m.id == goal.milestone_id).__dict__[goal.parameter]
     print(
-        f'\nsolved_ba: {solved_ba}, baseline_ba: {baseline_ba}, '
-        f'\nnsolved_val: {solved_val}, baseline_param_val: {baseline_param_val}'
-        f'\nsolver progress: {solver.progress}'
-        f'\nsolved_df: {solved_df}'
+        f'\n solved_ba: {solved_ba}, baseline_ba: {baseline_ba}, '
+        f'\n nsolved_val: {solved_val}, baseline_param_val: {baseline_param_val}'
+        f'\n solver progress: {solver.progress}'
+        f'\n solved_df: {solved_df}'
     )
 
     diff = abs(baseline_ba - solved_ba)
