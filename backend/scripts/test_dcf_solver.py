@@ -8,8 +8,8 @@ from backend.app.models.scenario_parameter_value import ScenarioParameterValue
 from .dcf_solver import DCFGoalSolver
 
 
-@pytest.fixture(scope="module")
-def sample_data():
+@pytest.fixture(params=["0.02", "0.05", "0.08", "0.12", "0.15", "0.2"], scope="module")
+def sample_data(request):
     """Return a small milestone list + goal + scenario parameter for quick tests."""
 
     # Helper to generate sequential IDs (simulating DB auto-increment)
@@ -69,6 +69,18 @@ def sample_data():
             scenario_id=1,
             sub_scenario_id=1,
         ),
+        _new_ms(
+            name="Inheritance",
+            milestone_type="Expense",
+            age_at_occurrence=40,
+            disbursement_type="Fixed Duration",
+            amount=0.0,
+            occurrence="Yearly",
+            duration=1,
+            rate_of_return=0.00,
+            scenario_id=1,
+            sub_scenario_id=1,
+        ),
     ])
 
     # Simple liquid asset + salary + expense baseline (like earlier unit-tests)Milestone(
@@ -92,7 +104,8 @@ def sample_data():
         disbursement_type="Fixed Duration",
         amount=55_000.0,
         occurrence="Yearly",
-        duration=5,
+        duration=None,
+        duration_end_at_milestone="Inheritance",
         rate_of_return=0.02,
         scenario_id=1,
         sub_scenario_id=1,
@@ -102,11 +115,11 @@ def sample_data():
 
     goal = Goal(milestone_id=retirement.id, parameter="age_at_occurrence", is_goal=True)
 
-    # Scenario parameter: shift rate of return to 15% instead of 10%
-    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value="0.05")
+    # Scenario parameter: apply whichever rate was requested via parametrisation
+    spv_rate = request.param
+    spv = ScenarioParameterValue(milestone_id=liquid_assets.id, parameter="rate_of_return", value=spv_rate)
 
     return milestones, goal, spv
-
 
 def test_goal_solver_converges(sample_data):
     milestones, goal, spv = sample_data
@@ -129,8 +142,8 @@ def test_goal_solver_converges(sample_data):
     # Fetch baseline value of the goal parameter before solving for clearer debug output
     baseline_param_val = next(m for m in milestones if m.id == goal.milestone_id).__dict__[goal.parameter]
     print(
-        f'\n solved_ba: {solved_ba}, baseline_ba: {baseline_ba}, '
-        f'\n nsolved_val: {solved_val}, baseline_param_val: {baseline_param_val}'
+        f'\n nsolved_val: {solved_val}, baseline_param_val: {baseline_param_val}, solved_ba: {solved_ba}, baseline_ba: {baseline_ba}, '
+        f'\n spv_rate: {spv.value}'
         f'\n solver progress: {solver.progress}'
         f'\n solved_df: {solved_df}'
     )
