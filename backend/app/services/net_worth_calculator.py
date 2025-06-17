@@ -52,13 +52,14 @@ class NetWorthCalculator:
         if milestone.milestone_type in ['Asset', 'Liability']:
             # For assets and liabilities, calculate remaining balance
             if milestone.disbursement_type == 'Fixed Duration':
-                if years_elapsed >= milestone.duration:
+                dur_lim = milestone.duration if milestone.duration is not None else math.inf
+                if years_elapsed >= dur_lim:
                     return 0.0
                     
                 # Calculate remaining balance based on rate of return
                 if milestone.occurrence == 'Monthly':
                     rate = milestone.rate_of_return / 12
-                    periods = milestone.duration * 12
+                    periods = (milestone.duration or dur_lim) * 12
                     remaining_periods = periods - (years_elapsed * 12)
                     
                     if rate == 0:
@@ -73,7 +74,7 @@ class NetWorthCalculator:
                     return balance
                 else:  # Yearly
                     rate = milestone.rate_of_return
-                    remaining_periods = milestone.duration - years_elapsed
+                    remaining_periods = (milestone.duration or dur_lim) - years_elapsed
                     
                     if rate == 0:
                         balance = milestone.amount - (milestone.payment or 0) * remaining_periods
@@ -116,7 +117,8 @@ class NetWorthCalculator:
         elif milestone.milestone_type in ['Income', 'Expense']:
             # For income and expenses, calculate cumulative impact
             if milestone.disbursement_type == 'Fixed Duration':
-                if years_elapsed >= milestone.duration:
+                dur_lim = milestone.duration if milestone.duration is not None else math.inf
+                if years_elapsed >= dur_lim:
                     return 0.0
                     
                 # Calculate cumulative impact

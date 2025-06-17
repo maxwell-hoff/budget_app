@@ -328,13 +328,24 @@ class DCFModel:
         # Build a quick lookup so we can find milestones by (normalised) name
         name_to_ms = { _norm_name(_get("name", m)): m for m in milestones }
 
-        def _effective_duration(ms) -> int | None:
-            """Return the *actual* duration taking dynamic rules into account.
+        def _effective_duration(ms, _vis: set | None = None) -> int | None:
+            """Return the *actual* duration handling dynamic links and cycles.
 
-            Supports dynamic durations via the custom attribute
-            ``duration_end_at_milestone`` which specifies that the milestone
-            lasts until *another* milestone *starts*.
+            When the duration is defined *relative* to another milestone we
+            resolve that reference recursively.  If a cyclic dependency is
+            detected we fall back to the milestone's stored numeric
+            ``duration`` (whatever value was last entered).
             """
+
+            if _vis is None:
+                _vis = set()
+
+            # Detect cycles using the Python object identity (unique in-memory id)
+            mid = id(ms)
+            if mid in _vis:
+                return _get("duration", ms)  # fallback – last stored value or None
+
+            _vis.add(mid)
 
             dyn_target_name = _get("duration_end_at_milestone", ms)
             if dyn_target_name:
@@ -343,8 +354,10 @@ class DCFModel:
                     raise ValueError(
                         f"Dynamic duration error: target milestone '{dyn_target_name}' not found."
                     )
-                target_start_age = _get("age_at_occurrence", target_ms)
+                target_start_age = _effective_age(target_ms, _vis)
                 own_start_age = _get("age_at_occurrence", ms)
+                if own_start_age is None or target_start_age is None:
+                    return _get("duration", ms)
                 return max(target_start_age - own_start_age, 0)
 
             # Fallback to explicit fixed durations --------------------------------
@@ -358,10 +371,22 @@ class DCFModel:
         #  Effective start age helper – supports dynamic "starts after" rule
         # ------------------------------------------------------------------
 
-        def _effective_age(ms) -> int:
-            """Return the age at which *ms* becomes active, accounting for dynamic
-            dependencies ("starts when another milestone ends").
+        def _effective_age(ms, _vis: set | None = None) -> int | None:
+            """Return the age at which *ms* becomes active.
+
+            Resolves dynamic *start-after* rules and, when a cyclic reference
+            is encountered, falls back to the milestone's stored
+            ``age_at_occurrence`` (last user-entered value).
             """
+
+            if _vis is None:
+                _vis = set()
+
+            mid = id(ms)
+            if mid in _vis:
+                return _get("age_at_occurrence", ms)
+
+            _vis.add(mid)
 
             dyn_ref_name = _get("start_after_milestone", ms)
             if dyn_ref_name:
@@ -370,8 +395,10 @@ class DCFModel:
                     raise ValueError(
                         f"Dynamic age error: reference milestone '{dyn_ref_name}' not found."
                     )
-                target_start = _get("age_at_occurrence", target)
-                dur = _effective_duration(target) or 0
+                target_start = _effective_age(target, _vis)
+                dur = _effective_duration(target, _vis) or 0
+                if target_start is None:
+                    return _get("age_at_occurrence", ms)
                 return target_start + dur
 
             return _get("age_at_occurrence", ms)
