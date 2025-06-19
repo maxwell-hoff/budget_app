@@ -104,7 +104,9 @@ def create_default_milestones():
                 disbursement_type='Fixed Duration',
                 amount=50000,
                 occurrence='Yearly',
-                duration=70 - default_age,
+                # duration=70 - default_age,
+                duration=None,  # explicit duration omitted – will be dynamic
+                duration_end_at_milestone="Retirement",
                 rate_of_return=0.02,
                 order=2,
                 parent_milestone_id=current_lifestyle_parent.id
@@ -116,7 +118,9 @@ def create_default_milestones():
                 disbursement_type='Fixed Duration',
                 amount=3000,
                 occurrence='Monthly',
-                duration=70 - default_age,
+                # duration=70 - default_age,
+                duration=None,
+                duration_end_at_milestone="Retirement",
                 rate_of_return=0.03,
                 order=3,
                 parent_milestone_id=current_lifestyle_parent.id
@@ -128,7 +132,9 @@ def create_default_milestones():
                 disbursement_type='Fixed Duration',
                 amount=60000,
                 occurrence='Yearly',
-                duration=30,
+                # duration=30,
+                duration=None,
+                duration_end_at_milestone="Inheritance",
                 rate_of_return=0.06,
                 order=4,
                 parent_milestone_id=retirement_parent.id

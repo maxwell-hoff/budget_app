@@ -358,11 +358,20 @@ class DCFModel:
                 own_start_age = _get("age_at_occurrence", ms)
                 if own_start_age is None or target_start_age is None:
                     return _get("duration", ms)
-                return max(target_start_age - own_start_age, 0)
+                dur_val = max(target_start_age - own_start_age, 0)
+                # Apply inheritance cap from outer scope
+                if inheritance_age is not None and own_start_age is not None:
+                    dur_val = min(dur_val, max(0, inheritance_age - own_start_age))
+                return dur_val
 
             # Fallback to explicit fixed durations --------------------------------
             if (_get("disbursement_type", ms) == "Fixed Duration") and (_get("duration", ms) is not None):
-                return _get("duration", ms)
+                dval = _get("duration", ms)
+                if inheritance_age is not None:
+                    own_start_age = _get("age_at_occurrence", ms)
+                    if own_start_age is not None:
+                        dval = min(dval, max(0, inheritance_age - own_start_age))
+                return dval
 
             # Perpetuity / open-ended stream --------------------------------------
             return None
@@ -404,7 +413,7 @@ class DCFModel:
             return _get("age_at_occurrence", ms)
 
         # ------------------------------------------------------------------
-        # 2. Derive projection horizon
+        # 2. Derive projection horizon – stop at inheritance age when present
         # ------------------------------------------------------------------
 
         ages = [_effective_age(m) for m in milestones]
@@ -413,13 +422,25 @@ class DCFModel:
 
         start_age = min(ages)
 
-        end_candidates = [
-            (_effective_age(m) + (_effective_duration(m) or 0))
-            if (_effective_duration(m) and _effective_duration(m) > 0)
-            else _effective_age(m)
-            for m in milestones
-        ]
+        # Detect "inheritance" milestone which acts as death marker
+        inh_ms_list = [m for m in milestones if _norm_name(_get("name", m)) == "inheritance"]
+        inheritance_age = _get("age_at_occurrence", inh_ms_list[0]) if inh_ms_list else None
+
+        end_candidates = []
+        for m in milestones:
+            dur_val = _effective_duration(m)
+            eff_start = _effective_age(m)
+            if dur_val and dur_val > 0:
+                cand = eff_start + dur_val
+            else:
+                cand = eff_start
+            end_candidates.append(cand)
+
         end_age = max(end_candidates)
+
+        # Clamp horizon at inheritance age when defined
+        if inheritance_age is not None:
+            end_age = min(end_age, inheritance_age)
 
         # ------------------------------------------------------------------
         # 3. Prepare containers for streams & balances
