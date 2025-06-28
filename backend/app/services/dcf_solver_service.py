@@ -10,6 +10,10 @@ def run_dcf_solver() -> None:
 
     # Local import – avoids circular dependency during Flask app startup
     from backend.scripts.dcf_solver import DCFSolverRunner  # noqa: WPS433 (allowed here)
+    # Make sure the baseline `dcf` projections exist – run the iterator once
+    from backend.scripts.scenario_dcf_iterator import ScenarioDCFIterator  # noqa: WPS433
+
+    ScenarioDCFIterator().run()
 
     runner = DCFSolverRunner()
     runner.run() 
