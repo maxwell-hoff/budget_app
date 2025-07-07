@@ -276,10 +276,25 @@ def update_milestone(milestone_id):
     # Store the old parent ID for updating
     old_parent_id = milestone.parent_milestone_id
     
+    NON_NULLABLE_FIELDS = {
+        'age_at_occurrence',
+        'name',
+        'milestone_type',
+    }
+
     for key, value in data.items():
         # Skip goal parameters here; we'll handle separately
-        if key != 'goal_parameters':
-            setattr(milestone, key, value)
+        if key == 'goal_parameters':
+            continue
+
+        # Prevent setting NOT NULL columns to None – this can happen when
+        # the front-end activates a *dynamic* checkbox that replaces the
+        # fixed value with a reference to another milestone.
+        if key in NON_NULLABLE_FIELDS and value is None:
+            # Ignore – keep current database value untouched
+            continue
+
+        setattr(milestone, key, value)
     
     db.session.commit()
     

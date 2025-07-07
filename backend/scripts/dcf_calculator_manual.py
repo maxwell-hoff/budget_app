@@ -328,13 +328,24 @@ class DCFModel:
         # Build a quick lookup so we can find milestones by (normalised) name
         name_to_ms = { _norm_name(_get("name", m)): m for m in milestones }
 
-        def _effective_duration(ms) -> int | None:
-            """Return the *actual* duration taking dynamic rules into account.
+        def _effective_duration(ms, _vis: set | None = None) -> int | None:
+            """Return the *actual* duration handling dynamic links and cycles.
 
-            Supports dynamic durations via the custom attribute
-            ``duration_end_at_milestone`` which specifies that the milestone
-            lasts until *another* milestone *starts*.
+            When the duration is defined *relative* to another milestone we
+            resolve that reference recursively.  If a cyclic dependency is
+            detected we fall back to the milestone's stored numeric
+            ``duration`` (whatever value was last entered).
             """
+
+            if _vis is None:
+                _vis = set()
+
+            # Detect cycles using the Python object identity (unique in-memory id)
+            mid = id(ms)
+            if mid in _vis:
+                return _get("duration", ms)  # fallback – last stored value or None
+
+            _vis.add(mid)
 
             dyn_target_name = _get("duration_end_at_milestone", ms)
             if dyn_target_name:
@@ -343,13 +354,24 @@ class DCFModel:
                     raise ValueError(
                         f"Dynamic duration error: target milestone '{dyn_target_name}' not found."
                     )
-                target_start_age = _get("age_at_occurrence", target_ms)
+                target_start_age = _effective_age(target_ms, _vis)
                 own_start_age = _get("age_at_occurrence", ms)
-                return max(target_start_age - own_start_age, 0)
+                if own_start_age is None or target_start_age is None:
+                    return _get("duration", ms)
+                dur_val = max(target_start_age - own_start_age, 0)
+                # Apply inheritance cap from outer scope
+                if inheritance_age is not None and own_start_age is not None:
+                    dur_val = min(dur_val, max(0, inheritance_age - own_start_age))
+                return dur_val
 
             # Fallback to explicit fixed durations --------------------------------
             if (_get("disbursement_type", ms) == "Fixed Duration") and (_get("duration", ms) is not None):
-                return _get("duration", ms)
+                dval = _get("duration", ms)
+                if inheritance_age is not None:
+                    own_start_age = _get("age_at_occurrence", ms)
+                    if own_start_age is not None:
+                        dval = min(dval, max(0, inheritance_age - own_start_age))
+                return dval
 
             # Perpetuity / open-ended stream --------------------------------------
             return None
@@ -358,10 +380,22 @@ class DCFModel:
         #  Effective start age helper – supports dynamic "starts after" rule
         # ------------------------------------------------------------------
 
-        def _effective_age(ms) -> int:
-            """Return the age at which *ms* becomes active, accounting for dynamic
-            dependencies ("starts when another milestone ends").
+        def _effective_age(ms, _vis: set | None = None) -> int | None:
+            """Return the age at which *ms* becomes active.
+
+            Resolves dynamic *start-after* rules and, when a cyclic reference
+            is encountered, falls back to the milestone's stored
+            ``age_at_occurrence`` (last user-entered value).
             """
+
+            if _vis is None:
+                _vis = set()
+
+            mid = id(ms)
+            if mid in _vis:
+                return _get("age_at_occurrence", ms)
+
+            _vis.add(mid)
 
             dyn_ref_name = _get("start_after_milestone", ms)
             if dyn_ref_name:
@@ -370,14 +404,16 @@ class DCFModel:
                     raise ValueError(
                         f"Dynamic age error: reference milestone '{dyn_ref_name}' not found."
                     )
-                target_start = _get("age_at_occurrence", target)
-                dur = _effective_duration(target) or 0
+                target_start = _effective_age(target, _vis)
+                dur = _effective_duration(target, _vis) or 0
+                if target_start is None:
+                    return _get("age_at_occurrence", ms)
                 return target_start + dur
 
             return _get("age_at_occurrence", ms)
 
         # ------------------------------------------------------------------
-        # 2. Derive projection horizon
+        # 2. Derive projection horizon – stop at inheritance age when present
         # ------------------------------------------------------------------
 
         ages = [_effective_age(m) for m in milestones]
@@ -386,13 +422,25 @@ class DCFModel:
 
         start_age = min(ages)
 
-        end_candidates = [
-            (_effective_age(m) + (_effective_duration(m) or 0))
-            if (_effective_duration(m) and _effective_duration(m) > 0)
-            else _effective_age(m)
-            for m in milestones
-        ]
+        # Detect "inheritance" milestone which acts as death marker
+        inh_ms_list = [m for m in milestones if _norm_name(_get("name", m)) == "inheritance"]
+        inheritance_age = _get("age_at_occurrence", inh_ms_list[0]) if inh_ms_list else None
+
+        end_candidates = []
+        for m in milestones:
+            dur_val = _effective_duration(m)
+            eff_start = _effective_age(m)
+            if dur_val and dur_val > 0:
+                cand = eff_start + dur_val
+            else:
+                cand = eff_start
+            end_candidates.append(cand)
+
         end_age = max(end_candidates)
+
+        # Clamp horizon at inheritance age when defined
+        if inheritance_age is not None:
+            end_age = min(end_age, inheritance_age)
 
         # ------------------------------------------------------------------
         # 3. Prepare containers for streams & balances

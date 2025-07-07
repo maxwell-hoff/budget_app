@@ -993,10 +993,14 @@ function handleMilestoneUpdate(e, form) {
         const startDynActive = form.find('.dynamic-start-checkbox').is(':checked');
 
         if (dynCheckboxActive) {
-            updatedMilestone.duration = null;
+            // Keep the stored numeric duration as a fallback for cycles; only
+            // send the dynamic link.
             updatedMilestone.duration_end_at_milestone = form.find('.dynamic-target-select').val();
+        } else {
+            updatedMilestone.duration_end_at_milestone = null;
+            updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
         }
-
+        
         if (disbursementType) {
             updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
             updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
@@ -1018,7 +1022,7 @@ function handleMilestoneUpdate(e, form) {
         updatedMilestone.goal_parameters = goalParameters;
         
         if (startDynActive){
-            updatedMilestone.age_at_occurrence = null;
+            // Preserve stored age; only transmit the dynamic reference.
             updatedMilestone.start_after_milestone = form.find('.dynamic-start-target-select').val();
         } else {
             updatedMilestone.age_at_occurrence = parseInt(form.find('[name="age_at_occurrence"]').val());

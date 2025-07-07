@@ -78,7 +78,8 @@ def create_scenario():
     # Allowed fields we can copy into a Milestone constructor
     ALLOWED_FIELDS = {
         'name','age_at_occurrence','milestone_type','disbursement_type','amount',
-        'payment','occurrence','duration','rate_of_return','order','parent_milestone_id'
+        'payment','occurrence','duration','rate_of_return','order','parent_milestone_id',
+        'duration_end_at_milestone','start_after_milestone'
     }
 
     new_rows = []

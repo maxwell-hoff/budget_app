@@ -195,12 +195,17 @@ class DCFSolverRunner:
         milestones: List[Milestone] = data["milestones"]
         base_dcf_rows: List[DCF] = self.read_session.query(DCF).all()
 
-        # Group helpers ------------------------------------------------
-        combo_to_target_ba: Dict[Tuple[int, int], float] = {}
+        # Map each (scenario, sub_scenario) pair to the *final* Beginning Assets value
+        # of the baseline DCF projection.  We iterate over all baseline rows and keep
+        # the entry with the highest age (i.e., the last year in the projection).
+        # The dictionary stores a tuple ``(age, beginning_assets)`` so we can compare
+        # ages during the scan while still easily retrieving the BA value later.
+        combo_to_target_ba: Dict[Tuple[int, int], Tuple[int, float]] = {}
         for row in base_dcf_rows:
             key = (row.scenario_id, row.sub_scenario_id)
+            # Keep the projection row with the highest age we have seen so far.
             if key not in combo_to_target_ba or row.age > combo_to_target_ba[key][0]:
-                combo_to_target_ba[key] = row.beginning_assets
+                combo_to_target_ba[key] = (row.age, row.beginning_assets)
 
         # Map combo → milestones, goals, scenario params ----------------
         combo_ms: Dict[Tuple[int, int], List[Milestone]] = {}
@@ -216,9 +221,12 @@ class DCFSolverRunner:
 
         for combo, ms_list in combo_ms.items():
             scenario_id, sub_scenario_id = combo
-            target_ba = combo_to_target_ba.get(combo)
-            if target_ba is None:
+            target_ba_record = combo_to_target_ba.get(combo)
+            if target_ba_record is None:
                 continue  # baseline missing – skip
+
+            # Extract the Beginning Assets figure from the stored ``(age, BA)`` tuple
+            target_ba = target_ba_record[1]
 
             combo_goals = [g for g in goals if g.milestone_id in {m.id for m in ms_list} and g.is_goal]
             combo_spvs = [spv for spv in spvs if spv.milestone_id in {m.id for m in ms_list}]

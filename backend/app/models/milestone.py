@@ -80,6 +80,14 @@ class Milestone(db.Model):
     occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
+    # --- dynamic linkage helpers -----------------------------------------
+    # When *duration_end_at_milestone* is set the milestone's duration is
+    # derived at runtime so the numeric ``duration`` can be NULL.
+    duration_end_at_milestone = db.Column(db.String(100), nullable=True)
+
+    # When *start_after_milestone* is set the milestone's start age is the
+    # end of *another* milestone which means ``age_at_occurrence`` may be NULL.
+    start_after_milestone = db.Column(db.String(100), nullable=True)
     order = db.Column(db.Integer, nullable=False, default=0)  # Order of the milestone
     parent_milestone_id = db.Column(db.Integer, db.ForeignKey('parent_milestones.id'), nullable=True)  # Reference to parent milestone
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -87,7 +95,9 @@ class Milestone(db.Model):
     
     def __init__(self, name, age_at_occurrence, milestone_type='Expense', disbursement_type=None, amount=0, payment=None, occurrence=None, duration=None, rate_of_return=None, order=0, parent_milestone_id=None,
                  scenario_id: int = 1, scenario_name: str = 'Base Scenario',
-                 sub_scenario_id: int = 1, sub_scenario_name: str = 'Base Sub-Scenario'):
+                 sub_scenario_id: int = 1, sub_scenario_name: str = 'Base Sub-Scenario',
+                 duration_end_at_milestone: str | None = None,
+                 start_after_milestone: str | None = None):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
@@ -100,6 +110,9 @@ class Milestone(db.Model):
         self.scenario_name = scenario_name
         self.sub_scenario_id = sub_scenario_id
         self.sub_scenario_name = sub_scenario_name
+        self.rate_of_return = rate_of_return
+        self.duration_end_at_milestone = duration_end_at_milestone
+        self.start_after_milestone = start_after_milestone
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -128,6 +141,8 @@ class Milestone(db.Model):
             'rate_of_return': self.rate_of_return,
             'order': self.order,
             'parent_milestone_id': self.parent_milestone_id,
+            'duration_end_at_milestone': self.duration_end_at_milestone,
+            'start_after_milestone': self.start_after_milestone,
             'scenario_id': self.scenario_id,
             'scenario_name': self.scenario_name,
             'sub_scenario_id': self.sub_scenario_id,
