@@ -180,10 +180,27 @@ class DCFModel:
         # ── 1. Initialise loan schedules ───────────────────────────────
         active_loans: List[AmortisingLoan] = []
 
-        def _make_loan(principal: float, rate: float, duration: int | None) -> AmortisingLoan:
+        def _make_loan(
+            principal: float,
+            rate: float,
+            duration: int | None,
+            payment_override: float | None = None,
+        ) -> AmortisingLoan:
+            """Create an *AmortisingLoan* object.
+
+            When *payment_override* is provided we respect that fixed **annual**
+            payment instead of deriving it from the usual annuity formula.  This
+            allows us to honour user-entered *monthly* payment figures (×12).
+            """
+
+            if payment_override is not None:
+                dur_remaining: int | float = duration if duration is not None else math.inf
+                return AmortisingLoan(principal, rate, dur_remaining, payment_override)
+
+            # ── default behaviour – derive payment from annuity math ──
             if duration is None:
-                payment = principal * rate  # interest-only
-                dur_remaining: int | float = math.inf
+                payment = principal * rate  # interest-only (per annum)
+                dur_remaining = math.inf
             else:
                 payment = (principal * rate) / (1 - (1 + rate) ** (-duration)) if rate else principal / duration
                 dur_remaining = duration
@@ -191,9 +208,15 @@ class DCFModel:
 
         # Loans commencing at the projection start -----------------------
         for spec in self._loan_templates.get(self.start_age, []):
-            principal, rate_override, duration = spec
+            # Support both historic 3-tuple and new 4-tuple including payment
+            if len(spec) == 4:
+                principal, rate_override, duration, pay_override = spec
+            else:
+                principal, rate_override, duration = spec
+                pay_override = None
+
             rate = rate_override if rate_override is not None else self.assump.cost_of_debt
-            active_loans.append(_make_loan(principal, rate, duration))
+            active_loans.append(_make_loan(principal, rate, duration, pay_override))
 
         # Backwards-compatible fallback (no templates) --------------------
         if not active_loans and self.liabilities[0] > 0:
@@ -206,9 +229,14 @@ class DCFModel:
             # Inject loans that start this year (skip t=0 ones already added)
             if age in self._loan_templates and (age != self.start_age or t != 0):
                 for spec in self._loan_templates[age]:
-                    principal, rate_override, duration = spec
+                    if len(spec) == 4:
+                        principal, rate_override, duration, pay_override = spec
+                    else:
+                        principal, rate_override, duration = spec
+                        pay_override = None
+
                     rate = rate_override if rate_override is not None else self.assump.cost_of_debt
-                    active_loans.append(_make_loan(principal, rate, duration))
+                    active_loans.append(_make_loan(principal, rate, duration, pay_override))
 
             # Beginning of year balances ---------------------------------
             a_begin_prev = self.assets[-1]
@@ -319,7 +347,14 @@ class DCFModel:
         }
 
         def _is_current(ms) -> bool:
-            return _norm_name(_get("name", ms)) in _CURRENT_MAP
+            """Return True when *ms* represents a *current_* milestone.
+
+            We treat any milestone whose normalised name **starts with** the
+            prefix ``current_`` as a current-value row so that variants like
+            "Current Debt" or "Current Salary (incl. Bonus …)" are detected.
+            """
+            nm = _norm_name(_get("name", ms))
+            return nm.startswith("current_") or nm in _CURRENT_MAP
 
         # ------------------------------------------------------------------
         #  Dynamic duration helper  (placed early so subsequent code can use it)
@@ -469,16 +504,20 @@ class DCFModel:
             if not _is_current(ms):
                 continue
 
-            key = _CURRENT_MAP[_norm_name(_get("name", ms))]
+            # ----------------------------------------------------------------
+            # Map the milestone to one of the four opening balance/flow groups.
+            # Prefer the explicit mapping first; otherwise fall back to the
+            # milestone_type which already matches the desired group key.
+            # ----------------------------------------------------------------
+            norm = _norm_name(_get("name", ms))
+            key = _CURRENT_MAP.get(norm)
+            if key is None:
+                key = (_get("milestone_type", ms) or "").lower()
+            current_vals[key] += _get("amount", ms) or 0.0
 
-            if key in ("asset", "liability"):
-                # Opening balances -------------------
-                amt = _get("amount", ms) or 0.0
-                current_vals[key] += amt
-
-                roi_val = _get("rate_of_return", ms)
-                if roi_val is not None:
-                    asset_roi_data.append((amt, roi_val))
+            roi_val = _get("rate_of_return", ms)
+            if roi_val is not None:
+                asset_roi_data.append((_get("amount", ms) or 0.0, roi_val))
             elif key == "income":
                 current_income_found = True
                 amt = _get("amount", ms) or 0.0
@@ -527,8 +566,10 @@ class DCFModel:
             mt = _get("milestone_type", ms)
             amt = _get("amount", ms) or 0.0
 
-            # Convert monthly occurrence to yearly amounts so that the DCF (yearly model) is consistent.
-            if (_get("occurrence", ms) or "Yearly") == "Monthly":
+            # Convert *monthly* figures to *yearly* equivalents **only** for
+            # Income/Expense streams.  Asset or Liability amounts are one-off
+            # principal balances and must NOT be multiplied.
+            if (_get("occurrence", ms) or "Yearly") == "Monthly" and mt in ("Income", "Expense"):
                 amt *= 12
 
             start_step = _effective_age(ms) - start_age
@@ -546,10 +587,30 @@ class DCFModel:
             elif mt == "Liability":
                 # Build amortising loan template ---------------------------
                 age_at = _effective_age(ms)
-                principal = amt
+                principal = amt  # principal balance stays exactly as entered
+
                 duration_ms = _effective_duration(ms)
                 rate_override = _get("rate_of_return", ms)
-                liability_templates[age_at].append((principal, rate_override, duration_ms))
+
+                # ------------------------------------------------------------------
+                # Convert *monthly* parameters → yearly equivalents
+                # ------------------------------------------------------------------
+                payment_override = None
+                if (_get("occurrence", ms) or "Yearly") == "Monthly":
+                    # Duration     : months → years
+                    if duration_ms is not None:
+                        duration_ms = max(int(math.ceil(duration_ms / 12)), 1)
+
+                    # Payment field: monthly → annual figure (for override)
+                    pay_val = _get("payment", ms)
+                    if pay_val is not None:
+                        payment_override = pay_val * 12
+                else:
+                    pay_val = _get("payment", ms)
+                    if pay_val is not None:
+                        payment_override = pay_val  # already annual
+
+                liability_templates[age_at].append((principal, rate_override, duration_ms, payment_override))
 
         # ------------------------------------------------------------------
         # 5. Build the DCFModel instance

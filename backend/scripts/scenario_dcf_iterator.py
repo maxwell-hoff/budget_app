@@ -1,4 +1,5 @@
 from collections import defaultdict
+import math
 
 from .db_connector import DBConnector
 from .dcf_calculator_manual import DCFModel, Assumptions, GrowingSeries
@@ -35,8 +36,13 @@ _CURRENT_MAP = {
 
 
 def _is_current_ms(ms) -> bool:
-    """Return *True* when *ms* represents a "current_*" milestone."""
-    return _norm_name(ms.name) in _CURRENT_MAP
+    """Return ``True`` when *ms* represents a *current_* milestone.
+
+    We count a milestone as *current* when its normalised name starts with the
+    prefix ``current_`` so that labels like "Current Debt" or "Current Salary
+    (incl. Bonus …)" are recognised in addition to the strict keys contained
+    in `_CURRENT_MAP`."""
+    return _norm_name(ms.name).startswith("current_") or _norm_name(ms.name) in _CURRENT_MAP
 
 
 def _sum_amount(milestones, m_type, age):
@@ -99,7 +105,11 @@ class ScenarioDCF:
             if not _is_current_ms(ms):
                 continue
 
-            group_key = _CURRENT_MAP[_norm_name(ms.name)]
+            norm = _norm_name(ms.name)
+            group_key = _CURRENT_MAP.get(norm)
+            if group_key is None:
+                # Fallback to milestone_type which maps 1:1 to the desired key
+                group_key = ms.milestone_type.lower()
             current_vals[group_key] += ms.amount or 0.0
 
         self.initial_assets = current_vals.get("asset", None)
@@ -143,7 +153,7 @@ class ScenarioDCF:
 
             # Convert monthly amounts to yearly so that the DCF (which works on
             # yearly periods) sees a like-for-like value.
-            if (ms.occurrence or "Yearly") == "Monthly":
+            if (ms.occurrence or "Yearly") == "Monthly" and mt in ("Income", "Expense"):
                 amt *= 12
 
             start_step = ms.age_at_occurrence - self.start_age
@@ -164,7 +174,19 @@ class ScenarioDCF:
             elif mt == "Liability":
                 if legacy_liabilities_used and ms.age_at_occurrence == self.start_age:
                     continue
-                self.liability_events.append((ms.age_at_occurrence, amt))
+
+                # Keep principal as-is – do NOT multiply by 12
+                liability_amt = amt
+
+                # Convert duration & payment when the entry is specified monthly
+                if (ms.occurrence or "Yearly") == "Monthly":
+                    if ms.duration is not None:
+                        ms.duration = max(int(math.ceil(ms.duration / 12)), 1)
+
+                    if ms.payment is not None:
+                        ms.payment = ms.payment * 12  # store annual figure so that downstream code can honour it
+
+                self.liability_events.append((ms.age_at_occurrence, liability_amt))
 
         # ------------------------------------------------------------------
         # 3. Guarantee non-zero defaults so the DCF always runs.
