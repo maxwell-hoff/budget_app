@@ -35,14 +35,13 @@ _CURRENT_MAP = {
 }
 
 
-def _is_current_ms(ms) -> bool:
-    """Return ``True`` when *ms* represents a *current_* milestone.
+def _is_current_ms(ms, start_age: int) -> bool:
+    """Return ``True`` for milestones that happen **at the projection start**.
 
-    We count a milestone as *current* when its normalised name starts with the
-    prefix ``current_`` so that labels like "Current Debt" or "Current Salary
-    (incl. Bonus …)" are recognised in addition to the strict keys contained
-    in `_CURRENT_MAP`."""
-    return _norm_name(ms.name).startswith("current_") or _norm_name(ms.name) in _CURRENT_MAP
+    A milestone is considered *current* when its ``age_at_occurrence`` equals
+    the scenario's ``start_age``.  This captures opening balances and existing
+    salary/expense levels without relying on the milestone name."""
+    return ms.age_at_occurrence == start_age and ms.milestone_type in {"Asset", "Liability", "Income", "Expense"}
 
 
 def _sum_amount(milestones, m_type, age):
@@ -102,7 +101,7 @@ class ScenarioDCF:
         current_vals = defaultdict(float)  # groups: asset/liability/income/expense
 
         for ms in self.milestones:
-            if not _is_current_ms(ms):
+            if not _is_current_ms(ms, self.start_age):
                 continue
 
             norm = _norm_name(ms.name)
@@ -145,7 +144,7 @@ class ScenarioDCF:
 
         for ms in self.milestones:
             # Skip the current_* milestones – already processed above
-            if _is_current_ms(ms):
+            if _is_current_ms(ms, self.start_age):
                 continue
 
             mt = ms.milestone_type

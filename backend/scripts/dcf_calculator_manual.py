@@ -347,14 +347,13 @@ class DCFModel:
         }
 
         def _is_current(ms) -> bool:
-            """Return True when *ms* represents a *current_* milestone.
+            """Return True when *ms* occurs at the projection start age.
 
-            We treat any milestone whose normalised name **starts with** the
-            prefix ``current_`` as a current-value row so that variants like
-            "Current Debt" or "Current Salary (incl. Bonus …)" are detected.
+            We treat milestones whose *effective* start age equals *start_age*
+            (the earliest age across the scenario) as opening balances or
+            existing income/expense streams regardless of their name.
             """
-            nm = _norm_name(_get("name", ms))
-            return nm.startswith("current_") or nm in _CURRENT_MAP
+            return _effective_age(ms) == start_age and (_get("milestone_type", ms) in ("Asset", "Liability", "Income", "Expense"))
 
         # ------------------------------------------------------------------
         #  Dynamic duration helper  (placed early so subsequent code can use it)
