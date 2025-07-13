@@ -512,6 +512,8 @@ class DCFModel:
             key = _CURRENT_MAP.get(norm)
             if key is None:
                 key = (_get("milestone_type", ms) or "").lower()
+            if key not in current_vals:
+                current_vals[key] = 0.0
             current_vals[key] += _get("amount", ms) or 0.0
 
             roi_val = _get("rate_of_return", ms)

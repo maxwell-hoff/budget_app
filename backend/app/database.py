@@ -212,15 +212,19 @@ def create_default_milestones():
     PARAM_OVERRIDES: dict[tuple[str, str], dict[str, dict[str, object]]] = {
         ("Base Scenario", "2 Kids"): {
             "Current Average Expenses": {"amount": 3_000},
+            "Current Salary (incl. Bonus, Side Hustle, etc.)": {"amount": 50_000},
         },
         ("Base Scenario", "3 Kids"): {
             "Current Average Expenses": {"amount": 5_000},
+            "Current Salary (incl. Bonus, Side Hustle, etc.)": {"amount": 50_000},
         },
         ("Good Scenario", "2 Kids"): {
             "Current Average Expenses": {"amount": 3_000},
+            "Current Salary (incl. Bonus, Side Hustle, etc.)": {"amount": 100_000},
         },
         ("Good Scenario", "3 Kids"): {
             "Current Average Expenses": {"amount": 5_000},
+            "Current Salary (incl. Bonus, Side Hustle, etc.)": {"amount": 100_000},
         },
     }
     
