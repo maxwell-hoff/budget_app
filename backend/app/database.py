@@ -28,6 +28,25 @@ def init_db(app):
     ma.init_app(app)
     
     with app.app_context():
+        # Ensure *all* model classes are imported so their tables are present
+        # in SQLAlchemy metadata before we call ``create_all``.  Omitting an
+        # import here means the corresponding table will NOT be created and
+        # subsequent queries will raise "no such table" errors.
+
+        from .models import (
+            user,  # noqa: F401 – imported for side-effect
+            milestone,  # includes ParentMilestone
+            scenario,
+            sub_scenario,
+            goal,
+            scenario_parameter_value,
+            dcf,
+            net_worth,
+            solved_dcf,
+            solved_parameter_value,
+            scenario_parameter_value,
+        )
+
         db.create_all()
 
 def create_default_milestones():
@@ -37,7 +56,7 @@ def create_default_milestones():
     #  scenario-parameter values.  (Ported from the previous standalone script.)
     # ------------------------------------------------------------------
 
-    from .models.milestone import Milestone
+    from .models.milestone import Milestone, ParentMilestone
     from .models.scenario import Scenario
     from .models.sub_scenario import SubScenario
     from .models.goal import Goal
@@ -65,6 +84,24 @@ def create_default_milestones():
     ]
 
     # ------------------------------------------------------------------
+    #  Ensure parent milestone *groups* exist so child milestones can reference
+    #  them via ``parent_milestone_id`` (used by the front-end to group rows).
+    # ------------------------------------------------------------------
+
+    PARENT_GROUPS = {
+        "Current Lifestyle": (30, 70),
+        "Retirement": (70, 100),
+        "Long Term Care": (96, 100),
+        "Inheritance": (100, 100),
+    }
+
+    parent_map: dict[str, int] = {}
+    for name, (min_age, max_age) in PARENT_GROUPS.items():
+        p = _get_or_create(ParentMilestone, name=name, min_age=min_age, max_age=max_age)
+        db.session.flush()
+        parent_map[name] = p.id
+
+    # ------------------------------------------------------------------
     #  Baseline milestone templates – will be duplicated for every combo.
     # ------------------------------------------------------------------
 
@@ -76,11 +113,11 @@ def create_default_milestones():
             "disbursement_type": "Perpetuity",
             "amount": 30_000,
             "rate_of_return": 0.07,
-            "goal_parameters": ["amount"],
             "scenario_values": {
-                "amount": ["25000", "40000"],
                 "rate_of_return": ["0.05", "0.07", "0.09"],
             },
+            "parent_group": "Current Lifestyle",
+            "order": 0,
         },
         {
             "name": "Current Debt",
@@ -92,8 +129,8 @@ def create_default_milestones():
             "occurrence": "Monthly",
             "duration": 120,        # months
             "rate_of_return": 0.07,
-            "goal_parameters": ["payment"],
-            "scenario_values": {"payment": ["300", "800"]},
+            "parent_group": "Current Lifestyle",
+            "order": 1,
         },
         {
             "name": "Current Salary (incl. Bonus, Side Hustle, etc.)",
@@ -104,7 +141,8 @@ def create_default_milestones():
             "occurrence": "Yearly",
             "duration": 1,
             "rate_of_return": 0.02,
-            "goal_parameters": ["amount"],
+            "parent_group": "Current Lifestyle",
+            "order": 2,
         },
         {
             "name": "Current Average Expenses",
@@ -115,7 +153,8 @@ def create_default_milestones():
             "occurrence": "Monthly",
             "duration": 1,
             "rate_of_return": 0.03,
-            "goal_parameters": ["amount"],
+            "parent_group": "Current Lifestyle",
+            "order": 3,
         },
         {
             "name": "Retirement",
@@ -129,6 +168,8 @@ def create_default_milestones():
             "start_after_milestone": "Current Salary (incl. Bonus, Side Hustle, etc.)",
             "rate_of_return": 0.06,
             "goal_parameters": ["age_at_occurrence"],
+            "parent_group": "Retirement",
+            "order": 4,
         },
         {
             "name": "Long Term Care (self)",
@@ -139,6 +180,8 @@ def create_default_milestones():
             "occurrence": "Monthly",
             "duration": 48,
             "rate_of_return": 0.04,
+            "parent_group": "Long Term Care",
+            "order": 5,
         },
         {
             "name": "Inheritance",
@@ -149,6 +192,8 @@ def create_default_milestones():
             "occurrence": "Monthly",
             "duration": 1,
             "rate_of_return": 0.0,
+            "parent_group": "Inheritance",
+            "order": 6,
         },
     ]
 
@@ -188,13 +233,21 @@ def create_default_milestones():
             sub = _get_or_create(SubScenario, scenario_id=scen.id, name=sub_name)
             db.session.flush()
 
-            for tpl in TEMPLATE_MILESTONES:
+            for idx, tpl in enumerate(TEMPLATE_MILESTONES):
                 # Apply per-scenario overrides --------------------------------
                 overrides = PARAM_OVERRIDES.get((scen.name, sub.name), {}).get(tpl["name"], {})
 
                 merged = {**tpl, **overrides}
 
-                m_defaults = {k: v for k, v in merged.items() if k not in ("goal_parameters", "scenario_values")}
+                # Fill default order when missing
+                if 'order' not in merged:
+                    merged['order'] = idx
+
+                # Map parent_group → parent_milestone_id
+                if 'parent_milestone_id' not in merged and merged.get('parent_group'):
+                    merged['parent_milestone_id'] = parent_map.get(merged['parent_group'])
+
+                m_defaults = {k: v for k, v in merged.items() if k not in ("goal_parameters", "scenario_values", "parent_group")}
                 m = _get_or_create(
                     Milestone,
                     **m_defaults,
