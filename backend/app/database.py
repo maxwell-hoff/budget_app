@@ -139,7 +139,8 @@ def create_default_milestones():
             "disbursement_type": "Fixed Duration",
             "amount": 50_000,
             "occurrence": "Yearly",
-            "duration": 1,
+            "duration": None,  # ends at retirement
+            "duration_end_at_milestone": "Retirement",
             "rate_of_return": 0.02,
             "parent_group": "Current Lifestyle",
             "order": 2,
@@ -151,7 +152,8 @@ def create_default_milestones():
             "disbursement_type": "Fixed Duration",
             "amount": 3_000,        # monthly figure
             "occurrence": "Monthly",
-            "duration": 1,
+            "duration": None,  # ends at retirement
+            "duration_end_at_milestone": "Retirement",
             "rate_of_return": 0.03,
             "parent_group": "Current Lifestyle",
             "order": 3,
