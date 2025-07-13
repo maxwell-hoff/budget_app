@@ -512,25 +512,60 @@ class DCFModel:
             key = _CURRENT_MAP.get(norm)
             if key is None:
                 key = (_get("milestone_type", ms) or "").lower()
+
+            # ----------------------------------------------------------------
+            # Derive *annual* amount – convert monthly Income/Expense to yearly
+            # ----------------------------------------------------------------
+            amt = _get("amount", ms) or 0.0
+            if (_get("occurrence", ms) or "Yearly") == "Monthly" and key in {"income", "expense"}:
+                amt *= 12  # monthly ⇒ yearly
+
+            # Accumulate opening balances/flows --------------------------------
             if key not in current_vals:
                 current_vals[key] = 0.0
-            current_vals[key] += _get("amount", ms) or 0.0
+            current_vals[key] += amt
 
-            roi_val = _get("rate_of_return", ms)
-            if roi_val is not None:
-                asset_roi_data.append((_get("amount", ms) or 0.0, roi_val))
+            # ----------------------------------------------------------------
+            # Special handling per type
+            # ----------------------------------------------------------------
+            if key == "asset":
+                roi_val = _get("rate_of_return", ms)
+                if roi_val is not None:
+                    asset_roi_data.append((amt, roi_val))
+
             elif key == "income":
                 current_income_found = True
-                amt = _get("amount", ms) or 0.0
                 duration = _effective_duration(ms)
                 growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
                 income_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
+
             elif key == "expense":
                 current_expense_found = True
-                amt = _get("amount", ms) or 0.0
                 duration = _effective_duration(ms)
                 growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
                 expense_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
+
+            elif key == "liability":
+                # Build amortising loan template for opening liabilities so that
+                # the defined *payment* and *duration* are honoured.
+                principal = amt
+                duration_ms = _effective_duration(ms)
+                rate_override = _get("rate_of_return", ms)
+
+                payment_override = None
+                pay_val = _get("payment", ms)
+
+                # Convert monthly parameters → annual equivalents
+                if (_get("occurrence", ms) or "Yearly") == "Monthly":
+                    if duration_ms is not None:
+                        duration_ms = max(int(math.ceil(duration_ms / 12)), 1)
+                    if pay_val is not None:
+                        payment_override = pay_val * 12
+                else:
+                    if pay_val is not None:
+                        payment_override = pay_val  # already annual
+
+                liability_templates[start_age].append((principal, rate_override, duration_ms, payment_override))
 
         # Fallback to legacy behaviour if explicit current_* milestones are absent
         def _sum_amount(m_type, age):
