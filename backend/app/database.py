@@ -167,7 +167,7 @@ def create_default_milestones():
             "occurrence": "Yearly",
             "duration": None,  # ends at inheritance
             "duration_end_at_milestone": "Inheritance",
-            "start_after_milestone": "Current Salary (incl. Bonus, Side Hustle, etc.)",
+            # "start_after_milestone": "Current Salary (incl. Bonus, Side Hustle, etc.)",
             "rate_of_return": 0.06,
             "goal_parameters": ["age_at_occurrence"],
             "parent_group": "Retirement",
