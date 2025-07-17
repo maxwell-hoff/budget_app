@@ -174,7 +174,9 @@ function createDefaultMilestones() {
         milestone_type: 'Asset',
         disbursement_type: 'Perpetuity',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: null,
         rate_of_return: 0.0,
@@ -188,7 +190,9 @@ function createDefaultMilestones() {
         milestone_type: 'Asset',
         disbursement_type: 'Perpetuity',
         amount: 10000,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: null,
         rate_of_return: 0.0,
@@ -407,7 +411,9 @@ function addNewMilestone() {
         milestone_type: 'Expense',
         disbursement_type: 'Fixed Duration',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0,
@@ -509,7 +515,11 @@ function createMilestoneForm(milestone) {
             </div>`;
     };
     
-    const isInheritance = milestone.name === 'Inheritance'; // NEW helper flag
+    const isInheritance = milestone.name === 'Inheritance';
+
+    // Compute display values based on PV/FV type
+    const amountDisplay = milestone.amount;
+    const paymentDisplay = milestone.payment || '';
     
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
@@ -567,14 +577,14 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3">
                     <label class="form-label">Amount${goalCheckbox('amount')}</label>
                     <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
+                        <input type="number" class="form-control" name="amount" value="${amountDisplay}" ${isInheritance ? 'readonly disabled' : ''}>
                         ${scenarioControls('amount')}
                         <div class="form-check form-check-inline ms-2">
-                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="FV" checked>
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="FV" ${milestone.amount_value_type !== 'PV' ? 'checked' : ''}>
                             <label class="form-check-label">FV</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="PV">
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="PV" ${milestone.amount_value_type === 'PV' ? 'checked' : ''}>
                             <label class="form-check-label">PV</label>
                         </div>
                     </div>
@@ -588,14 +598,14 @@ function createMilestoneForm(milestone) {
                         </span>
                     </label>
                     <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
+                        <input type="number" class="form-control" name="payment" value="${paymentDisplay}">
                         ${scenarioControls('payment')}
                         <div class="form-check form-check-inline ms-2">
-                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="FV" checked>
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="FV" ${milestone.payment_value_type !== 'PV' ? 'checked' : ''}>
                             <label class="form-check-label">FV</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="PV">
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="PV" ${milestone.payment_value_type === 'PV' ? 'checked' : ''}>
                             <label class="form-check-label">PV</label>
                         </div>
                     </div>
@@ -867,7 +877,9 @@ function addSubMilestone(parentForm) {
         milestone_type: 'Expense',
         disbursement_type: 'Fixed Duration',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0,
@@ -1010,12 +1022,13 @@ function handleMilestoneUpdate(e, form) {
             let paymentVal = parseFloat(form.find('[name="payment"]').val());
             if (isNaN(paymentVal)) paymentVal = null;
             let paymentType = form.find('.payment-value-type:checked').val() || 'FV';
-            if (paymentVal !== null) {
-                if (paymentType === 'PV') {
-                    paymentVal = paymentVal * Math.pow(1 + INFLATION_RATE, updatedMilestone.age_at_occurrence - currentAge);
-                }
+            // Convert PV payment to FV when needed
+            if (paymentVal !== null && paymentType === 'PV') {
+                const years = Math.max(0, updatedMilestone.age_at_occurrence - currentAge);
+                paymentVal = paymentVal * Math.pow(1 + INFLATION_RATE, years);
             }
             updatedMilestone.payment = paymentVal;
+            updatedMilestone.payment_value_type = paymentType;
         }
         
         const dynCheckboxActive = form.find('.dynamic-duration-checkbox').is(':checked');
@@ -1059,10 +1072,11 @@ function handleMilestoneUpdate(e, form) {
         }
         
         let amountType = form.find('.amount-value-type:checked').val() || 'FV';
-        let yearsToEvent = updatedMilestone.age_at_occurrence - currentAge;
-        if (yearsToEvent < 0) yearsToEvent = 0;
+        updatedMilestone.amount_value_type = amountType;
+        // Convert PV inputs to FV before sending to backend
         if (!isNaN(updatedMilestone.amount) && amountType === 'PV') {
-            updatedMilestone.amount = updatedMilestone.amount * Math.pow(1 + INFLATION_RATE, yearsToEvent);
+            const years = Math.max(0, updatedMilestone.age_at_occurrence - currentAge);
+            updatedMilestone.amount = updatedMilestone.amount * Math.pow(1 + INFLATION_RATE, years);
         }
         
         $.ajax({
