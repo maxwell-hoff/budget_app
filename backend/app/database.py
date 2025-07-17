@@ -164,6 +164,7 @@ def create_default_milestones():
             "milestone_type": "Expense",
             "disbursement_type": "Fixed Duration",
             "amount": 60_000,
+            "amount_value_type": "PV",  # store as present value by default
             "occurrence": "Yearly",
             "duration": None,  # ends at inheritance
             "duration_end_at_milestone": "Inheritance",
