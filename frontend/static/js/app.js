@@ -5,6 +5,9 @@ let globalScenarioValues = {};
 // Track the most recent loadMilestones request so we can ignore stale responses
 let milestonesLoadCounter = 0;
 
+// Add after global variable declarations (around line 1-6)
+const INFLATION_RATE = 0.02; // Default 2% inflation – update easily to change default conversion
+
 // Initialize the application
 $(document).ready(function() {
     console.log('Document ready, initializing application...');
@@ -566,6 +569,7 @@ function createMilestoneForm(milestone) {
                     <div class="d-flex align-items-center">
                         <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
                         ${scenarioControls('amount')}
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2 convert-fv-btn">Convert to FV</button>
                     </div>
                 </div>
                 <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
@@ -576,8 +580,11 @@ function createMilestoneForm(milestone) {
                             <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
                         </span>
                     </label>
-                    <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
-                    ${scenarioControls('payment')}
+                    <div class="d-flex align-items-center">
+                        <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
+                        ${scenarioControls('payment')}
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2 convert-fv-btn">Convert to FV</button>
+                    </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Occurrence${goalCheckbox('occurrence')}</label>
@@ -831,6 +838,18 @@ function createMilestoneForm(milestone) {
             ageInput.prop('disabled', false);
         }
     });
+
+    // Add click handler for the convert FV button
+    form.find('.convert-fv-btn').on('click', function() {
+        // Identify corresponding input within the same flex container
+        const container = $(this).closest('.d-flex');
+        const input = container.find('input.form-control');
+        const rawVal = parseFloat(input.val());
+        if (isNaN(rawVal)) return; // nothing to convert
+        const yearsToEvent = Math.max(0, parseInt(form.find('[name="age_at_occurrence"]').val()) - currentAge);
+        const fvVal = rawVal * Math.pow(1 + INFLATION_RATE, yearsToEvent);
+        input.val(fvVal.toFixed(2)); // leave button enabled for re-conversion after edits
+    });
     
     return form;
 }
@@ -986,7 +1005,8 @@ function handleMilestoneUpdate(e, form) {
         
         // Add payment field for Asset and Liability types
         if (['Asset', 'Liability'].includes(milestoneType)) {
-            updatedMilestone.payment = parseFloat(form.find('[name="payment"]').val()) || null;
+            let paymentVal = parseFloat(form.find('[name="payment"]').val());
+            updatedMilestone.payment = isNaN(paymentVal) ? null : paymentVal;
         }
         
         const dynCheckboxActive = form.find('.dynamic-duration-checkbox').is(':checked');
