@@ -569,7 +569,14 @@ function createMilestoneForm(milestone) {
                     <div class="d-flex align-items-center">
                         <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
                         ${scenarioControls('amount')}
-                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2 convert-fv-btn">Convert to FV</button>
+                        <div class="form-check form-check-inline ms-2">
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="FV" checked>
+                            <label class="form-check-label">FV</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="PV">
+                            <label class="form-check-label">PV</label>
+                        </div>
                     </div>
                 </div>
                 <div class="mb-3 payment-field" style="display: ${['Asset', 'Liability'].includes(milestone.milestone_type) ? 'block' : 'none'}">
@@ -583,7 +590,14 @@ function createMilestoneForm(milestone) {
                     <div class="d-flex align-items-center">
                         <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
                         ${scenarioControls('payment')}
-                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2 convert-fv-btn">Convert to FV</button>
+                        <div class="form-check form-check-inline ms-2">
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="FV" checked>
+                            <label class="form-check-label">FV</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="PV">
+                            <label class="form-check-label">PV</label>
+                        </div>
                     </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
@@ -838,18 +852,6 @@ function createMilestoneForm(milestone) {
             ageInput.prop('disabled', false);
         }
     });
-
-    // Add click handler for the convert FV button
-    form.find('.convert-fv-btn').on('click', function() {
-        // Identify corresponding input within the same flex container
-        const container = $(this).closest('.d-flex');
-        const input = container.find('input.form-control');
-        const rawVal = parseFloat(input.val());
-        if (isNaN(rawVal)) return; // nothing to convert
-        const yearsToEvent = Math.max(0, parseInt(form.find('[name="age_at_occurrence"]').val()) - currentAge);
-        const fvVal = rawVal * Math.pow(1 + INFLATION_RATE, yearsToEvent);
-        input.val(fvVal.toFixed(2)); // leave button enabled for re-conversion after edits
-    });
     
     return form;
 }
@@ -1006,7 +1008,14 @@ function handleMilestoneUpdate(e, form) {
         // Add payment field for Asset and Liability types
         if (['Asset', 'Liability'].includes(milestoneType)) {
             let paymentVal = parseFloat(form.find('[name="payment"]').val());
-            updatedMilestone.payment = isNaN(paymentVal) ? null : paymentVal;
+            if (isNaN(paymentVal)) paymentVal = null;
+            let paymentType = form.find('.payment-value-type:checked').val() || 'FV';
+            if (paymentVal !== null) {
+                if (paymentType === 'PV') {
+                    paymentVal = paymentVal * Math.pow(1 + INFLATION_RATE, updatedMilestone.age_at_occurrence - currentAge);
+                }
+            }
+            updatedMilestone.payment = paymentVal;
         }
         
         const dynCheckboxActive = form.find('.dynamic-duration-checkbox').is(':checked');
@@ -1047,6 +1056,13 @@ function handleMilestoneUpdate(e, form) {
         } else {
             updatedMilestone.age_at_occurrence = parseInt(form.find('[name="age_at_occurrence"]').val());
             updatedMilestone.start_after_milestone = null;
+        }
+        
+        let amountType = form.find('.amount-value-type:checked').val() || 'FV';
+        let yearsToEvent = updatedMilestone.age_at_occurrence - currentAge;
+        if (yearsToEvent < 0) yearsToEvent = 0;
+        if (!isNaN(updatedMilestone.amount) && amountType === 'PV') {
+            updatedMilestone.amount = updatedMilestone.amount * Math.pow(1 + INFLATION_RATE, yearsToEvent);
         }
         
         $.ajax({
