@@ -1022,11 +1022,6 @@ function handleMilestoneUpdate(e, form) {
             let paymentVal = parseFloat(form.find('[name="payment"]').val());
             if (isNaN(paymentVal)) paymentVal = null;
             let paymentType = form.find('.payment-value-type:checked').val() || 'FV';
-            // Convert PV payment to FV when needed
-            if (paymentVal !== null && paymentType === 'PV') {
-                const years = Math.max(0, updatedMilestone.age_at_occurrence - currentAge);
-                paymentVal = paymentVal * Math.pow(1 + INFLATION_RATE, years);
-            }
             updatedMilestone.payment = paymentVal;
             updatedMilestone.payment_value_type = paymentType;
         }
@@ -1073,11 +1068,7 @@ function handleMilestoneUpdate(e, form) {
         
         let amountType = form.find('.amount-value-type:checked').val() || 'FV';
         updatedMilestone.amount_value_type = amountType;
-        // Convert PV inputs to FV before sending to backend
-        if (!isNaN(updatedMilestone.amount) && amountType === 'PV') {
-            const years = Math.max(0, updatedMilestone.age_at_occurrence - currentAge);
-            updatedMilestone.amount = updatedMilestone.amount * Math.pow(1 + INFLATION_RATE, years);
-        }
+        // Leave PV numbers unconverted; backend will convert to FV upon save
         
         $.ajax({
             url: `/api/milestones/${milestoneId}`,
