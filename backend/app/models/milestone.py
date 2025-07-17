@@ -77,6 +77,9 @@ class Milestone(db.Model):
     disbursement_type = db.Column(db.String(20), nullable=True)  # 'Fixed Duration' or 'Perpetuity'
     amount = db.Column(db.Float, nullable=False)
     payment = db.Column(db.Float, nullable=True)  # Payment amount for Assets and Liabilities
+    # Value type indicators – 'PV' or 'FV' (default 'FV')
+    amount_value_type = db.Column(db.String(2), nullable=False, default='FV')
+    payment_value_type = db.Column(db.String(2), nullable=True, default='FV')
     occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
@@ -97,13 +100,18 @@ class Milestone(db.Model):
                  scenario_id: int = 1, scenario_name: str = 'Base Scenario',
                  sub_scenario_id: int = 1, sub_scenario_name: str = 'Base Sub-Scenario',
                  duration_end_at_milestone: str | None = None,
-                 start_after_milestone: str | None = None):
+                 start_after_milestone: str | None = None,
+                 amount_value_type: str = 'FV',
+                 payment_value_type: str | None = 'FV',
+                 ):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
         self.disbursement_type = disbursement_type
         self.amount = amount
         self.payment = payment
+        self.amount_value_type = amount_value_type or 'FV'
+        self.payment_value_type = payment_value_type or ('FV' if payment is not None else None)
         self.order = order
         self.parent_milestone_id = parent_milestone_id
         self.scenario_id = scenario_id
@@ -136,6 +144,8 @@ class Milestone(db.Model):
             'disbursement_type': self.disbursement_type,
             'amount': self.amount,
             'payment': self.payment,
+            'amount_value_type': self.amount_value_type,
+            'payment_value_type': self.payment_value_type,
             'occurrence': self.occurrence,
             'duration': self.duration,
             'rate_of_return': self.rate_of_return,

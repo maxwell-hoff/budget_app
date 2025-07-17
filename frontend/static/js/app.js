@@ -5,6 +5,9 @@ let globalScenarioValues = {};
 // Track the most recent loadMilestones request so we can ignore stale responses
 let milestonesLoadCounter = 0;
 
+// Add after global variable declarations (around line 1-6)
+const INFLATION_RATE = 0.02; // Default 2% inflation – update easily to change default conversion
+
 // Initialize the application
 $(document).ready(function() {
     console.log('Document ready, initializing application...');
@@ -171,7 +174,9 @@ function createDefaultMilestones() {
         milestone_type: 'Asset',
         disbursement_type: 'Perpetuity',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: null,
         rate_of_return: 0.0,
@@ -185,7 +190,9 @@ function createDefaultMilestones() {
         milestone_type: 'Asset',
         disbursement_type: 'Perpetuity',
         amount: 10000,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: null,
         rate_of_return: 0.0,
@@ -404,7 +411,9 @@ function addNewMilestone() {
         milestone_type: 'Expense',
         disbursement_type: 'Fixed Duration',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0,
@@ -506,7 +515,26 @@ function createMilestoneForm(milestone) {
             </div>`;
     };
     
-    const isInheritance = milestone.name === 'Inheritance'; // NEW helper flag
+    const isInheritance = milestone.name === 'Inheritance';
+
+    // --- Dual Amount Inputs ---------------------------------------------------
+    const yearsDelta = milestone.age_at_occurrence - currentAge;
+    const growthFactor = Math.pow(1 + INFLATION_RATE, yearsDelta);
+
+    const amt = milestone.amount || 0;
+    const amtType = milestone.amount_value_type || 'FV';
+
+    let fvVal, pvVal;
+    if (amtType === 'PV') {
+        // amt stored as FV already (converted in backend).  To show PV, divide.
+        fvVal = amt.toFixed(2);
+        pvVal = (amt / growthFactor).toFixed(2);
+    } else {
+        fvVal = amt.toFixed(2);
+        pvVal = (amt / growthFactor).toFixed(2);
+    }
+    
+    const paymentDisplay = milestone.payment || '';
     
     const form = $(`
         <div class="milestone-form" data-id="${milestone.id}">
@@ -563,8 +591,21 @@ function createMilestoneForm(milestone) {
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Amount${goalCheckbox('amount')}</label>
-                    <div class="d-flex align-items-center">
-                        <input type="number" class="form-control" name="amount" value="${milestone.amount}" ${isInheritance ? 'readonly disabled' : ''}>
+                    <div class="d-flex align-items-center amount-field">
+                        <!-- FV radio + input -->
+                        <div class="form-check form-check-inline me-1">
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="FV" ${milestone.amount_value_type !== 'PV' ? 'checked' : ''}>
+                            <label class="form-check-label">FV</label>
+                        </div>
+                        <input type="number" class="form-control amount-fv-input me-2" style="max-width:120px" value="${fvVal}" ${milestone.amount_value_type === 'PV' ? 'disabled' : ''}>
+
+                        <!-- PV radio + input -->
+                        <div class="form-check form-check-inline me-1">
+                            <input class="form-check-input amount-value-type" type="radio" name="amount_value_type_${milestone.id}" value="PV" ${milestone.amount_value_type === 'PV' ? 'checked' : ''}>
+                            <label class="form-check-label">PV</label>
+                        </div>
+                        <input type="number" class="form-control amount-pv-input me-2" style="max-width:120px" value="${pvVal}" ${milestone.amount_value_type !== 'PV' ? 'disabled' : ''}>
+
                         ${scenarioControls('amount')}
                     </div>
                 </div>
@@ -576,8 +617,18 @@ function createMilestoneForm(milestone) {
                             <span class="tooltip-text">Enter negative value for asset withdrawals / enter positive value for liability payments</span>
                         </span>
                     </label>
-                    <input type="number" class="form-control" name="payment" value="${milestone.payment || ''}">
-                    ${scenarioControls('payment')}
+                    <div class="d-flex align-items-center">
+                        <input type="number" class="form-control" name="payment" value="${paymentDisplay}">
+                        ${scenarioControls('payment')}
+                        <div class="form-check form-check-inline ms-2">
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="FV" ${milestone.payment_value_type !== 'PV' ? 'checked' : ''}>
+                            <label class="form-check-label">FV</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input payment-value-type" type="radio" name="payment_value_type_${milestone.id}" value="PV" ${milestone.payment_value_type === 'PV' ? 'checked' : ''}>
+                            <label class="form-check-label">PV</label>
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <label class="form-label">Occurrence${goalCheckbox('occurrence')}</label>
@@ -604,7 +655,7 @@ function createMilestoneForm(milestone) {
                     </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Rate of Return (%)${goalCheckbox('rate_of_return')}</label>
+                    <label class="form-label">Rate of Return ($%)${goalCheckbox('rate_of_return')}</label>
                     <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
                     ${scenarioControls('rate_of_return')}
                 </div>
@@ -831,6 +882,16 @@ function createMilestoneForm(milestone) {
             ageInput.prop('disabled', false);
         }
     });
+
+    // Helper to toggle enable/disable of PV / FV inputs
+    function updateAmountEditability(frm) {
+        const selected = frm.find('.amount-value-type:checked').val();
+        frm.find('.amount-fv-input').prop('disabled', selected !== 'FV');
+        frm.find('.amount-pv-input').prop('disabled', selected !== 'PV');
+    }
+
+    updateAmountEditability(form);
+    form.on('change', '.amount-value-type', () => updateAmountEditability(form));
     
     return form;
 }
@@ -846,7 +907,9 @@ function addSubMilestone(parentForm) {
         milestone_type: 'Expense',
         disbursement_type: 'Fixed Duration',
         amount: 0,
+        amount_value_type: 'FV',
         payment: null,
+        payment_value_type: 'FV',
         occurrence: 'Yearly',
         duration: 1,
         rate_of_return: 0.0,
@@ -976,7 +1039,6 @@ function handleMilestoneUpdate(e, form) {
             age_at_occurrence: parseInt(form.find('[name="age_at_occurrence"]').val()),
             milestone_type: milestoneType,
             disbursement_type: disbursementType,
-            amount: parseFloat(form.find('[name="amount"]').val())
         };
         
         // Prevent manual amount updates for the system-managed Inheritance milestone
@@ -986,7 +1048,11 @@ function handleMilestoneUpdate(e, form) {
         
         // Add payment field for Asset and Liability types
         if (['Asset', 'Liability'].includes(milestoneType)) {
-            updatedMilestone.payment = parseFloat(form.find('[name="payment"]').val()) || null;
+            let paymentVal = parseFloat(form.find('[name="payment"]').val());
+            if (isNaN(paymentVal)) paymentVal = null;
+            let paymentType = form.find('.payment-value-type:checked').val() || 'FV';
+            updatedMilestone.payment = paymentVal;
+            updatedMilestone.payment_value_type = paymentType;
         }
         
         const dynCheckboxActive = form.find('.dynamic-duration-checkbox').is(':checked');
@@ -1028,6 +1094,15 @@ function handleMilestoneUpdate(e, form) {
             updatedMilestone.age_at_occurrence = parseInt(form.find('[name="age_at_occurrence"]').val());
             updatedMilestone.start_after_milestone = null;
         }
+        
+        let amountType = form.find('.amount-value-type:checked').val() || 'FV';
+        let amountValRaw = amountType === 'FV'
+            ? parseFloat(form.find('.amount-fv-input').val())
+            : parseFloat(form.find('.amount-pv-input').val());
+
+        updatedMilestone.amount = amountValRaw;
+        updatedMilestone.amount_value_type = amountType;
+        // Leave PV numbers unconverted; backend will convert to FV upon save
         
         $.ajax({
             url: `/api/milestones/${milestoneId}`,

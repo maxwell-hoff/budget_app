@@ -13,6 +13,30 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
 
+INFLATION_RATE = 0.02  # Central place for default inflation (matching front-end)
+
+def _convert_amount(value, value_type, milestone_age):
+    """Return **FV** stored value regardless of user input type.
+
+    Args:
+        value (float | None): Numeric entered value.
+        value_type (str): 'PV' or 'FV'.
+        milestone_age (int): age_at_occurrence for milestone.
+    """
+    if value is None:
+        return None
+
+    if value_type == 'PV':
+        # Fetch current age (fallback 0 when no profile)
+        user = User.query.first()
+        if user and user.birthday:
+            cur_age = calculate_current_age(user.birthday)
+        else:
+            cur_age = 0
+        years = max(0, milestone_age - cur_age)
+        return float(value) * ((1 + INFLATION_RATE) ** years)
+    return float(value)
+
 api_bp = Blueprint('api', __name__)
 parser = StatementParser()
 
@@ -230,8 +254,10 @@ def create_milestone():
         age_at_occurrence=data['age_at_occurrence'],
         milestone_type=data['milestone_type'],
         disbursement_type=data['disbursement_type'],
-        amount=data['amount'],
-        payment=data.get('payment'),
+        amount=_convert_amount(data['amount'], data.get('amount_value_type', 'FV'), data['age_at_occurrence']),
+        payment=_convert_amount(data.get('payment'), data.get('payment_value_type', 'FV'), data['age_at_occurrence']),
+        amount_value_type=data.get('amount_value_type', 'FV'),
+        payment_value_type=data.get('payment_value_type', 'FV'),
         occurrence=data.get('occurrence'),
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
@@ -285,6 +311,15 @@ def update_milestone(milestone_id):
     for key, value in data.items():
         # Skip goal parameters here; we'll handle separately
         if key == 'goal_parameters':
+            continue
+
+        if key in {'amount', 'payment'}:
+            # Need associated value_type to decide conversion
+            vt_key = f"{key}_value_type"
+            vtype = data.get(vt_key, getattr(milestone, vt_key, 'FV'))
+            conv_val = _convert_amount(value, vtype, milestone.age_at_occurrence)
+            setattr(milestone, key, conv_val)
+            setattr(milestone, vt_key, vtype)
             continue
 
         # Prevent setting NOT NULL columns to None – this can happen when
