@@ -309,7 +309,7 @@ class DCFModel:
         milestones: List[object],
         *,
         assumptions: Assumptions | None = None,
-        inflation_default: float = 0.03,
+        inflation_default: float = 0.02,
     ) -> "DCFModel":
         """Create a DCFModel from a list of milestone *records*.
 
