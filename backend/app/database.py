@@ -163,7 +163,7 @@ def create_default_milestones():
             "age_at_occurrence": 70,  # fallback – real start is dynamic
             "milestone_type": "Expense",
             "disbursement_type": "Fixed Duration",
-            "amount": 60_000 * ((1 + 0.02) ** 40),  # store FV value
+            "amount": 60_000, #* ((1 + 0.02) ** 40),  # store FV value
             "amount_value_type": "PV",  # default selection PV
             "occurrence": "Yearly",
             "duration": None,  # ends at inheritance
