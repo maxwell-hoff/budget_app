@@ -246,8 +246,6 @@ class DCFModel:
             # Regular income / expenses ----------------------------------
             salary = sum(s.value_at(t) for s in self.income_streams)
             expenses = sum(s.value_at(t) for s in self.expense_streams)
-            a_income = a_begin * self.assump.rate_of_return
-
             # Debt service ----------------------------------------------
             liab_expense = 0.0
             for loan in list(active_loans):  # copy -> safe removal
@@ -256,9 +254,15 @@ class DCFModel:
                 if loan.principal_remaining <= 1e-8:
                     active_loans.remove(loan)
 
-            # Update year-end balances -----------------------------------
+            # Apply cash flows first (salary, expenses, debt service) –
+            # assumes withdrawals/deposits happen at the *start* of the year.
             net_saving = salary - expenses - liab_expense
-            a_next = a_begin + a_income + net_saving
+
+            a_pre_growth = a_begin + net_saving
+            # Asset growth then compounds on the adjusted balance.
+            a_income = a_pre_growth * self.assump.rate_of_return
+
+            a_next = a_pre_growth + a_income
             l_next = sum(l.principal_remaining for l in active_loans)
 
             if t < years:
