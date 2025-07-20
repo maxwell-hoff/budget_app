@@ -246,8 +246,6 @@ class DCFModel:
             # Regular income / expenses ----------------------------------
             salary = sum(s.value_at(t) for s in self.income_streams)
             expenses = sum(s.value_at(t) for s in self.expense_streams)
-            a_income = a_begin * self.assump.rate_of_return
-
             # Debt service ----------------------------------------------
             liab_expense = 0.0
             for loan in list(active_loans):  # copy -> safe removal
@@ -256,8 +254,14 @@ class DCFModel:
                 if loan.principal_remaining <= 1e-8:
                     active_loans.remove(loan)
 
-            # Update year-end balances -----------------------------------
+            # Apply cash flows first? Excel assumes growth on beginning assets.
+            # 1) Interest on assets already invested at the **start** of the year
+            a_income = a_begin * self.assump.rate_of_return
+
+            # 2) Net cash flow during the year (salary – expenses – debt service)
             net_saving = salary - expenses - liab_expense
+
+            # 3) End-of-year balance
             a_next = a_begin + a_income + net_saving
             l_next = sum(l.principal_remaining for l in active_loans)
 
@@ -309,7 +313,7 @@ class DCFModel:
         milestones: List[object],
         *,
         assumptions: Assumptions | None = None,
-        inflation_default: float = 0.03,
+        inflation_default: float = 0.02,
     ) -> "DCFModel":
         """Create a DCFModel from a list of milestone *records*.
 
@@ -447,6 +451,20 @@ class DCFModel:
             return _get("age_at_occurrence", ms)
 
         # ------------------------------------------------------------------
+        #  Helper: convert PV amounts to nominal value at *start_age*
+        # ------------------------------------------------------------------
+        def _amount_at(ms):
+            """Return the milestone's *amount* expressed in nominal terms at its
+            effective age.  When the stored value is tagged as 'PV' we inflate
+            it by ``inflation_default`` for the years between *start_age* and
+            the milestone's effective age.  'FV' values are returned as-is."""
+            amt = _get("amount", ms) or 0.0
+            if (_get("amount_value_type", ms) or "FV") == "PV":
+                years = max(_effective_age(ms) - start_age, 0)
+                amt *= (1 + inflation_default) ** years
+            return amt
+
+        # ------------------------------------------------------------------
         # 2. Derive projection horizon – stop at inheritance age when present
         # ------------------------------------------------------------------
 
@@ -516,7 +534,7 @@ class DCFModel:
             # ----------------------------------------------------------------
             # Derive *annual* amount – convert monthly Income/Expense to yearly
             # ----------------------------------------------------------------
-            amt = _get("amount", ms) or 0.0
+            amt = _amount_at(ms)
             if (_get("occurrence", ms) or "Yearly") == "Monthly" and key in {"income", "expense"}:
                 amt *= 12  # monthly ⇒ yearly
 
@@ -570,7 +588,7 @@ class DCFModel:
         # Fallback to legacy behaviour if explicit current_* milestones are absent
         def _sum_amount(m_type, age):
             return sum(
-                (_get("amount", x) or 0.0)
+                _amount_at(x)
                 for x in milestones
                 if (_get("milestone_type", x) == m_type and _effective_age(x) == age)
             )
@@ -600,7 +618,7 @@ class DCFModel:
                 continue  # already processed
 
             mt = _get("milestone_type", ms)
-            amt = _get("amount", ms) or 0.0
+            amt = _amount_at(ms)
 
             # Convert *monthly* figures to *yearly* equivalents **only** for
             # Income/Expense streams.  Asset or Liability amounts are one-off

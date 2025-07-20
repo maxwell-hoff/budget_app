@@ -526,10 +526,11 @@ function createMilestoneForm(milestone) {
 
     let fvVal, pvVal;
     if (amtType === 'PV') {
-        // amt stored as FV already (converted in backend).  To show PV, divide.
-        fvVal = amt.toFixed(2);
-        pvVal = (amt / growthFactor).toFixed(2);
+        // The stored *amount* represents the present-value figure.
+        pvVal = amt.toFixed(2);
+        fvVal = (amt * growthFactor).toFixed(2);
     } else {
+        // The stored *amount* already represents the future-value at the milestone age.
         fvVal = amt.toFixed(2);
         pvVal = (amt / growthFactor).toFixed(2);
     }

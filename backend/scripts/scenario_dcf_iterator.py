@@ -137,7 +137,7 @@ class ScenarioDCF:
         self.asset_events: list[tuple[int, float]] = []
         self.liability_events: list[tuple[int, float]] = []
 
-        inflation_default = 0.03  # Same as used in run() call below
+        inflation_default = 0.02  # Keep in sync with INFLATION_RATE in API/front-end
 
         legacy_assets_used = "asset" not in current_vals
         legacy_liabilities_used = "liability" not in current_vals
