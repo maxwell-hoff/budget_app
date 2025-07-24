@@ -33,6 +33,10 @@ $(document).ready(function() {
         .then(res => res.json())
         .then(data => { globalScenarioValues = data; })
         .catch(err => console.warn('Could not fetch global scenario values', err));
+
+    // Initialize bootstrap tooltips for sidebar icons
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('.nav-button[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
 });
 
 // Event Listeners
