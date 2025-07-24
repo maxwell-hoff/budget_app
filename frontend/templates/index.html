@@ -12,13 +12,49 @@
     <link href="/static/css/liquidity_chart.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- User Profile Section -->
-            <div class="col-md-3 sidebar">
-                <div class="sidebar-header">
-                    <i class="fas fa-chevron-left toggle-icon"></i>
-                </div>
+    <!-- The new side navigation bar -->
+    <div class="side-navbar">
+        <button class="nav-button active" data-tab="tab-profile">
+            <i class="fas fa-user-circle"></i>
+            <span class="nav-text">Profile & Accounts</span>
+        </button>
+        <button class="nav-button" data-tab="tab-milestones">
+            <i class="fas fa-tasks"></i>
+            <span class="nav-text">Milestones</span>
+        </button>
+        <button class="nav-button" data-tab="tab-analysis">
+            <i class="fas fa-chart-pie"></i>
+            <span class="nav-text">Analysis</span>
+        </button>
+    </div>
+
+    <!-- The main content area -->
+    <div class="main-container">
+        <!-- Scenario Bar at the top -->
+        <div class="scenario-bar">
+            <div class="scenario-controls d-flex align-items-center gap-2">
+                <select id="scenarioSelect" class="form-control">
+                    <option value="">Select a scenario...</option>
+                </select>
+                <button id="newScenario" class="btn btn-success">New</button>
+                <button id="renameScenario" class="btn btn-secondary">Rename</button>
+                <button id="deleteScenario" class="btn btn-danger">Delete</button>
+
+                <!-- Sub-scenario controls -->
+                <select id="subScenarioSelect" class="form-control">
+                    <option value="">Select a sub-scenario...</option>
+                </select>
+                <button id="newSubScenario" class="btn btn-success">New</button>
+                <button id="renameSubScenario" class="btn btn-secondary">Rename</button>
+                <button id="deleteSubScenario" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+
+        <!-- The content that switches with tabs -->
+        <div class="content-area">
+
+            <!-- Tab 1: Profile -->
+            <div id="tab-profile" class="tab-pane active">
                 <div class="profile-section">
                     <div id="profileForm">
                         <h3>User Profile</h3>
@@ -59,33 +95,8 @@
                 </div>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 main-content">
-                <!-- Scenario Bar -->
-                <div class="scenario-bar">
-                    <div class="scenario-controls d-flex align-items-center gap-2">
-                        <select id="scenarioSelect" class="form-control">
-                            <option value="">Select a scenario...</option>
-                        </select>
-                        <button id="newScenario" class="btn btn-success">New</button>
-                        <button id="renameScenario" class="btn btn-secondary">Rename</button>
-                        <button id="deleteScenario" class="btn btn-danger">Delete</button>
-
-                        <!-- Sub-scenario controls -->
-                        <select id="subScenarioSelect" class="form-control">
-                            <option value="">Select a sub-scenario...</option>
-                        </select>
-                        <button id="newSubScenario" class="btn btn-success">New</button>
-                        <button id="renameSubScenario" class="btn btn-secondary">Rename</button>
-                        <button id="deleteSubScenario" class="btn btn-danger">Delete</button>
-                    </div>
-                </div>
-                
-                <!-- Show Sidebar Button -->
-                <div class="show-sidebar-button">
-                    <i class="fas fa-bars toggle-icon"></i>
-                </div>
-                
+            <!-- Tab 2: Milestones -->
+            <div id="tab-milestones" class="tab-pane">
                 <!-- Timeline Section -->
                 <div class="timeline-container">
                     <div class="timeline-controls">
@@ -101,7 +112,27 @@
                         </div>
                     </div>
                 </div>
+                <!-- Milestone Details Section -->
+                <div id="milestoneDetails" class="mt-4">
+                    <h3>Milestones</h3>
+                    <div id="milestoneForms"></div>
+                </div>
+            </div>
 
+            <!-- Tab 3: Analysis -->
+            <div id="tab-analysis" class="tab-pane">
+                <!-- Scenario Table Section -->
+                <div class="chart-container">
+                    <h3>Scenario Table</h3>
+                    <div class="mb-2">
+                        <button id="calculateButton" class="btn btn-primary">Calculate</button>
+                    </div>
+                    <div class="mb-2">
+                        <label for="goalDropdown" class="form-label">Goal parameter:</label>
+                        <select id="goalDropdown" class="form-select d-inline-block w-auto"></select>
+                    </div>
+                    <div id="scenarioTableContainer"></div>
+                </div>
                 <!-- Net Worth Chart Section -->
                 <div class="chart-container">
                     <div id="net-worth-chart">
@@ -116,7 +147,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Liquidity Chart Section -->
                 <div class="chart-container">
                     <div id="liquidity-chart">
@@ -133,25 +163,6 @@
                             <span class="toggle-icon">▼</span>
                         </button>
                     </div>
-                </div>
-
-                <!-- Scenario Table Section -->
-                <div class="chart-container">
-                    <h3>Scenario Table</h3>
-                    <div class="mb-2">
-                        <button id="calculateButton" class="btn btn-primary">Calculate</button>
-                    </div>
-                    <div class="mb-2">
-                        <label for="goalDropdown" class="form-label">Goal parameter:</label>
-                        <select id="goalDropdown" class="form-select d-inline-block w-auto"></select>
-                    </div>
-                    <div id="scenarioTableContainer"></div>
-                </div>
-
-                <!-- Milestone Details Section -->
-                <div id="milestoneDetails" class="mt-4">
-                    <h3>Milestones</h3>
-                    <div id="milestoneForms"></div>
                 </div>
             </div>
         </div>

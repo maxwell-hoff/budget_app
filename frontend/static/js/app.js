@@ -13,7 +13,7 @@ $(document).ready(function() {
     console.log('Document ready, initializing application...');
     initializeEventListeners();
     loadProfile();
-    setupSidebarToggle();
+    setupTabSwitching();
     
     // Ensure milestone details section exists
     if ($('#milestoneDetails').length === 0) {
@@ -48,6 +48,39 @@ function initializeEventListeners() {
     // Bank statement upload
     $('#statementUploadForm').on('submit', handleStatementUpload);
 }
+
+// Setup Tab Switching
+function setupTabSwitching() {
+    $('.nav-button').on('click', function() {
+        const tabId = $(this).data('tab');
+
+        // Update button active state
+        $('.nav-button').removeClass('active');
+        $(this).addClass('active');
+
+        // Show the selected tab and hide others
+        $('.tab-pane').removeClass('active');
+        $('#' + tabId).addClass('active');
+
+        // If Milestones tab became active, refresh timeline so it renders with correct width
+        if (tabId === 'tab-milestones' && window.timeline) {
+            // Small timeout ensures element has become visible before measuring widths
+            setTimeout(() => window.timeline.updateTimeline(), 50);
+        }
+
+        // If Analysis tab became active, (re)load charts so they render correctly
+        if (tabId === 'tab-analysis') {
+            setTimeout(() => updateCharts(), 50);
+        }
+    });
+}
+
+// After definition of setupTabSwitching, ensure charts update if analysis tab pre-selected (unlikely but safe)
+$(document).ready(function(){
+    if ($('.nav-button.active').data('tab') === 'tab-analysis') {
+        updateCharts();
+    }
+});
 
 // User Profile Functions
 function loadProfile() {
@@ -1280,23 +1313,6 @@ function displayBalanceSheet(data) {
 function handleError(error) {
     console.error('Error:', error);
     alert('An error occurred. Please try again.');
-}
-
-function setupSidebarToggle() {
-    const sidebar = $('.sidebar');
-    const mainContent = $('.main-content');
-    const hideButton = $('.sidebar-header .toggle-icon');
-    const showButton = $('.show-sidebar-button');
-    
-    hideButton.on('click', function() {
-        sidebar.toggleClass('hidden');
-        mainContent.toggleClass('expanded');
-    });
-    
-    showButton.on('click', function() {
-        sidebar.toggleClass('hidden');
-        mainContent.toggleClass('expanded');
-    });
 }
 
 function updateCharts() {
