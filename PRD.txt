@@ -429,3 +429,55 @@ Future Considerations
 ---------------------
 • Invariant may change (e.g., "die with $X at age 100" *plug*).  Solver service will accept a strategy enum; PV remains default.
 • Optimisation across milestones may require multi-variable solvers; not in scope for v1.
+
+Target Sub-Scenario Anchor
+==========================
+
+Problem
+-------
+When comparing “what-if” sub-scenarios inside the **Scenario Table** the solver currently
+keeps each sub-scenario’s own age-100 Beginning Assets balance constant. This yields
+identical solved values when the goal parameter is `age_at_occurrence` (e.g. retirement
+age); every sub-scenario starts from its *own* baseline so their retirement ages line up.
+
+Solution
+--------
+Allow the user to **pick one sub-scenario per scenario as the *target***. Its
+age-100 Beginning Assets figure becomes the *anchor* for *all* sibling
+sub-scenarios while solving goal parameters. The target itself is never
+re-solved – it defines the benchmark.
+
+Data Model
+----------
+Table: `target_sub_scenarios`
+| column           | type    | notes                                      |
+|------------------|---------|--------------------------------------------|
+| id               | PK      |                                            |
+| scenario_id      | INT     | FK → scenarios.id, UNIQUE                  |
+| sub_scenario_id  | INT     | FK → sub_scenarios.id                      |
+| created_at       | TS      |                                            |
+| updated_at       | TS      |                                            |
+
+API
+----
+• **GET** `/api/target-sub-scenarios?scenario_id=1` → `{sub_scenario_id: 3}` or `{}`  
+• **POST** `/api/target-sub-scenarios` `{scenario_id: 1, sub_scenario_id: 3}` (upsert)  
+• **DELETE** `/api/target-sub-scenarios?scenario_id=1` clears the mapping
+
+Solver Workflow (v2)
+--------------------
+1.  Precompute baseline DCF projections (unchanged).
+2.  Lookup anchor BA per *scenario* using the target mapping.
+3.  Skip solving for the target sub-scenario itself – its baseline projection is taken as-is.
+4.  For all other sub-scenarios in the scenario run the goal solver with the **same anchor BA**.
+5.  If no target is defined, fall back to legacy per-sub-scenario anchors so behaviour is backward-compatible.
+
+Front-end
+---------
+A checkbox ("Target") next to the Sub-Scenario selector lets the user pick or clear the target. Behind the scenes it calls the API above and updates its indeterminate/checked state automatically.
+
+Edge Cases / Constraints
+------------------------
+• Only one target row per scenario enforced by DB UNIQUE(scenario_id).  
+• Deleting a sub-scenario must also delete its target mapping (ON DELETE CASCADE or manual).  
+• Changing the target invalidates previously solved values; users should click *Calculate Scenarios* to refresh (automatic trigger planned for future).

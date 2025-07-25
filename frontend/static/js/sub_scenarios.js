@@ -4,6 +4,8 @@ class SubScenarioManager {
         this.newButton = document.getElementById('newSubScenario');
         this.renameButton = document.getElementById('renameSubScenario');
         this.deleteButton = document.getElementById('deleteSubScenario');
+        // Checkbox used to mark the current sub-scenario as the target
+        this.targetCheckbox = document.getElementById('targetSubScenario');
 
         // Keep id in local storage per scenario for persistence
         this.parentScenarioSelect = document.getElementById('scenarioSelect');
@@ -17,12 +19,15 @@ class SubScenarioManager {
         this.newButton.addEventListener('click', () => this.createNewSubScenario());
 
         // When user selects another sub-scenario, reload milestones
-        this.subScenarioSelect.addEventListener('change', () => {
+        this.subScenarioSelect.addEventListener('change', async () => {
             const key = this.storageKeyForScenario();
             localStorage.setItem(key, this.subScenarioSelect.value);
             if (typeof loadMilestones === 'function') {
                 loadMilestones();
             }
+
+            // Update target checkbox state when changing selection
+            await this.refreshTargetCheckbox();
         });
 
         // When the parent scenario changes, we need to refresh available sub-scenarios
@@ -35,6 +40,9 @@ class SubScenarioManager {
 
         // When user clicks to delete a sub-scenario
         this.deleteButton.addEventListener('click', () => this.deleteCurrentSubScenario());
+
+        // When user toggles the "Target" checkbox
+        this.targetCheckbox.addEventListener('change', () => this.onTargetToggle());
     }
 
     storageKeyForScenario() {
@@ -87,12 +95,80 @@ class SubScenarioManager {
                 this.subScenarioSelect.value = defaultId || subScenarios[0].id;
             }
 
+            // After populating the dropdown, refresh the target checkbox state
+            await this.refreshTargetCheckbox();
+
             // Trigger milestone load whenever sub-scenarios refreshed
             if (typeof loadMilestones === 'function') {
                 loadMilestones();
             }
         } catch (err) {
             console.error('Error loading sub-scenarios', err);
+        }
+    }
+
+    /**
+     * Fetch the current target sub-scenario for the selected scenario and update
+     * the checkbox accordingly.
+     */
+    async refreshTargetCheckbox() {
+        const scenarioId = this.parentScenarioSelect.value;
+        if (!scenarioId) {
+            this.targetCheckbox.checked = false;
+            this.targetCheckbox.disabled = true;
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/api/target-sub-scenarios?scenario_id=${scenarioId}`);
+            if (!resp.ok) throw new Error('Failed to fetch target sub-scenario');
+            const data = await resp.json(); // expected { sub_scenario_id: <id> } or null
+
+            const currentSubId = this.subScenarioSelect.value;
+            this.targetCheckbox.checked = data && data.sub_scenario_id && data.sub_scenario_id.toString() === currentSubId.toString();
+            this.targetCheckbox.indeterminate = data && data.sub_scenario_id && data.sub_scenario_id.toString() !== currentSubId.toString();
+            this.targetCheckbox.disabled = false;
+        } catch (err) {
+            console.error('Error loading target sub-scenario', err);
+            this.targetCheckbox.checked = false;
+            this.targetCheckbox.disabled = true;
+        }
+    }
+
+    /** Handle user toggling of target checkbox */
+    async onTargetToggle() {
+        const scenarioId = this.parentScenarioSelect.value;
+        const subScenarioId = this.subScenarioSelect.value;
+        if (!scenarioId || !subScenarioId) {
+            alert('Select a scenario and sub-scenario first');
+            this.targetCheckbox.checked = false;
+            return;
+        }
+
+        try {
+            if (this.targetCheckbox.checked) {
+                // Mark as target
+                const resp = await fetch('/api/target-sub-scenarios', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ scenario_id: parseInt(scenarioId), sub_scenario_id: parseInt(subScenarioId) })
+                });
+                if (!resp.ok) throw new Error('Failed to set target');
+            } else {
+                // Remove target
+                const resp = await fetch(`/api/target-sub-scenarios?scenario_id=${scenarioId}`, { method: 'DELETE' });
+                if (!resp.ok) throw new Error('Failed to clear target');
+            }
+
+            // Refresh checkbox state to reflect any server-side enforcement (e.g., only one target)
+            await this.refreshTargetCheckbox();
+        } catch (err) {
+            console.error('Error updating target sub-scenario', err);
+            alert('Error updating target sub-scenario');
+            // Revert checkbox visual state on error
+            await this.refreshTargetCheckbox();
         }
     }
 

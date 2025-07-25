@@ -44,7 +44,7 @@ def init_db(app):
             net_worth,
             solved_dcf,
             solved_parameter_value,
-            scenario_parameter_value,
+            target_sub_scenario,
         )
 
         db.create_all()
@@ -160,7 +160,7 @@ def create_default_milestones():
         },
         {
             "name": "Retirement",
-            "age_at_occurrence": 70,  # fallback – real start is dynamic
+            "age_at_occurrence": 65,  # fallback – real start is dynamic
             "milestone_type": "Expense",
             "disbursement_type": "Fixed Duration",
             "amount": 60_000, #* ((1 + 0.02) ** 40),  # store FV value
