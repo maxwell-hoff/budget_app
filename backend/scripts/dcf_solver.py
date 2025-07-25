@@ -246,11 +246,10 @@ class DCFSolverRunner:
             scenario_id, sub_scenario_id = combo
 
             # Decide anchor BA -----------------------------------------
+            is_target_sub = scenario_to_target_sub.get(scenario_id) == sub_scenario_id
+
             if scenario_id in scenario_anchor_ba:
                 anchor_ba = scenario_anchor_ba[scenario_id]
-                # Skip solving for the target sub-scenario itself – it's the anchor
-                if scenario_to_target_sub.get(scenario_id) == sub_scenario_id:
-                    continue
             else:
                 # Fallback: use own baseline BA (legacy behaviour)
                 target_ba_record = combo_to_target_ba.get(combo)
@@ -265,6 +264,33 @@ class DCFSolverRunner:
                 continue
 
             for spv in combo_spvs:
+                # ---------------------------------------------------------
+                # Skip computation for the *target* sub-scenario when the
+                # scenario_value equals the default value already stored on
+                # the milestone (i.e., the baseline row).  All other
+                # scenario values should still be solved so the row appears
+                # in the Scenario Table.
+                # ---------------------------------------------------------
+
+                if is_target_sub:
+                    # Find the baseline value on the milestone itself
+                    baseline_ms = next((m for m in ms_list if m.id == spv.milestone_id), None)
+                    if baseline_ms is None:
+                        continue  # safety – should not happen
+
+                    baseline_val_raw = getattr(baseline_ms, spv.parameter)
+
+                    def _same(v1, v2):
+                        try:
+                            return abs(float(v1) - float(v2)) < 1e-9
+                        except (ValueError, TypeError):
+                            return str(v1) == str(v2)
+
+                    if _same(spv.value, baseline_val_raw):
+                        # Skip – this is the default scenario value for the
+                        # target sub-scenario.
+                        continue
+
                 for goal in combo_goals:
                     solver = DCFGoalSolver(ms_list, anchor_ba)
                     solved_val, solved_ms = solver.solve(goal, spv)
