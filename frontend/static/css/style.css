@@ -127,8 +127,9 @@ body {
     border-radius: 4px;
     border: 1px solid #404040;
     margin: 20px 0;
-    width: 100%; /* Changed from calc(100% - 170px) */
-    margin-left: 0; /* Changed from 170px */
+    /* reserve 100px on the left for labels */
+    margin-left: 150px;
+    width: calc(100% - 170px); /* account for left margin + right padding */
     overflow: visible;
     padding-bottom: 20px;
 }
@@ -165,21 +166,23 @@ body {
 #timeline-markers {
     position: absolute;
     top: 25px;
-    left: 20px;
+    left: 20px; /* start markers at beginning of timeline */
     right: 0;
     height: 100%;
-    width: calc(100% - 20px);
+    width: 100%;
     z-index: 1;
 }
 
 #timeline-labels {
     position: absolute;
     top: 0;
-    left: 20px;
+    left: 20px; /* position labels in reserved area */
     right: 0;
     height: 20px;
-    width: calc(100% - 20px);
-    z-index: 2;
+    width: 100px;
+    z-index: 150; /* Bring labels to front */
+    pointer-events: none;
+    text-align: right;
 }
 
 #timeline-milestones {
@@ -205,7 +208,7 @@ body {
     top: 0;
     transform: translate(-50%, 0);
     font-size: 0.8em;
-    color: #a0a0a0;
+    color: #e0e0e0; /* Ensure high contrast */
     z-index: 2;
 }
 
