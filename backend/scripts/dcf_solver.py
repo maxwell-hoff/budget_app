@@ -13,6 +13,7 @@ from backend.app.models.solved_parameter_value import SolvedParameterValue
 from backend.app.models.solved_dcf import SolvedDCF  # newly added
 from backend.app.models.dcf import DCF
 from backend.app.database import db  # Flask-SQLAlchemy instance
+from backend.app.models.target_sub_scenario import TargetSubScenario
 
 
 class DCFGoalSolver:
@@ -195,6 +196,21 @@ class DCFSolverRunner:
         milestones: List[Milestone] = data["milestones"]
         base_dcf_rows: List[DCF] = self.read_session.query(DCF).all()
 
+        # ------------------------------------------------------------------
+        #  Determine the anchor Beginning Assets per *scenario*.
+        #  We fetch the user-selected target sub-scenario mapping and look up
+        #  its BA at the maximum projection age (usually 100) in the *baseline*
+        #  DCF table.  If no mapping exists we fall back to the legacy behaviour
+        #  (each sub-scenario uses its own baseline as anchor).
+        # ------------------------------------------------------------------
+
+        # Map scenario_id → sub_scenario_id of chosen target
+        scenario_to_target_sub = {
+            row.scenario_id: row.sub_scenario_id for row in self.read_session.query(TargetSubScenario).all()
+        }
+
+        # Precompute BA for every baseline row (same loop as before but we now
+        # need both per-combo and per-scenario look-ups).
         # Map each (scenario, sub_scenario) pair to the *final* Beginning Assets value
         # of the baseline DCF projection.  We iterate over all baseline rows and keep
         # the entry with the highest age (i.e., the last year in the projection).
@@ -206,6 +222,13 @@ class DCFSolverRunner:
             # Keep the projection row with the highest age we have seen so far.
             if key not in combo_to_target_ba or row.age > combo_to_target_ba[key][0]:
                 combo_to_target_ba[key] = (row.age, row.beginning_assets)
+
+        # Build per-scenario anchor based on mapping (if any)
+        scenario_anchor_ba: Dict[int, float] = {}
+        for scen_id, sub_id in scenario_to_target_sub.items():
+            tup = combo_to_target_ba.get((scen_id, sub_id))
+            if tup:
+                scenario_anchor_ba[scen_id] = tup[1]
 
         # Map combo → milestones, goals, scenario params ----------------
         combo_ms: Dict[Tuple[int, int], List[Milestone]] = {}
@@ -221,12 +244,19 @@ class DCFSolverRunner:
 
         for combo, ms_list in combo_ms.items():
             scenario_id, sub_scenario_id = combo
-            target_ba_record = combo_to_target_ba.get(combo)
-            if target_ba_record is None:
-                continue  # baseline missing – skip
 
-            # Extract the Beginning Assets figure from the stored ``(age, BA)`` tuple
-            target_ba = target_ba_record[1]
+            # Decide anchor BA -----------------------------------------
+            if scenario_id in scenario_anchor_ba:
+                anchor_ba = scenario_anchor_ba[scenario_id]
+                # Skip solving for the target sub-scenario itself – it's the anchor
+                if scenario_to_target_sub.get(scenario_id) == sub_scenario_id:
+                    continue
+            else:
+                # Fallback: use own baseline BA (legacy behaviour)
+                target_ba_record = combo_to_target_ba.get(combo)
+                if target_ba_record is None:
+                    continue  # baseline missing – skip
+                anchor_ba = target_ba_record[1]
 
             combo_goals = [g for g in goals if g.milestone_id in {m.id for m in ms_list} and g.is_goal]
             combo_spvs = [spv for spv in spvs if spv.milestone_id in {m.id for m in ms_list}]
@@ -236,7 +266,7 @@ class DCFSolverRunner:
 
             for spv in combo_spvs:
                 for goal in combo_goals:
-                    solver = DCFGoalSolver(ms_list, target_ba)
+                    solver = DCFGoalSolver(ms_list, anchor_ba)
                     solved_val, solved_ms = solver.solve(goal, spv)
 
                     # Persist solved_param_value ----------------------

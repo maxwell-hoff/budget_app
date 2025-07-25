@@ -606,3 +606,59 @@ def get_scenario_parameter_values():
         mapping.setdefault(row.parameter, set()).add(row.value)
     mapping = {k: sorted(list(v), key=lambda x: (str(x))) for k, v in mapping.items()}
     return jsonify(mapping) 
+
+# -------------------------------------------------------------------------
+# Target Sub-Scenario (anchor) endpoints
+# -------------------------------------------------------------------------
+from ..models.target_sub_scenario import TargetSubScenario  # noqa: E402 – after Flask objects
+
+
+@api_bp.route('/target-sub-scenarios', methods=['GET'])
+def get_target_sub_scenario():
+    """Return the target sub-scenario for a given scenario (if any).
+
+    Query args:
+      scenario_id: required – ID of the scenario.
+    """
+    scenario_id = request.args.get('scenario_id', type=int)
+    if scenario_id is None:
+        return jsonify({'error': 'scenario_id query param required'}), 400
+
+    tgt = TargetSubScenario.query.filter_by(scenario_id=scenario_id).first()
+    if tgt is None:
+        return jsonify({})
+    return jsonify({'sub_scenario_id': tgt.sub_scenario_id})
+
+
+@api_bp.route('/target-sub-scenarios', methods=['POST'])
+def set_target_sub_scenario():
+    """Upsert the target sub-scenario for a scenario.
+
+    Body JSON: { "scenario_id": int, "sub_scenario_id": int }
+    """
+    data = request.get_json() or {}
+    scenario_id = data.get('scenario_id')
+    sub_scenario_id = data.get('sub_scenario_id')
+    if not scenario_id or not sub_scenario_id:
+        return jsonify({'error': 'scenario_id and sub_scenario_id required'}), 400
+
+    tgt = TargetSubScenario.query.filter_by(scenario_id=scenario_id).first()
+    if tgt is None:
+        tgt = TargetSubScenario(scenario_id=scenario_id, sub_scenario_id=sub_scenario_id)
+        db.session.add(tgt)
+    else:
+        tgt.sub_scenario_id = sub_scenario_id
+    db.session.commit()
+    return '', 204
+
+
+@api_bp.route('/target-sub-scenarios', methods=['DELETE'])
+def clear_target_sub_scenario():
+    """Remove the target sub-scenario mapping for a scenario."""
+    scenario_id = request.args.get('scenario_id', type=int)
+    if scenario_id is None:
+        return jsonify({'error': 'scenario_id query param required'}), 400
+
+    TargetSubScenario.query.filter_by(scenario_id=scenario_id).delete()
+    db.session.commit()
+    return '', 204 
