@@ -54,15 +54,21 @@ class SubScenarioManager {
             const response = await fetch(`/api/sub-scenarios?scenario_id=${scenarioId}`);
             const subScenarios = await response.json();
 
-            // Remove existing options and restore placeholder
-            this.subScenarioSelect.innerHTML = '<option value="">Select a sub-scenario...</option>';
+            // Clear existing options
+            this.subScenarioSelect.innerHTML = '';
 
             // Populate options
+            let defaultId = '';
             subScenarios.forEach(s => {
                 const option = document.createElement('option');
                 option.value = s.id;
                 option.textContent = s.name;
                 this.subScenarioSelect.appendChild(option);
+
+                // Remember id of "2 Kids" if present
+                if (s.name.toLowerCase() === '2 kids') {
+                    defaultId = s.id;
+                }
             });
 
             // Restore from local storage if available
@@ -77,8 +83,8 @@ class SubScenarioManager {
                 // Remove any stored selection for this scenario
                 localStorage.removeItem(this.storageKeyForScenario());
             } else if (!this.subScenarioSelect.value) {
-                // Default to first sub-scenario if available
-                this.subScenarioSelect.value = subScenarios[0].id;
+                // Default to "2 Kids" if exists, otherwise first sub-scenario
+                this.subScenarioSelect.value = defaultId || subScenarios[0].id;
             }
 
             // Trigger milestone load whenever sub-scenarios refreshed
