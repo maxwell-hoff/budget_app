@@ -223,12 +223,15 @@ class DCFSolverRunner:
             if key not in combo_to_target_ba or row.age > combo_to_target_ba[key][0]:
                 combo_to_target_ba[key] = (row.age, row.beginning_assets)
 
-        # Build per-scenario anchor based on mapping (if any)
+        # Build per-scenario anchor and derive a *global* anchor (first one wins)
         scenario_anchor_ba: Dict[int, float] = {}
+        global_anchor_ba: float | None = None
         for scen_id, sub_id in scenario_to_target_sub.items():
             tup = combo_to_target_ba.get((scen_id, sub_id))
             if tup:
                 scenario_anchor_ba[scen_id] = tup[1]
+                if global_anchor_ba is None:
+                    global_anchor_ba = tup[1]
 
         # Map combo → milestones, goals, scenario params ----------------
         combo_ms: Dict[Tuple[int, int], List[Milestone]] = {}
@@ -255,7 +258,7 @@ class DCFSolverRunner:
                 target_ba_record = combo_to_target_ba.get(combo)
                 if target_ba_record is None:
                     continue  # baseline missing – skip
-                anchor_ba = target_ba_record[1]
+                anchor_ba = global_anchor_ba if global_anchor_ba is not None else target_ba_record[1]
 
             combo_goals = [g for g in goals if g.milestone_id in {m.id for m in ms_list} and g.is_goal]
             combo_spvs = [spv for spv in spvs if spv.milestone_id in {m.id for m in ms_list}]
@@ -287,8 +290,21 @@ class DCFSolverRunner:
                             return str(v1) == str(v2)
 
                     if _same(spv.value, baseline_val_raw):
-                        # Skip – this is the default scenario value for the
-                        # target sub-scenario.
+                        # For the default value we don't run the solver but we still
+                        # record the *baseline* goal parameter value so the Scenario
+                        # Table shows a row for it.
+
+                        for goal in combo_goals:
+                            baseline_goal_val = getattr(baseline_ms, goal.parameter)
+                            solved_param_records.append({
+                                "milestone_id": goal.milestone_id,
+                                "scenario_id": scenario_id,
+                                "sub_scenario_id": sub_scenario_id,
+                                "goal_parameter": goal.parameter,
+                                "scenario_parameter": spv.parameter,
+                                "scenario_value": spv.value,
+                                "solved_value": baseline_goal_val,
+                            })
                         continue
 
                 for goal in combo_goals:
