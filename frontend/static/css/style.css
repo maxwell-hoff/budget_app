@@ -669,3 +669,23 @@ label {
     flex: 1;
     max-width: 300px;
 } 
+
+/* Scenario Table Dark Theme */
+#scenarioTableContainer table {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+#scenarioTableContainer th,
+#scenarioTableContainer td {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #404040 !important;
+}
+#scenarioTableContainer thead th {
+    background-color: #2d2d2d;
+    font-weight: 600;
+}
+#scenarioTableContainer tr:nth-child(even) td {
+    background-color: #242424;
+} 
