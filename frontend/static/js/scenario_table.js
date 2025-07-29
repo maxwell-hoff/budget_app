@@ -164,22 +164,31 @@
 
         // Attach click handler to body rows to update Net Worth chart
         tbody.addEventListener('click', (ev) => {
-            // Find the <tr> element that was clicked (could be a <td>)
+            const cell = ev.target.closest('td');
             const tr = ev.target.closest('tr');
-            if (!tr) return;
-            // Extract the first two cell values: Scenario and Sub-Scenario names
+            if (!tr || !cell) return;
+
+            // Extract scenario / sub-scenario
             const cells = tr.querySelectorAll('td');
             if (cells.length < 2) return;
             const scenarioName = cells[0].textContent.trim();
             const subScenarioName = cells[1].textContent.trim();
 
-            // Fetch net-worth line for that scenario and update the chart
-            fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}`)
+            // Detect if a parameter cell was clicked
+            const param = cell.dataset.param;
+            const value = cell.dataset.value;
+
+            let url = `/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}`;
+            if (param && value) {
+                url += `&scenario_parameter=${encodeURIComponent(param)}&scenario_value=${encodeURIComponent(value)}`;
+            }
+
+            fetch(url)
                 .then(r => r.json())
                 .then(lineData => {
                     if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                         window.netWorthChart.setLineData(lineData);
-                        // Persist this selection for future hover reverts
+                        // Persist this exact selection (including parameter filter) so hover-out reverts correctly
                         lastClickedLineData = lineData;
                     }
                 })
