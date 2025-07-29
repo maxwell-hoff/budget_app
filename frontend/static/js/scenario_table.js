@@ -10,6 +10,10 @@
     const dropdownId = 'goalDropdown';
     const containerId = 'scenarioTableContainer';
 
+    // Remember last *clicked* scenario's line so hover previews can temporarily
+    // override it and then revert on mouse leave.
+    let lastClickedLineData = null;
+
     function init() {
         const container = document.getElementById(containerId);
         if (!container) return; // section may be hidden/removed
@@ -131,6 +135,29 @@
                 });
             });
             tbody.appendChild(tr);
+
+            // -------------------------------------------------------------
+            // Hover preview: temporarily show this scenario's net-worth line
+            // -------------------------------------------------------------
+            const scenarioName = row.scenario;
+            const subScenarioName = row.sub_scenario;
+
+            tr.addEventListener('mouseenter', () => {
+                fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}`)
+                    .then(r => r.json())
+                    .then(lineData => {
+                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lineData);
+                        }
+                    })
+                    .catch(err => console.error('Error fetching hover preview line', err));
+            });
+
+            tr.addEventListener('mouseleave', () => {
+                if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                    window.netWorthChart.setLineData(lastClickedLineData);
+                }
+            });
         });
         table.appendChild(tbody);
         container.appendChild(table);
@@ -152,9 +179,18 @@
                 .then(lineData => {
                     if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                         window.netWorthChart.setLineData(lineData);
+                        // Persist this selection for future hover reverts
+                        lastClickedLineData = lineData;
                     }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
+        });
+
+        // Add mouseleave on entire table to revert when exiting the table altogether
+        table.addEventListener('mouseleave', () => {
+            if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                window.netWorthChart.setLineData(lastClickedLineData);
+            }
         });
     }
 
