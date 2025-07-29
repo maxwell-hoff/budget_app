@@ -1,208 +1,148 @@
+// NOTE: Rewritten to use D3.js for band + line visualisation
+// Dependencies: Make sure D3 v7+ is loaded before this script.
+
 class NetWorthChart {
     constructor() {
-        console.log('Initializing NetWorthChart');
-        this.chart = document.getElementById('net-worth-chart');
-        this.chartContent = document.getElementById('net-worth-chart-content');
-        this.chartBars = document.getElementById('net-worth-chart-bars');
-        this.chartXAxis = document.getElementById('net-worth-chart-x-axis');
-        this.chartYAxis = document.getElementById('net-worth-chart-y-axis');
-        
-        console.log('Chart elements:', {
-            chart: this.chart,
-            content: this.chartContent,
-            bars: this.chartBars,
-            xAxis: this.chartXAxis,
-            yAxis: this.chartYAxis
-        });
-        
-        this.verticalSpacing = 30;
-        this.padding = 20;
-        this.chartHeight = 150; // Half of the original 300px height
-        
-        // Create toggle button
-        this.toggleButton = document.createElement('button');
-        this.toggleButton.className = 'net-worth-toggle-button';
-        this.toggleButton.innerHTML = '<i class="fas fa-chevron-up toggle-icon"></i>';
-        this.toggleButton.addEventListener('click', () => this.toggleChart());
-        this.chart.appendChild(this.toggleButton);
-        
-        // Initialize chart state
-        this.isExpanded = true;
-    }
-
-    toggleChart() {
-        this.isExpanded = !this.isExpanded;
-        
-        if (this.isExpanded) {
-            // If expanding, refresh the page
-            window.location.reload();
-        } else {
-            // If collapsing, just update the UI
-            this.chart.classList.add('collapsed');
-            this.toggleButton.querySelector('.toggle-icon').classList.add('expanded');
-            this.chart.style.height = 'auto';
-        }
-    }
-
-    updateChart(netWorthData) {
-        console.log('Updating net worth chart with data:', netWorthData);
-        
-        // Clear existing content
-        this.chartBars.innerHTML = '';
-        this.chartXAxis.innerHTML = '';
-        this.chartYAxis.innerHTML = '';
-        
-        if (!netWorthData || netWorthData.length === 0) {
-            console.log('No net worth data, hiding chart content');
-            this.chartContent.style.display = 'none';
+        this.container = d3.select('#net-worth-chart');
+        if (this.container.empty()) {
+            console.error('NetWorthChart container not found');
             return;
         }
 
-        console.log('Showing chart content');
-        this.chartContent.style.display = this.isExpanded ? 'block' : 'none';
+        // Dimensions -------------------------------------------------------
+        this.margin = { top: 20, right: 20, bottom: 40, left: 60 };
+        this.width = this.container.node().clientWidth - this.margin.left - this.margin.right;
+        this.height = 300; // fixed height for now
 
-        // Find max and min values for scaling
-        const maxValue = Math.max(...netWorthData.map(d => d.net_worth));
-        const minValue = Math.min(...netWorthData.map(d => d.net_worth));
-        const maxAbsValue = Math.max(Math.abs(maxValue), Math.abs(minValue));
-        
-        console.log('Chart values:', { maxValue, minValue, maxAbsValue });
-        
-        // Create y-axis
-        this.createYAxis(maxAbsValue);
-        
-        // Create x-axis
-        this.createXAxis(netWorthData);
-        
-        // Create line
-        this.createLine(netWorthData, maxAbsValue);
-        
-        // Adjust chart height based on expanded state
-        if (this.isExpanded) {
-            this.chart.style.height = `${this.chartHeight}px`;
-        } else {
-            this.chart.style.height = 'auto';
-        }
+        // SVG setup --------------------------------------------------------
+        this.svg = this.container
+            .append('svg')
+            .attr('width', this.width + this.margin.left + this.margin.right)
+            .attr('height', this.height + this.margin.top + this.margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${this.margin.left},${this.margin.top})`);
+
+        // Scales -----------------------------------------------------------
+        this.xScale = d3.scaleLinear();
+        this.yScale = d3.scaleLinear();
+
+        // Axes -------------------------------------------------------------
+        this.xAxisGroup = this.svg.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${this.height})`);
+        this.yAxisGroup = this.svg.append('g').attr('class', 'y-axis');
+
+        // Area + line groups ----------------------------------------------
+        this.areaGroup = this.svg.append('g').attr('class', 'range-area');
+        this.lineGroup = this.svg.append('g').attr('class', 'scenario-line');
+
+        // Tooltip value display (reuse existing markup) --------------------
+        this.valueDisplay = this.container.select('.net-worth-total-value');
+
+        // Data holders -----------------------------------------------------
+        this.rangeData = [];
+        this.lineData = [];
     }
 
-    createYAxis(maxAbsValue) {
-        // Calculate interval for y-axis markers
-        let interval = 100000;
-        let numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1; // +1 for zero
-        
-        // Keep doubling the interval until we have 10 or fewer markers
-        while (numMarkers > 10) {
-            interval *= 2;
-            numMarkers = Math.ceil(maxAbsValue / interval) * 2 + 1;
-        }
-
-        // Round maxAbsValue up to nearest multiple of interval
-        const roundedMax = Math.ceil(maxAbsValue / interval) * interval;
-        
-        // Create y-axis line
-        const line = document.createElement('div');
-        line.className = 'y-axis-line';
-        this.chartYAxis.appendChild(line);
-        
-        // Create markers and labels
-        for (let value = -roundedMax; value <= roundedMax; value += interval) {
-            const position = this.chartHeight/2 - (value / roundedMax) * (this.chartHeight/2); // Half of chart height
-            
-            // Create marker
-            const marker = document.createElement('div');
-            marker.className = 'y-axis-marker';
-            marker.style.top = `${position}px`;
-            this.chartYAxis.appendChild(marker);
-            
-            // Create label
-            const label = document.createElement('div');
-            label.className = 'y-axis-label';
-            label.textContent = this.formatValue(value);
-            label.style.top = `${position}px`;
-            this.chartYAxis.appendChild(label);
-        }
+    setRangeData(rangeData) {
+        this.rangeData = rangeData || [];
+        this._render();
     }
 
-    createXAxis(netWorthData) {
-        // Create x-axis line
-        const line = document.createElement('div');
-        line.className = 'x-axis-line';
-        this.chartXAxis.appendChild(line);
-        
-        // Create markers and labels for each age
-        netWorthData.forEach((data, index) => {
-            const position = (index / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            
-            // Create marker
-            const marker = document.createElement('div');
-            marker.className = 'x-axis-marker';
-            marker.style.left = `${position}px`;
-            this.chartXAxis.appendChild(marker);
-            
-            // Only create label if age is divisible by 5
-            if (data.age % 5 === 0) {
-                const label = document.createElement('div');
-                label.className = 'x-axis-label';
-                label.textContent = data.age;
-                label.style.left = `${position}px`;
-                this.chartXAxis.appendChild(label);
+    setLineData(lineData) {
+        this.lineData = lineData || [];
+        this._render();
+    }
+
+    _render() {
+        // Refresh dimensions in case container resized after first load
+        const newW = this.container.node().clientWidth - this.margin.left - this.margin.right;
+        if (newW !== this.width && newW > 0) {
+            this.width = newW;
+            // Update SVG outer width
+            this.container.select('svg')
+                .attr('width', this.width + this.margin.left + this.margin.right);
+        }
+
+        if (!this.rangeData.length && !this.lineData.length) return;
+
+        // Combine data to compute domains ---------------------------------
+        const ages = [...new Set([
+            ...this.rangeData.map(d => d.age),
+            ...this.lineData.map(d => d.age),
+        ])];
+        if (!ages.length) return;
+
+        const xMin = d3.min(ages);
+        const xMax = d3.max(ages);
+
+        let yVals = [];
+        if (this.rangeData.length) {
+            yVals.push(d3.min(this.rangeData, d => d.min_net_worth));
+            yVals.push(d3.max(this.rangeData, d => d.max_net_worth));
+        }
+        if (this.lineData.length) {
+            yVals.push(d3.min(this.lineData, d => d.net_worth));
+            yVals.push(d3.max(this.lineData, d => d.net_worth));
+        }
+        const yMin = d3.min(yVals);
+        const yMax = d3.max(yVals);
+
+        this.xScale.domain([xMin, xMax]).range([0, this.width]);
+        this.yScale.domain([yMin, yMax]).range([this.height, 0]).nice();
+
+        // Render axes ------------------------------------------------------
+        const xAxis = d3.axisBottom(this.xScale).tickFormat(d => d).ticks(10);
+        const yAxis = d3.axisLeft(this.yScale).ticks(6).tickFormat(this._formatValue);
+
+        this.xAxisGroup.call(xAxis);
+        this.yAxisGroup.call(yAxis);
+
+        // Range area -------------------------------------------------------
+        if (this.rangeData.length) {
+            // Sort by age to ensure correct path
+            const sorted = [...this.rangeData].sort((a, b) => a.age - b.age);
+            const areaGenerator = d3.area()
+                .x(d => this.xScale(d.age))
+                .y0(d => this.yScale(d.min_net_worth))
+                .y1(d => this.yScale(d.max_net_worth));
+
+            const areaSelection = this.areaGroup.selectAll('path').data([sorted]);
+            areaSelection.join('path')
+                .attr('d', areaGenerator)
+                .attr('fill', '#b3d3f3')
+                .attr('opacity', 0.5);
+        }
+
+        // Scenario line ----------------------------------------------------
+        if (this.lineData.length) {
+            const sortedLine = [...this.lineData].sort((a, b) => a.age - b.age);
+            const lineGenerator = d3.line()
+                .x(d => this.xScale(d.age))
+                .y(d => this.yScale(d.net_worth));
+
+            const lineSel = this.lineGroup.selectAll('path').data([sortedLine]);
+            lineSel.join('path')
+                .attr('d', lineGenerator)
+                .attr('fill', 'none')
+                .attr('stroke', '#0d6efd')
+                .attr('stroke-width', 2);
+
+            // Update value display on latest age
+            const last = sortedLine[sortedLine.length - 1];
+            if (this.valueDisplay && last) {
+                this.valueDisplay.text(this._formatValue(last.net_worth));
             }
-        });
+        }
     }
 
-    createLine(netWorthData, maxAbsValue) {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.position = 'absolute';
-        svg.style.top = '0';
-        svg.style.left = '0';
-        
-        // Get the value display element
-        const valueDisplay = this.chart.querySelector('.net-worth-total-value');
-        
-        // Create line segments
-        for (let i = 0; i < netWorthData.length - 1; i++) {
-            const currentData = netWorthData[i];
-            const nextData = netWorthData[i + 1];
-            
-            const x1 = (i / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            const y1 = this.chartHeight/2 - (currentData.net_worth / maxAbsValue) * (this.chartHeight/2);
-            const x2 = ((i + 1) / (netWorthData.length - 1)) * (this.chart.offsetWidth - 2 * this.padding) + this.padding;
-            const y2 = this.chartHeight/2 - (nextData.net_worth / maxAbsValue) * (this.chartHeight/2);
-            
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', x1);
-            line.setAttribute('y1', y1);
-            line.setAttribute('x2', x2);
-            line.setAttribute('y2', y2);
-            line.setAttribute('stroke', currentData.net_worth >= 0 ? '#4CAF50' : '#f44336');
-            line.setAttribute('stroke-width', '2');
-            
-            // Add hover effect
-            line.addEventListener('mouseover', (e) => {
-                valueDisplay.textContent = `${this.formatValue(currentData.net_worth)} (Age ${currentData.age})`;
-                valueDisplay.className = `net-worth-total-value ${currentData.net_worth >= 0 ? 'positive' : 'negative'}`;
-            });
-            
-            svg.appendChild(line);
-        }
-        
-        this.chartBars.appendChild(svg);
-    }
-
-    formatValue(value) {
-        if (Math.abs(value) >= 1000000) {
-            return `$${(value / 1000000).toFixed(1)}M`;
-        } else if (Math.abs(value) >= 1000) {
-            return `$${(value / 1000).toFixed(1)}K`;
-        }
-        return `$${value.toFixed(0)}`;
+    _formatValue = (val) => {
+        const abs = Math.abs(val);
+        if (abs >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+        if (abs >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
+        return `$${val.toFixed(0)}`;
     }
 }
 
-// Initialize chart when the document is loaded
+// Global initialisation -----------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, creating NetWorthChart instance');
     window.netWorthChart = new NetWorthChart();
 }); 

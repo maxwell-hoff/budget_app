@@ -4,6 +4,11 @@ from ..services.net_worth_calculator import NetWorthCalculator
 from ..models.user import User
 from datetime import datetime
 from ..models.milestone import Milestone
+from ..models.solved_dcf import SolvedDCF
+from sqlalchemy import func
+from ..models.scenario import Scenario
+from ..models.sub_scenario import SubScenario
+from ..database import db
 
 net_worth_bp = Blueprint('net_worth', __name__)
 
@@ -78,3 +83,94 @@ def get_liquidity():
         })
     
     return jsonify(liquid_assets_values) 
+
+# ---------------------------------------------------------------------------
+#  NEW ENDPOINTS – scenario-level net-worth projections
+# ---------------------------------------------------------------------------
+
+@net_worth_bp.route('/api/net-worth-range', methods=['GET'])
+def get_net_worth_range():
+    """Return the min / max net-worth across *all* scenario combinations for every age.
+
+    Aggregates data from the `SolvedDCF` table instead of the summary
+    `NetWorthByAge` table so that every scenario/sub-scenario/parameter sweep is
+    included in the calculation.
+    """
+    # Use SQL aggregation to compute min/max net-worth per age directly in the DB
+    net_expr = (
+        (SolvedDCF.beginning_assets + SolvedDCF.assets_income)
+        - (SolvedDCF.beginning_liabilities + SolvedDCF.liabilities_expense)
+        + (SolvedDCF.salary - SolvedDCF.expenses)
+    )
+
+    rows = (
+        db.session
+        .query(
+            SolvedDCF.age.label('age'),
+            func.min(net_expr).label('min_net_worth'),
+            func.max(net_expr).label('max_net_worth'),
+        )
+        .group_by(SolvedDCF.age)
+        .order_by(SolvedDCF.age)
+        .all()
+    )
+
+    return jsonify([
+        {
+            'age': row.age,
+            'min_net_worth': row.min_net_worth,
+            'max_net_worth': row.max_net_worth,
+        }
+        for row in rows
+    ])
+
+
+@net_worth_bp.route('/api/net-worth-line', methods=['GET'])
+def get_net_worth_line():
+    """Return the net-worth projection line for a single scenario/sub-scenario.
+
+    Query params:
+        scenario (str): Scenario *name* (unique)
+        sub_scenario (str): Sub-scenario *name*
+    """
+    from flask import request  # local import to avoid circular issues
+
+    scenario_name = request.args.get('scenario')
+    sub_scenario_name = request.args.get('sub_scenario')
+
+    if not scenario_name or not sub_scenario_name:
+        return jsonify({'error': 'scenario and sub_scenario parameters required'}), 400
+
+    # Resolve names to internal IDs ----------------------------------------
+
+    scenario = Scenario.query.filter_by(name=scenario_name).first()
+    if not scenario:
+        return jsonify({'error': f'Scenario \"{scenario_name}\" not found'}), 404
+
+    sub_scenario = (
+        SubScenario.query
+        .filter_by(name=sub_scenario_name, scenario_id=scenario.id)
+        .first()
+    )
+    if not sub_scenario:
+        return jsonify({'error': f'Sub-scenario \"{sub_scenario_name}\" not found'}), 404
+
+    # Build expression (same as for range) ----------------------------------
+    net_expr = (
+        (SolvedDCF.beginning_assets + SolvedDCF.assets_income)
+        - (SolvedDCF.beginning_liabilities + SolvedDCF.liabilities_expense)
+        + (SolvedDCF.salary - SolvedDCF.expenses)
+    )
+
+    rows = (
+        db.session
+        .query(SolvedDCF.age.label('age'), net_expr.label('net_worth'))
+        .filter(
+            SolvedDCF.scenario_id == scenario.id,
+            SolvedDCF.sub_scenario_id == sub_scenario.id,
+        )
+        .order_by(SolvedDCF.age)
+        .all()
+    )
+
+    return jsonify([{ 'age': r.age, 'net_worth': r.net_worth } for r in rows]) 

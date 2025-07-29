@@ -134,6 +134,28 @@
         });
         table.appendChild(tbody);
         container.appendChild(table);
+
+        // Attach click handler to body rows to update Net Worth chart
+        tbody.addEventListener('click', (ev) => {
+            // Find the <tr> element that was clicked (could be a <td>)
+            const tr = ev.target.closest('tr');
+            if (!tr) return;
+            // Extract the first two cell values: Scenario and Sub-Scenario names
+            const cells = tr.querySelectorAll('td');
+            if (cells.length < 2) return;
+            const scenarioName = cells[0].textContent.trim();
+            const subScenarioName = cells[1].textContent.trim();
+
+            // Fetch net-worth line for that scenario and update the chart
+            fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}`)
+                .then(r => r.json())
+                .then(lineData => {
+                    if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                        window.netWorthChart.setLineData(lineData);
+                    }
+                })
+                .catch(err => console.error('Error fetching scenario net-worth line', err));
+        });
     }
 
     // Auto-init on DOMContentLoaded
