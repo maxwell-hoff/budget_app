@@ -9,14 +9,32 @@ class NetWorthChart {
             return;
         }
 
+        // Prefer inner content wrapper to control sizing
+        this.content = this.container.select('#net-worth-chart-content');
+        if (this.content.empty()) {
+            this.content = this.container; // fallback
+        } else {
+            // Ensure the content wrapper is visible
+            this.content.style('display', 'block');
+        }
+
+        // Use the bars container (same element original chart used) for absolute positioning
+        this.barsContainer = this.container.select('#net-worth-chart-bars');
+        if (this.barsContainer.empty()) {
+            this.barsContainer = this.content; // fallback
+        }
+
         // Dimensions -------------------------------------------------------
         this.margin = { top: 20, right: 20, bottom: 40, left: 60 };
         this.width = this.container.node().clientWidth - this.margin.left - this.margin.right;
         this.height = 300; // fixed height for now
 
         // SVG setup --------------------------------------------------------
-        this.svg = this.container
+        this.svg = this.barsContainer
             .append('svg')
+            .style('position','absolute')
+            .style('top',0)
+            .style('left',0)
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom)
             .append('g')
@@ -58,7 +76,7 @@ class NetWorthChart {
         if (newW !== this.width && newW > 0) {
             this.width = newW;
             // Update SVG outer width
-            this.container.select('svg')
+            this.barsContainer.select('svg')
                 .attr('width', this.width + this.margin.left + this.margin.right);
         }
 

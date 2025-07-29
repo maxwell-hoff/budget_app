@@ -134,30 +134,41 @@ def get_net_worth_line():
         sub_scenario (str): Sub-scenario *name*
         scenario_parameter (str, optional)
         scenario_value (str, optional)
+        scenario_id (int, optional)
+        sub_scenario_id (int, optional)
     """
     from flask import request  # local import to avoid circular issues
 
     scenario_name = request.args.get('scenario')
     sub_scenario_name = request.args.get('sub_scenario')
+    # Name or ID params ----------------------------------------------------
+    scenario_id = request.args.get('scenario_id', type=int)
+    sub_scenario_id = request.args.get('sub_scenario_id', type=int)
+
     param_filter = request.args.get('scenario_parameter')
     value_filter = request.args.get('scenario_value')
 
-    if not scenario_name or not sub_scenario_name:
-        return jsonify({'error': 'scenario and sub_scenario parameters required'}), 400
+    # Resolve scenario & sub IDs ------------------------------------------
+    if scenario_id and sub_scenario_id:
+        scenario = Scenario.query.get(scenario_id)
+        sub_scenario = SubScenario.query.get(sub_scenario_id)
+        if not scenario or not sub_scenario:
+            return jsonify({'error': 'Scenario or sub-scenario ID not found'}), 404
+    else:
+        if not scenario_name or not sub_scenario_name:
+            return jsonify({'error': 'scenario/sub_scenario (or ids) required'}), 400
 
-    # Resolve names to internal IDs ----------------------------------------
+        scenario = Scenario.query.filter_by(name=scenario_name).first()
+        if not scenario:
+            return jsonify({'error': f'Scenario "{scenario_name}" not found'}), 404
 
-    scenario = Scenario.query.filter_by(name=scenario_name).first()
-    if not scenario:
-        return jsonify({'error': f'Scenario \"{scenario_name}\" not found'}), 404
-
-    sub_scenario = (
-        SubScenario.query
-        .filter_by(name=sub_scenario_name, scenario_id=scenario.id)
-        .first()
-    )
-    if not sub_scenario:
-        return jsonify({'error': f'Sub-scenario \"{sub_scenario_name}\" not found'}), 404
+        sub_scenario = (
+            SubScenario.query
+            .filter_by(name=sub_scenario_name, scenario_id=scenario.id)
+            .first()
+        )
+        if not sub_scenario:
+            return jsonify({'error': f'Sub-scenario "{sub_scenario_name}" not found'}), 404
 
     # Build expression (same as for range) ----------------------------------
     net_expr = (

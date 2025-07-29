@@ -13,6 +13,8 @@
     // Remember last *clicked* scenario's line so hover previews can temporarily
     // override it and then revert on mouse leave.
     let lastClickedLineData = null;
+    // Make accessible to other scripts (e.g., updateCharts default load)
+    window.lastClickedLineData = null;
 
     function init() {
         const container = document.getElementById(containerId);
@@ -150,8 +152,9 @@
                             .catch(err => console.error('Error fetching param preview line', err));
                     });
                     td.addEventListener('mouseleave', () => {
-                        if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
-                            window.netWorthChart.setLineData(lastClickedLineData);
+                        const revertLine = lastClickedLineData || window.lastClickedLineData;
+                        if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(revertLine);
                         }
                     });
                     tr.appendChild(td);
@@ -190,6 +193,7 @@
                         window.netWorthChart.setLineData(lineData);
                         // Persist this exact selection (including parameter filter) so hover-out reverts correctly
                         lastClickedLineData = lineData;
+                        window.lastClickedLineData = lineData;
                     }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
@@ -197,8 +201,9 @@
 
         // Add mouseleave on entire table to revert when exiting the table altogether
         table.addEventListener('mouseleave', () => {
-            if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
-                window.netWorthChart.setLineData(lastClickedLineData);
+            const revertLine = lastClickedLineData || window.lastClickedLineData;
+            if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                window.netWorthChart.setLineData(revertLine);
             }
         });
     }

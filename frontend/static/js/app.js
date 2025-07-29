@@ -1329,6 +1329,21 @@ function updateCharts() {
                 window.netWorthChart.setRangeData(rangeData);
             }
 
+            // Load default line (scenario_id=1, sub_scenario_id=1) only once per page load
+            if (!window._defaultLineLoaded) {
+                fetch('/api/net-worth-line?scenario_id=1&sub_scenario_id=1')
+                    .then(r=>r.json())
+                    .then(lineData => {
+                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lineData);
+                        }
+                        // Expose for scenario_table preview reverts
+                        window.lastClickedLineData = lineData;
+                        window._defaultLineLoaded = true;
+                    })
+                    .catch(err => console.error('Error fetching default net worth line', err));
+            }
+
             // If the range is empty, fall back to a simple line from /api/net-worth
             if ((!rangeData || rangeData.length === 0) && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                 fetch('/api/net-worth')
