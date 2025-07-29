@@ -1321,19 +1321,48 @@ function handleError(error) {
 
 function updateCharts() {
     // Update net worth chart
-    fetch('/api/net-worth')
+    fetch('/api/net-worth-range')
         .then(response => response.json())
-        .then(netWorthData => {
-            console.log('Net worth data:', netWorthData);
-            if (window.netWorthChart) {
-                console.log('Updating net worth chart with data');
-                window.netWorthChart.updateChart(netWorthData);
-            } else {
-                console.error('Net worth chart not initialized');
+        .then(rangeData => {
+            console.log('Net worth range:', rangeData);
+            if (window.netWorthChart && typeof window.netWorthChart.setRangeData === 'function') {
+                window.netWorthChart.setRangeData(rangeData);
+            }
+
+            // Load default line (scenario_id=1, sub_scenario_id=1) only once per page load
+            if (!window._defaultLineLoaded) {
+                fetch('/api/net-worth-line?scenario_id=1&sub_scenario_id=1')
+                    .then(r=>r.json())
+                    .then(lineData => {
+                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lineData);
+                        }
+                        // Expose for scenario_table preview reverts
+                        window.lastClickedLineData = lineData;
+                        window._defaultLineLoaded = true;
+                    })
+                    .catch(err => console.error('Error fetching default net worth line', err));
+            }
+
+            // If the range is empty, fall back to a simple line from /api/net-worth
+            if ((!rangeData || rangeData.length === 0) && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                fetch('/api/net-worth')
+                    .then(r => r.json())
+                    .then(lineData => window.netWorthChart.setLineData(lineData))
+                    .catch(err => console.error('Error fetching fallback net worth line:', err));
             }
         })
         .catch(error => {
-            console.error('Error fetching net worth data:', error);
+            console.error('Error fetching net worth range:', error);
+            // Fallback straight away on error
+            fetch('/api/net-worth')
+                .then(r => r.json())
+                .then(lineData => {
+                    if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                        window.netWorthChart.setLineData(lineData);
+                    }
+                })
+                .catch(err2 => console.error('Error fetching fallback net worth line:', err2));
         });
 
     // Fetch liquidity data
