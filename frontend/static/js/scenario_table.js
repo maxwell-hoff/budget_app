@@ -127,37 +127,37 @@
         grouped.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${row.scenario}</td><td>${row.sub_scenario}</td><td>${row.milestone}</td>`;
+            const scenarioName = row.scenario;
+            const subScenarioName = row.sub_scenario;
+
             paramOrder.forEach(p=>{
                 const vals=paramValues[p];
                 vals.forEach(v=>{
                     const solved = (row.data[p] && row.data[p][v]!==undefined)? Number(row.data[p][v]).toLocaleString():'';
-                    tr.innerHTML+=`<td>${solved}</td>`;
+                    const td = document.createElement('td');
+                    td.textContent = solved;
+                    td.dataset.param = p;
+                    td.dataset.value = v;
+                    // Hover preview for parameter cell
+                    td.addEventListener('mouseenter', () => {
+                        fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}&scenario_parameter=${encodeURIComponent(p)}&scenario_value=${encodeURIComponent(v)}`)
+                            .then(r => r.json())
+                            .then(lineData => {
+                                if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                                    window.netWorthChart.setLineData(lineData);
+                                }
+                            })
+                            .catch(err => console.error('Error fetching param preview line', err));
+                    });
+                    td.addEventListener('mouseleave', () => {
+                        if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lastClickedLineData);
+                        }
+                    });
+                    tr.appendChild(td);
                 });
             });
             tbody.appendChild(tr);
-
-            // -------------------------------------------------------------
-            // Hover preview: temporarily show this scenario's net-worth line
-            // -------------------------------------------------------------
-            const scenarioName = row.scenario;
-            const subScenarioName = row.sub_scenario;
-
-            tr.addEventListener('mouseenter', () => {
-                fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}`)
-                    .then(r => r.json())
-                    .then(lineData => {
-                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
-                            window.netWorthChart.setLineData(lineData);
-                        }
-                    })
-                    .catch(err => console.error('Error fetching hover preview line', err));
-            });
-
-            tr.addEventListener('mouseleave', () => {
-                if (lastClickedLineData && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
-                    window.netWorthChart.setLineData(lastClickedLineData);
-                }
-            });
         });
         table.appendChild(tbody);
         container.appendChild(table);

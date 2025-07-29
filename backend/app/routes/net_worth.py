@@ -132,11 +132,15 @@ def get_net_worth_line():
     Query params:
         scenario (str): Scenario *name* (unique)
         sub_scenario (str): Sub-scenario *name*
+        scenario_parameter (str, optional)
+        scenario_value (str, optional)
     """
     from flask import request  # local import to avoid circular issues
 
     scenario_name = request.args.get('scenario')
     sub_scenario_name = request.args.get('sub_scenario')
+    param_filter = request.args.get('scenario_parameter')
+    value_filter = request.args.get('scenario_value')
 
     if not scenario_name or not sub_scenario_name:
         return jsonify({'error': 'scenario and sub_scenario parameters required'}), 400
@@ -168,6 +172,12 @@ def get_net_worth_line():
         .filter(
             SolvedDCF.scenario_id == scenario.id,
             SolvedDCF.sub_scenario_id == sub_scenario.id,
+            *(
+                [SolvedDCF.scenario_parameter == param_filter] if param_filter else []
+            ),
+            *(
+                [SolvedDCF.scenario_value == value_filter] if value_filter else []
+            ),
         )
         .order_by(SolvedDCF.age)
         .all()
