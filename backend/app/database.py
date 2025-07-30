@@ -45,6 +45,7 @@ def init_db(app):
             solved_dcf,
             solved_parameter_value,
             target_sub_scenario,
+            monte_carlo_dcf,
         )
 
         db.create_all()
