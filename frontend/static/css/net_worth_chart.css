@@ -135,6 +135,23 @@
     color: #a0a0a0;
 }
 
+/* Zoom buttons */
+#net-worth-chart .net-worth-zoom-button {
+    position: absolute;
+    top: -50px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: #e0e0e0;
+}
+#net-worth-chart .net-worth-zoom-button.zoom-in {
+    right: 50px;
+}
+#net-worth-chart .net-worth-zoom-button.zoom-out {
+    right: 20px;
+}
+
 /* Add container styles to match other charts */
 .chart-container {
     background-color: #1e1e1e;
