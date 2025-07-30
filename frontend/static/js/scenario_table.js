@@ -18,6 +18,7 @@
 
     // Track which table cell is currently highlighted (represents the line on the chart)
     let highlightedCell = null;
+    let lastClickedCell = null;
 
     function setHighlightedCell(cell) {
         if (highlightedCell === cell) return;
@@ -152,6 +153,7 @@
                     td.dataset.value = v;
                     // Hover preview for parameter cell
                     td.addEventListener('mouseenter', () => {
+                        setHighlightedCell(td);
                         fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}&scenario_parameter=${encodeURIComponent(p)}&scenario_value=${encodeURIComponent(v)}`)
                             .then(r => r.json())
                             .then(lineData => {
@@ -162,6 +164,7 @@
                             .catch(err => console.error('Error fetching param preview line', err));
                     });
                     td.addEventListener('mouseleave', () => {
+                        if (lastClickedCell) setHighlightedCell(lastClickedCell);
                         const revertLine = lastClickedLineData || window.lastClickedLineData;
                         if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                             window.netWorthChart.setLineData(revertLine);
@@ -190,7 +193,10 @@
                 const firstTr = tbody.querySelector('tr');
                 if (firstTr) {
                     const targetCell = Array.from(firstTr.querySelectorAll('td')).find(td => td.dataset.param === firstParam && td.dataset.value === firstValue);
-                    if (targetCell) setHighlightedCell(targetCell);
+                    if (targetCell) {
+                        setHighlightedCell(targetCell);
+                        lastClickedCell = targetCell;
+                    }
                 }
 
                 const url = `/api/net-worth-line?scenario=${encodeURIComponent(firstRow.scenario)}&sub_scenario=${encodeURIComponent(firstRow.sub_scenario)}&scenario_parameter=${encodeURIComponent(firstParam)}&scenario_value=${encodeURIComponent(firstValue)}`;
@@ -240,6 +246,7 @@
                     // Highlight the clicked cell if it is a parameter/value cell
                     if (param && value) {
                         setHighlightedCell(cell);
+                        lastClickedCell = cell;
                     }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
@@ -247,6 +254,7 @@
 
         // Add mouseleave on entire table to revert when exiting the table altogether
         table.addEventListener('mouseleave', () => {
+            if (lastClickedCell) setHighlightedCell(lastClickedCell);
             const revertLine = lastClickedLineData || window.lastClickedLineData;
             if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                 window.netWorthChart.setLineData(revertLine);
