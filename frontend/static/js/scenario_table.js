@@ -165,6 +165,30 @@
         table.appendChild(tbody);
         container.appendChild(table);
 
+        // NEW: Automatically load a default parameter/value line for the first
+        //      scenario/sub-scenario in the table so that the Net-Worth chart
+        //      starts with a *specific* series instead of an aggregate.
+        if (!window.lastClickedLineData && grouped.length && paramOrder.length) {
+            // Find the first row that actually contains data for the first parameter.
+            const firstRow = grouped[0];
+            const firstParam = paramOrder[0];
+            const firstValList = paramValues[firstParam] || [];
+            if (firstValList.length) {
+                const firstValue = firstValList[0];
+                const url = `/api/net-worth-line?scenario=${encodeURIComponent(firstRow.scenario)}&sub_scenario=${encodeURIComponent(firstRow.sub_scenario)}&scenario_parameter=${encodeURIComponent(firstParam)}&scenario_value=${encodeURIComponent(firstValue)}`;
+                fetch(url)
+                    .then(r => r.json())
+                    .then(lineData => {
+                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lineData);
+                            // Persist so hover previews can revert to this default
+                            window.lastClickedLineData = lineData;
+                        }
+                    })
+                    .catch(err => console.error('Error fetching default parameter line', err));
+            }
+        }
+
         // Attach click handler to body rows to update Net Worth chart
         tbody.addEventListener('click', (ev) => {
             const cell = ev.target.closest('td');
