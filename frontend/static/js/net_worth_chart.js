@@ -27,7 +27,7 @@ class NetWorthChart {
         // Dimensions -------------------------------------------------------
         this.margin = { top: 20, right: 20, bottom: 40, left: 60 };
         this.width = this.container.node().clientWidth - this.margin.left - this.margin.right;
-        this.height = 300; // fixed height for now
+        this.height = 250; // fixed height for now
 
         // SVG setup --------------------------------------------------------
         this.svg = this.barsContainer
