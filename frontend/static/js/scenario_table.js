@@ -160,6 +160,15 @@
                                 if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                                     window.netWorthChart.setLineData(lineData);
                                 }
+                                // Fetch Monte Carlo band
+                                fetch(`/api/net-worth-mc-range?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}&scenario_parameter=${encodeURIComponent(p)}&scenario_value=${encodeURIComponent(v)}`)
+                                    .then(r=>r.json())
+                                    .then(rangeData=>{
+                                        if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
+                                            window.netWorthChart.setMcRangeData(rangeData);
+                                        }
+                                    })
+                                    .catch(err=>console.error('Error fetching MC range',err));
                             })
                             .catch(err => console.error('Error fetching param preview line', err));
                     });
@@ -168,6 +177,9 @@
                         const revertLine = lastClickedLineData || window.lastClickedLineData;
                         if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                             window.netWorthChart.setLineData(revertLine);
+                        }
+                        if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
+                            window.netWorthChart.setMcRangeData([]);
                         }
                     });
                     tr.appendChild(td);
@@ -243,6 +255,15 @@
                         lastClickedLineData = lineData;
                         window.lastClickedLineData = lineData;
                     }
+                    // Fetch Monte Carlo band for clicked selection
+                    fetch(`${url.replace('net-worth-line','net-worth-mc-range')}`)
+                        .then(r=>r.json())
+                        .then(rangeData=>{
+                            if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
+                                window.netWorthChart.setMcRangeData(rangeData);
+                            }
+                        })
+                        .catch(err=>console.error('Error fetching MC range',err));
                     // Highlight the clicked cell if it is a parameter/value cell
                     if (param && value) {
                         setHighlightedCell(cell);

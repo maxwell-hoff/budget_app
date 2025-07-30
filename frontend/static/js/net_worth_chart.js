@@ -50,6 +50,8 @@ class NetWorthChart {
 
         // Area + line groups ----------------------------------------------
         this.areaGroup = this.svg.append('g').attr('class', 'range-area');
+        // Monte Carlo band (drawn on top so colour stands out)
+        this.mcAreaGroup = this.svg.append('g').attr('class', 'mc-range-area');
         this.lineGroup = this.svg.append('g').attr('class', 'scenario-line');
 
         // Tooltip value display (reuse existing markup) --------------------
@@ -78,11 +80,17 @@ class NetWorthChart {
 
         // Data holders -----------------------------------------------------
         this.rangeData = [];
+        this.mcRangeData = [];
         this.lineData = [];
     }
 
     setRangeData(rangeData) {
         this.rangeData = rangeData || [];
+        this._render();
+    }
+
+    setMcRangeData(mcRangeData) {
+        this.mcRangeData = mcRangeData || [];
         this._render();
     }
 
@@ -101,12 +109,13 @@ class NetWorthChart {
                 .attr('width', this.width + this.margin.left + this.margin.right);
         }
 
-        if (!this.rangeData.length && !this.lineData.length) return;
+        if (!this.rangeData.length && !this.mcRangeData.length && !this.lineData.length) return;
 
         // Combine data to compute domains ---------------------------------
         const ages = [...new Set([
             ...this.rangeData.map(d => d.age),
             ...this.lineData.map(d => d.age),
+            ...this.mcRangeData.map(d => d.age),
         ])];
         if (!ages.length) return;
 
@@ -117,6 +126,10 @@ class NetWorthChart {
         if (this.rangeData.length) {
             yVals.push(d3.min(this.rangeData, d => d.min_net_worth));
             yVals.push(d3.max(this.rangeData, d => d.max_net_worth));
+        }
+        if (this.mcRangeData.length) {
+            yVals.push(d3.min(this.mcRangeData, d => d.min_net_worth));
+            yVals.push(d3.max(this.mcRangeData, d => d.max_net_worth));
         }
         if (this.lineData.length) {
             yVals.push(d3.min(this.lineData, d => d.net_worth));
@@ -157,6 +170,21 @@ class NetWorthChart {
             areaSelection.join('path')
                 .attr('d', areaGenerator)
                 .attr('fill', '#b3d3f3')
+                .attr('opacity', 0.5);
+        }
+
+        // Monte Carlo range -------------------------------------------------
+        if (this.mcRangeData.length) {
+            const sortedMc = [...this.mcRangeData].sort((a, b) => a.age - b.age);
+            const mcArea = d3.area()
+                .x(d => this.xScale(d.age))
+                .y0(d => this.yScale(d.min_net_worth))
+                .y1(d => this.yScale(d.max_net_worth));
+
+            const mcSel = this.mcAreaGroup.selectAll('path').data([sortedMc]);
+            mcSel.join('path')
+                .attr('d', mcArea)
+                .attr('fill', '#ffcc99')
                 .attr('opacity', 0.5);
         }
 
