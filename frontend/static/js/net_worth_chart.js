@@ -27,7 +27,7 @@ class NetWorthChart {
         // Dimensions -------------------------------------------------------
         this.margin = { top: 20, right: 20, bottom: 40, left: 60 };
         this.width = this.container.node().clientWidth - this.margin.left - this.margin.right;
-        this.height = 300; // fixed height for now
+        this.height = 250; // fixed height for now
 
         // SVG setup --------------------------------------------------------
         this.svg = this.barsContainer
@@ -54,6 +54,27 @@ class NetWorthChart {
 
         // Tooltip value display (reuse existing markup) --------------------
         this.valueDisplay = this.container.select('.net-worth-total-value');
+
+        // Zoom factor ------------------------------------------------------
+        this.zoomFactor = 1; // 1 = default scale
+
+        // Hook up zoom buttons -------------------------------------------
+        const zoomInBtn = this.container.select('.net-worth-zoom-button.zoom-in');
+        const zoomOutBtn = this.container.select('.net-worth-zoom-button.zoom-out');
+        if (!zoomInBtn.empty()) {
+            zoomInBtn.on('click', () => {
+                // Halve the domain span (zoom in)
+                this.zoomFactor = Math.max(this.zoomFactor / 2, 0.125);
+                this._render();
+            });
+        }
+        if (!zoomOutBtn.empty()) {
+            zoomOutBtn.on('click', () => {
+                // Double the domain span (zoom out) but cap at 1 (original)
+                this.zoomFactor = Math.min(this.zoomFactor * 2, 1);
+                this._render();
+            });
+        }
 
         // Data holders -----------------------------------------------------
         this.rangeData = [];
@@ -101,8 +122,17 @@ class NetWorthChart {
             yVals.push(d3.min(this.lineData, d => d.net_worth));
             yVals.push(d3.max(this.lineData, d => d.net_worth));
         }
-        const yMin = d3.min(yVals);
-        const yMax = d3.max(yVals);
+        const rawYMin = d3.min(yVals);
+        const rawYMax = d3.max(yVals);
+
+        let yMin = rawYMin;
+        let yMax = rawYMax;
+        if (this.zoomFactor !== 1) {
+            const mid = (rawYMin + rawYMax) / 2;
+            const halfSpan = (rawYMax - rawYMin) * this.zoomFactor / 2;
+            yMin = mid - halfSpan;
+            yMax = mid + halfSpan;
+        }
 
         this.xScale.domain([xMin, xMax]).range([0, this.width]);
         this.yScale.domain([yMin, yMax]).range([this.height, 0]).nice();

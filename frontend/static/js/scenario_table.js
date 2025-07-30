@@ -16,6 +16,17 @@
     // Make accessible to other scripts (e.g., updateCharts default load)
     window.lastClickedLineData = null;
 
+    // Track which table cell is currently highlighted (represents the line on the chart)
+    let highlightedCell = null;
+    let lastClickedCell = null;
+
+    function setHighlightedCell(cell) {
+        if (highlightedCell === cell) return;
+        if (highlightedCell) highlightedCell.classList.remove('selected-cell');
+        highlightedCell = cell;
+        if (highlightedCell) highlightedCell.classList.add('selected-cell');
+    }
+
     function init() {
         const container = document.getElementById(containerId);
         if (!container) return; // section may be hidden/removed
@@ -142,6 +153,7 @@
                     td.dataset.value = v;
                     // Hover preview for parameter cell
                     td.addEventListener('mouseenter', () => {
+                        setHighlightedCell(td);
                         fetch(`/api/net-worth-line?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}&scenario_parameter=${encodeURIComponent(p)}&scenario_value=${encodeURIComponent(v)}`)
                             .then(r => r.json())
                             .then(lineData => {
@@ -152,6 +164,7 @@
                             .catch(err => console.error('Error fetching param preview line', err));
                     });
                     td.addEventListener('mouseleave', () => {
+                        if (lastClickedCell) setHighlightedCell(lastClickedCell);
                         const revertLine = lastClickedLineData || window.lastClickedLineData;
                         if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                             window.netWorthChart.setLineData(revertLine);
@@ -164,6 +177,41 @@
         });
         table.appendChild(tbody);
         container.appendChild(table);
+
+        // NEW: Automatically load a default parameter/value line for the first
+        //      scenario/sub-scenario in the table so that the Net-Worth chart
+        //      starts with a *specific* series instead of an aggregate.
+        if (!window.lastClickedLineData && grouped.length && paramOrder.length) {
+            // Find the first row that actually contains data for the first parameter.
+            const firstRow = grouped[0];
+            const firstParam = paramOrder[0];
+            const firstValList = paramValues[firstParam] || [];
+            if (firstValList.length) {
+                const firstValue = firstValList[0];
+
+                // Highlight the cell in the table (row 0 for that param/value)
+                const firstTr = tbody.querySelector('tr');
+                if (firstTr) {
+                    const targetCell = Array.from(firstTr.querySelectorAll('td')).find(td => td.dataset.param === firstParam && td.dataset.value === firstValue);
+                    if (targetCell) {
+                        setHighlightedCell(targetCell);
+                        lastClickedCell = targetCell;
+                    }
+                }
+
+                const url = `/api/net-worth-line?scenario=${encodeURIComponent(firstRow.scenario)}&sub_scenario=${encodeURIComponent(firstRow.sub_scenario)}&scenario_parameter=${encodeURIComponent(firstParam)}&scenario_value=${encodeURIComponent(firstValue)}`;
+                fetch(url)
+                    .then(r => r.json())
+                    .then(lineData => {
+                        if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
+                            window.netWorthChart.setLineData(lineData);
+                            // Persist so hover previews can revert to this default
+                            window.lastClickedLineData = lineData;
+                        }
+                    })
+                    .catch(err => console.error('Error fetching default parameter line', err));
+            }
+        }
 
         // Attach click handler to body rows to update Net Worth chart
         tbody.addEventListener('click', (ev) => {
@@ -195,12 +243,18 @@
                         lastClickedLineData = lineData;
                         window.lastClickedLineData = lineData;
                     }
+                    // Highlight the clicked cell if it is a parameter/value cell
+                    if (param && value) {
+                        setHighlightedCell(cell);
+                        lastClickedCell = cell;
+                    }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
         });
 
         // Add mouseleave on entire table to revert when exiting the table altogether
         table.addEventListener('mouseleave', () => {
+            if (lastClickedCell) setHighlightedCell(lastClickedCell);
             const revertLine = lastClickedLineData || window.lastClickedLineData;
             if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                 window.netWorthChart.setLineData(revertLine);
