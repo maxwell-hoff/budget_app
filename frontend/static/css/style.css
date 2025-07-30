@@ -689,3 +689,11 @@ label {
 #scenarioTableContainer tr:nth-child(even) td {
     background-color: #242424;
 } 
+
+/* ----------------------------------------------------------------------- */
+/* Highlight for the currently-displayed series in the Scenario Table       */
+/* ----------------------------------------------------------------------- */
+#scenarioTableContainer td.selected-cell {
+    background-color: #4a9eff !important; /* blue highlight */
+    color: #ffffff !important;
+} 

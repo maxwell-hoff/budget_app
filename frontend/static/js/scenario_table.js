@@ -16,6 +16,16 @@
     // Make accessible to other scripts (e.g., updateCharts default load)
     window.lastClickedLineData = null;
 
+    // Track which table cell is currently highlighted (represents the line on the chart)
+    let highlightedCell = null;
+
+    function setHighlightedCell(cell) {
+        if (highlightedCell === cell) return;
+        if (highlightedCell) highlightedCell.classList.remove('selected-cell');
+        highlightedCell = cell;
+        if (highlightedCell) highlightedCell.classList.add('selected-cell');
+    }
+
     function init() {
         const container = document.getElementById(containerId);
         if (!container) return; // section may be hidden/removed
@@ -175,6 +185,14 @@
             const firstValList = paramValues[firstParam] || [];
             if (firstValList.length) {
                 const firstValue = firstValList[0];
+
+                // Highlight the cell in the table (row 0 for that param/value)
+                const firstTr = tbody.querySelector('tr');
+                if (firstTr) {
+                    const targetCell = Array.from(firstTr.querySelectorAll('td')).find(td => td.dataset.param === firstParam && td.dataset.value === firstValue);
+                    if (targetCell) setHighlightedCell(targetCell);
+                }
+
                 const url = `/api/net-worth-line?scenario=${encodeURIComponent(firstRow.scenario)}&sub_scenario=${encodeURIComponent(firstRow.sub_scenario)}&scenario_parameter=${encodeURIComponent(firstParam)}&scenario_value=${encodeURIComponent(firstValue)}`;
                 fetch(url)
                     .then(r => r.json())
@@ -218,6 +236,10 @@
                         // Persist this exact selection (including parameter filter) so hover-out reverts correctly
                         lastClickedLineData = lineData;
                         window.lastClickedLineData = lineData;
+                    }
+                    // Highlight the clicked cell if it is a parameter/value cell
+                    if (param && value) {
+                        setHighlightedCell(cell);
                     }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
