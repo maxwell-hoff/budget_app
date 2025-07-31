@@ -66,6 +66,13 @@ function setupTabSwitching() {
         $('.tab-pane').removeClass('active');
         $('#' + tabId).addClass('active');
 
+        // Toggle scenario bar visibility (only visible on Milestones tab)
+        if (tabId === 'tab-milestones') {
+            $('.scenario-bar').show();
+        } else {
+            $('.scenario-bar').hide();
+        }
+
         // If Milestones tab became active, refresh timeline so it renders with correct width
         if (tabId === 'tab-milestones' && window.timeline) {
             // Small timeout ensures element has become visible before measuring widths

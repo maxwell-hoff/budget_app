@@ -11,6 +11,8 @@ body {
 /* Side Navigation Bar Styles */
 .side-navbar {
     width: 60px; /* Narrow sidebar */
+    min-width: 60px; /* Prevent shrinking when content grows */
+    flex-shrink: 0;
     background-color: #1e1e1e;
     padding: 10px 0; /* Top-bottom padding only */
     display: flex;
@@ -696,4 +698,17 @@ label {
 #scenarioTableContainer td.selected-cell {
     background-color: #4a9eff !important; /* blue highlight */
     color: #ffffff !important;
+}
+
+/* Home Section Styles */
+.home-section {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.home-description {
+    white-space: pre-line; /* respect newlines */
+    font-size: 1rem;
+    line-height: 1.6;
 } 
