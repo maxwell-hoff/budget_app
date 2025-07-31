@@ -1,4 +1,5 @@
 import pygame
+import pygame.gfxdraw  # for anti-aliased circles
 import random
 import math
 
@@ -9,63 +10,148 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Financial Model Simulation")
 clock = pygame.time.Clock()
 
-# Node settings
-# How many generations to keep visible at once
-GENERATION_LIMIT = 3
+# Simulation parameters (tweak these to taste)
+# --------------------------------------------------
+# How many generations (node count) to keep visible at once
+GENERATION_LIMIT = 10
+
+# Number of vertical sections for directionality
+SECTION_COUNT = 10  # default sections left→right
+
+# Current movement direction across sections: +1 (right) or -1 (left)
+direction = 1
+
+# New children spawned per parent (inclusive range)
+MIN_CHILDREN = 1
+MAX_CHILDREN = 10
+
+# Random positional jitter around the parent
+JITTER_DISTANCE = 80
+
+# A safety margin so nodes don't hug the screen edges (pixels)
+SCREEN_MARGIN = 60
+
+# Visual settings
 NODE_RADIUS = 6
 NODE_COLOR = (50, 200, 255)
 LINE_COLOR = (100, 100, 100)
 BG_COLOR = (10, 10, 10)
 
+# Animation speed (0-1 growth increment per frame)
+GROWTH_SPEED = .2  # speed at which lines grow toward children
+
+# Attempts to find a non-overlapping child placement
+MAX_POSITION_TRIES = 25
+
 # Node structure
 class Node:
-    def __init__(self, position, parents=[]):
+    def __init__(self, position, section, parents=None):
+        if parents is None:
+            parents = []
         self.position = position
         self.parents = parents
         self.age = 0
+        self.section = section
+        # Growth progress for animation (0 = just born, 1 = fully grown)
+        self.growth = 0.0
 
 nodes = []
 
+# Geometry helpers -----------------------------------------------------------
+
+def _ccw(A, B, C):
+    """Return True if the points A, B, C are listed in a counter-clockwise order."""
+    return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+
+def segments_intersect(p1, p2, p3, p4):
+    """Return True if line segment p1→p2 intersects p3→p4 (excluding shared endpoints)."""
+    # Fast rejection: If any shared endpoint, we don't consider it an intersection.
+    if p1 == p3 or p1 == p4 or p2 == p3 or p2 == p4:
+        return False
+    return _ccw(p1, p3, p4) != _ccw(p2, p3, p4) and _ccw(p1, p2, p3) != _ccw(p1, p2, p4)
+
 # First root node
-root_node = Node(position=(width // 2, height // 2))
+root_node = Node(position=(width // 2, height // 2), section=0)
+root_node.growth = 1.0  # root is already visible
 nodes.append(root_node)
 
-def add_node():
-    """Create a new node that branches from the *most recently* created node
-    and prune any nodes that are older than ``GENERATION_LIMIT`` generations.
+def add_children():
+    """Spawn children moving section-by-section across the screen.
+    Children always appear in the adjacent section in the current
+    direction (left→right or right→left). Direction flips when the
+    outermost section is reached. Old nodes are pruned to
+    ``GENERATION_LIMIT``.
     """
+    global direction
+
     if not nodes:
         return
 
-    # Always branch from the node that was most recently created
     parent = nodes[-1]
+    parent_section = parent.section
 
-    # Jitter new node's position slightly around its parent while keeping it on-screen
-    jitter = lambda: random.uniform(-80, 80)
-    new_x = max(0, min(width, parent.position[0] + jitter()))
-    new_y = max(0, min(height, parent.position[1] + jitter()))
-    new_node = Node(position=(new_x, new_y), parents=[parent])
+    # Determine next section index, reversing at the edges
+    next_section = parent_section + direction
+    if next_section < 0 or next_section >= SECTION_COUNT:
+        direction *= -1
+        next_section = parent_section + direction
 
-    # Append the new node to the end of the list (newest generation)
-    nodes.append(new_node)
+    num_children = random.randint(MIN_CHILDREN, MAX_CHILDREN)
+    section_width = width / SECTION_COUNT
+    left_bound = next_section * section_width
+    right_bound = left_bound + section_width
 
-    # Remove nodes older than our generation limit
+    for _ in range(num_children):
+        for _ in range(MAX_POSITION_TRIES):
+            new_x = random.uniform(max(left_bound + SCREEN_MARGIN, left_bound),
+                                   min(right_bound - SCREEN_MARGIN, right_bound))
+            new_y = random.uniform(SCREEN_MARGIN, height - SCREEN_MARGIN)
+            candidate_pos = (new_x, new_y)
+
+            # Ensure the new edge does not intersect existing ones
+            intersects = False
+            for n in nodes:
+                for p in n.parents:
+                    if p not in nodes or p == parent:
+                        continue
+                    if segments_intersect(parent.position, candidate_pos, p.position, n.position):
+                        intersects = True
+                        break
+                if intersects:
+                    break
+            if not intersects:
+                break  # found valid location
+
+        child = Node(position=candidate_pos, section=next_section, parents=[parent])
+        nodes.append(child)
+
+    # Prune oldest nodes so list doesn't grow unbounded
     while len(nodes) > GENERATION_LIMIT:
         nodes.pop(0)
 
 def draw():
     screen.fill(BG_COLOR)
 
-    # Draw connections first
+    # Update growth animation state
+    for node in nodes:
+        if node.growth < 1.0:
+            node.growth = min(1.0, node.growth + GROWTH_SPEED)
+
+    # Draw connections first (animated)
     for node in nodes:
         for parent in node.parents:
-            # Only draw a connection if the parent is still visible on screen
             if parent in nodes:
-                pygame.draw.line(screen, LINE_COLOR, node.position, parent.position, 1)
+                # Interpolate endpoint based on growth progress
+                end_x = parent.position[0] + (node.position[0] - parent.position[0]) * node.growth
+                end_y = parent.position[1] + (node.position[1] - parent.position[1]) * node.growth
+                pygame.draw.line(screen, LINE_COLOR, parent.position, (end_x, end_y), 1)
 
-    # Draw nodes on top
+    # Draw nodes on top once their connecting line is fully grown
     for node in nodes:
-        pygame.draw.circle(screen, NODE_COLOR, (int(node.position[0]), int(node.position[1])), NODE_RADIUS)
+        if node.growth >= 1.0:
+            x, y = int(node.position[0]), int(node.position[1])
+            pygame.gfxdraw.filled_circle(screen, x, y, NODE_RADIUS, NODE_COLOR)
+            pygame.gfxdraw.aacircle(screen, x, y, NODE_RADIUS, NODE_COLOR)
 
 running = True
 frame_count = 0
@@ -78,9 +164,9 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # Add a node every 15 frames
+    # Spawn children every 15 frames
     if frame_count % 15 == 0:
-        add_node()
+        add_children()
 
     draw()
     pygame.display.flip()
