@@ -5,7 +5,7 @@ import math
 
 # Initialize Pygame
 pygame.init()
-width, height = 800, 600
+width, height = 800, 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Financial Model Simulation")
 clock = pygame.time.Clock()
@@ -33,8 +33,11 @@ SCREEN_MARGIN = 60
 
 # Visual settings
 NODE_RADIUS = 6
-NODE_COLOR = (50, 200, 255)
-LINE_COLOR = (100, 100, 100)
+# Color parameters
+NODE_OUTER_COLOR = (50, 200, 255)   # outline / border color of node
+NODE_INNER_COLOR = (0, 0, 0)        # fill color (default black)
+INNER_FILL_PERCENT = 0.6            # 0→hollow, 1→solid
+LINE_COLOR = (100, 100, 100)        # edge color
 BG_COLOR = (10, 10, 10)
 
 # Animation speed (0-1 growth increment per frame)
@@ -154,8 +157,14 @@ def draw():
     for node in nodes:
         if node.growth >= 1.0:
             x, y = int(node.position[0]), int(node.position[1])
-            pygame.gfxdraw.filled_circle(screen, x, y, NODE_RADIUS, NODE_COLOR)
-            pygame.gfxdraw.aacircle(screen, x, y, NODE_RADIUS, NODE_COLOR)
+                        # Outer circle (anti-aliased)
+            pygame.gfxdraw.aacircle(screen, x, y, NODE_RADIUS, NODE_OUTER_COLOR)
+            pygame.gfxdraw.filled_circle(screen, x, y, NODE_RADIUS, NODE_OUTER_COLOR)
+
+            # Inner fill (allows hollow appearance)
+            inner_r = int(NODE_RADIUS * INNER_FILL_PERCENT)
+            if inner_r > 0:
+                pygame.gfxdraw.filled_circle(screen, x, y, inner_r, NODE_INNER_COLOR)
 
 running = True
 frame_count = 0
