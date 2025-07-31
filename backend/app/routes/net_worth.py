@@ -194,4 +194,82 @@ def get_net_worth_line():
         .all()
     )
 
-    return jsonify([{ 'age': r.age, 'net_worth': r.net_worth } for r in rows]) 
+    return jsonify([{ 'age': r.age, 'net_worth': r.net_worth } for r in rows])
+
+# ---------------------------------------------------------------------------
+#  Monte Carlo range endpoint ------------------------------------------------
+# ---------------------------------------------------------------------------
+from backend.app.models.monte_carlo_dcf import MonteCarloDCF
+
+@net_worth_bp.route('/api/net-worth-mc-range', methods=['GET'])
+def get_mc_net_worth_range():
+    """Return min/max net-worth values from Monte Carlo best/worst paths.
+
+    Accepts the same query parameters as /api/net-worth-line
+    (scenario/sub_scenario identifiers plus optional scenario_parameter/value).
+    """
+    from flask import request
+    scenario_name = request.args.get('scenario')
+    sub_scenario_name = request.args.get('sub_scenario')
+    scenario_id = request.args.get('scenario_id', type=int)
+    sub_scenario_id = request.args.get('sub_scenario_id', type=int)
+    param_filter = request.args.get('scenario_parameter')
+    value_filter = request.args.get('scenario_value')
+
+    # Resolve scenario/sub IDs identical to line endpoint ------------------
+    if scenario_id and sub_scenario_id:
+        scenario = Scenario.query.get(scenario_id)
+        sub_scenario = SubScenario.query.get(sub_scenario_id)
+        if not scenario or not sub_scenario:
+            return jsonify({'error': 'Scenario or sub-scenario ID not found'}), 404
+    else:
+        if not scenario_name or not sub_scenario_name:
+            return jsonify({'error': 'scenario/sub_scenario (or ids) required'}), 400
+        scenario = Scenario.query.filter_by(name=scenario_name).first()
+        if not scenario:
+            return jsonify({'error': f'Scenario "{scenario_name}" not found'}), 404
+        sub_scenario = (
+            SubScenario.query
+            .filter_by(name=sub_scenario_name, scenario_id=scenario.id)
+            .first()
+        )
+        if not sub_scenario:
+            return jsonify({'error': f'Sub-scenario "{sub_scenario_name}" not found'}), 404
+
+    # Build net-worth expression -----------------------------------------
+    net_expr = (
+        (MonteCarloDCF.beginning_assets + MonteCarloDCF.assets_income)
+        - (MonteCarloDCF.beginning_liabilities + MonteCarloDCF.liabilities_expense)
+        + (MonteCarloDCF.salary - MonteCarloDCF.expenses)
+    )
+
+    # Query both result_types and pivot in Python so we always have aligned ages
+    rows = (
+        db.session
+        .query(
+            MonteCarloDCF.age.label('age'),
+            MonteCarloDCF.result_type.label('result_type'),
+            net_expr.label('net_worth'),
+        )
+        .filter(
+            MonteCarloDCF.scenario_id == scenario.id,
+            MonteCarloDCF.sub_scenario_id == sub_scenario.id,
+            *([MonteCarloDCF.scenario_parameter == param_filter] if param_filter else []),
+            *([MonteCarloDCF.scenario_value == value_filter] if value_filter else []),
+        )
+        .order_by(MonteCarloDCF.age)
+        .all()
+    )
+
+    data_by_age = {}
+    for r in rows:
+        d = data_by_age.setdefault(r.age, {'age': r.age, 'min_net_worth': None, 'max_net_worth': None})
+        if r.result_type == 'min':
+            d['min_net_worth'] = r.net_worth
+        elif r.result_type == 'max':
+            d['max_net_worth'] = r.net_worth
+
+    # Keep only ages that have both min & max values available
+    result = [d for d in data_by_age.values() if d['min_net_worth'] is not None and d['max_net_worth'] is not None]
+    result.sort(key=lambda x: x['age'])
+    return jsonify(result)

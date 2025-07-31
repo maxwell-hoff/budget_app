@@ -22,10 +22,14 @@
                 }
 
                 // 2a. Run the full DCF projection so the `dcf` table gets refreshed.
-                //     We intentionally send an *empty* JSON body – the back-end will
-                //     interpret this as a request to *only* run the iterator without
-                //     returning traditional PV results.
                 await fetch('/api/calculate-dcf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                // 2b. Trigger Monte Carlo simulation (uses server defaults: 1000 iterations).
+                await fetch('/api/run-monte-carlo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})

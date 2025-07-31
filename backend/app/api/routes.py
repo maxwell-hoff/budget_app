@@ -424,7 +424,24 @@ def calculate_dcf():
         results.append({'milestone_id': milestone['id'], 'present_value': pv})
 
     # Combine both outputs
-    return jsonify({'message': 'DCF projections recalculated for all scenarios.', 'present_values': results})
+        return jsonify({'message': 'DCF projections recalculated for all scenarios.', 'present_values': results})
+
+@api_bp.route('/run-monte-carlo', methods=['POST'])
+def run_monte_carlo():
+    """Trigger Monte Carlo simulation for all scenario combinations.
+
+    This runs the *backend.scripts.dcf_monte_carlo.MonteCarloSimulator* inside
+    the Flask app context so the results are persisted to the DB and can be
+    fetched immediately by front-end charts.
+    """
+    from backend.scripts.dcf_monte_carlo import MonteCarloSimulator  # lazy import
+    data = request.get_json(silent=True) or {}
+    iterations = data.get('iterations', 1000)
+    sigma = data.get('sigma')
+    debug = data.get('debug', False)
+
+    MonteCarloSimulator(iterations=iterations, sigma=sigma, debug=debug).run()
+    return jsonify({'message': f'Monte Carlo simulation finished ({iterations} iterations per parameter).'})
 
 @api_bp.route('/parse-statement', methods=['POST'])
 def parse_statement():

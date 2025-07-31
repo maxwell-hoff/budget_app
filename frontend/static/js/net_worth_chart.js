@@ -50,24 +50,49 @@ class NetWorthChart {
 
         // Area + line groups ----------------------------------------------
         this.areaGroup = this.svg.append('g').attr('class', 'range-area');
+        // Monte Carlo band (drawn on top so colour stands out)
+        this.mcAreaGroup = this.svg.append('g').attr('class', 'mc-range-area');
         this.lineGroup = this.svg.append('g').attr('class', 'scenario-line');
+
+        // ------------------------------------------------------------------
+        //  State for panning (vertical translation)
+        // ------------------------------------------------------------------
+        this.panOffset = 0; // additive offset in y-value units
 
         // Tooltip value display (reuse existing markup) --------------------
         this.valueDisplay = this.container.select('.net-worth-total-value');
 
         // Zoom factor ------------------------------------------------------
         this.zoomFactor = 1; // 1 = default scale
+        this.minZoomFactor = 1/128; // allow up to 7 successive zoom-in clicks
 
         // Hook up zoom buttons -------------------------------------------
         const zoomInBtn = this.container.select('.net-worth-zoom-button.zoom-in');
         const zoomOutBtn = this.container.select('.net-worth-zoom-button.zoom-out');
+        const panUpBtn = this.container.select('.net-worth-pan-button.pan-up');
+        const panDownBtn = this.container.select('.net-worth-pan-button.pan-down');
         if (!zoomInBtn.empty()) {
             zoomInBtn.on('click', () => {
                 // Halve the domain span (zoom in)
-                this.zoomFactor = Math.max(this.zoomFactor / 2, 0.125);
+                this.zoomFactor = Math.max(this.zoomFactor / 2, this.minZoomFactor);
                 this._render();
             });
         }
+        if (!panUpBtn.empty()) {
+            panUpBtn.on('click', () => {
+                const span = this.yScale.domain()[1] - this.yScale.domain()[0];
+                this.panOffset += span / 2;
+                this._render();
+            });
+        }
+        if (!panDownBtn.empty()) {
+            panDownBtn.on('click', () => {
+                const span = this.yScale.domain()[1] - this.yScale.domain()[0];
+                this.panOffset -= span / 2;
+                this._render();
+            });
+        }
+
         if (!zoomOutBtn.empty()) {
             zoomOutBtn.on('click', () => {
                 // Double the domain span (zoom out) but cap at 1 (original)
@@ -78,11 +103,17 @@ class NetWorthChart {
 
         // Data holders -----------------------------------------------------
         this.rangeData = [];
+        this.mcRangeData = [];
         this.lineData = [];
     }
 
     setRangeData(rangeData) {
         this.rangeData = rangeData || [];
+        this._render();
+    }
+
+    setMcRangeData(mcRangeData) {
+        this.mcRangeData = mcRangeData || [];
         this._render();
     }
 
@@ -101,12 +132,13 @@ class NetWorthChart {
                 .attr('width', this.width + this.margin.left + this.margin.right);
         }
 
-        if (!this.rangeData.length && !this.lineData.length) return;
+        if (!this.rangeData.length && !this.mcRangeData.length && !this.lineData.length) return;
 
         // Combine data to compute domains ---------------------------------
         const ages = [...new Set([
             ...this.rangeData.map(d => d.age),
             ...this.lineData.map(d => d.age),
+            ...this.mcRangeData.map(d => d.age),
         ])];
         if (!ages.length) return;
 
@@ -117,6 +149,10 @@ class NetWorthChart {
         if (this.rangeData.length) {
             yVals.push(d3.min(this.rangeData, d => d.min_net_worth));
             yVals.push(d3.max(this.rangeData, d => d.max_net_worth));
+        }
+        if (this.mcRangeData.length) {
+            yVals.push(d3.min(this.mcRangeData, d => d.min_net_worth));
+            yVals.push(d3.max(this.mcRangeData, d => d.max_net_worth));
         }
         if (this.lineData.length) {
             yVals.push(d3.min(this.lineData, d => d.net_worth));
@@ -135,6 +171,10 @@ class NetWorthChart {
         }
 
         this.xScale.domain([xMin, xMax]).range([0, this.width]);
+        // Apply vertical panning offset ----------------------------------
+        yMin += this.panOffset;
+        yMax += this.panOffset;
+
         this.yScale.domain([yMin, yMax]).range([this.height, 0]).nice();
 
         // Render axes ------------------------------------------------------
@@ -157,6 +197,21 @@ class NetWorthChart {
             areaSelection.join('path')
                 .attr('d', areaGenerator)
                 .attr('fill', '#b3d3f3')
+                .attr('opacity', 0.5);
+        }
+
+        // Monte Carlo range -------------------------------------------------
+        if (this.mcRangeData.length) {
+            const sortedMc = [...this.mcRangeData].sort((a, b) => a.age - b.age);
+            const mcArea = d3.area()
+                .x(d => this.xScale(d.age))
+                .y0(d => this.yScale(d.min_net_worth))
+                .y1(d => this.yScale(d.max_net_worth));
+
+            const mcSel = this.mcAreaGroup.selectAll('path').data([sortedMc]);
+            mcSel.join('path')
+                .attr('d', mcArea)
+                .attr('fill', '#ffcc99')
                 .attr('opacity', 0.5);
         }
 

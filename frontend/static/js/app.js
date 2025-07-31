@@ -1337,6 +1337,16 @@ function updateCharts() {
                         if (window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                             window.netWorthChart.setLineData(lineData);
                         }
+                        // Load Monte Carlo band for default selection
+                        fetch('/api/net-worth-mc-range?scenario_id=1&sub_scenario_id=1')
+                            .then(r=>r.json())
+                            .then(rangeData=>{
+                                if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
+                                    window.netWorthChart.setMcRangeData(rangeData);
+                                }
+                                window.lastClickedMcRangeData = rangeData;
+                            })
+                            .catch(err=>console.error('Error fetching default MC range',err));
                         // Expose for scenario_table preview reverts
                         window.lastClickedLineData = lineData;
                         window._defaultLineLoaded = true;
