@@ -15,7 +15,10 @@
 <body>
     <!-- The new side navigation bar -->
     <div class="side-navbar">
-        <button class="nav-button active" data-bs-toggle="tooltip" data-bs-placement="right" title="Profile & Accounts" data-tab="tab-profile">
+        <button class="nav-button active" data-bs-toggle="tooltip" data-bs-placement="right" title="Home" data-tab="tab-home">
+            <i class="fas fa-home"></i>
+        </button>
+        <button class="nav-button" data-bs-toggle="tooltip" data-bs-placement="right" title="Profile & Accounts" data-tab="tab-profile">
             <i class="fas fa-user-circle"></i>
         </button>
         <button class="nav-button" data-bs-toggle="tooltip" data-bs-placement="right" title="Milestones" data-tab="tab-milestones">
@@ -53,8 +56,25 @@
         <!-- The content that switches with tabs -->
         <div class="content-area">
 
+            <!-- Tab 0: Home -->
+            <div id="tab-home" class="tab-pane active">
+                <div class="home-section text-center py-5">
+                    <div class="home-logo-placeholder mb-4">
+                        <!-- Add your logo image below -->
+                        <!-- Example: <img src="/static/images/logo.png" alt="Tradeoffs Logo" class="home-logo"> -->
+                    </div>
+
+                    <h1 class="mb-4">Welcome to Tradeoffs</h1>
+
+                    <p class="home-description">
+                        Use Tradeoffs to explore your financial future. Create scenarios, set milestones, and visualize your net worth over time.
+                        Customize your journey and make informed decisions with ease.
+                    </p>
+                </div>
+            </div>
+
             <!-- Tab 1: Profile -->
-            <div id="tab-profile" class="tab-pane active">
+            <div id="tab-profile" class="tab-pane">
                 <div class="profile-section">
                     <div id="profileForm">
                         <h3>User Profile</h3>
