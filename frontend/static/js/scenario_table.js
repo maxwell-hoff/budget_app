@@ -13,6 +13,7 @@
     // Remember last *clicked* scenario's line so hover previews can temporarily
     // override it and then revert on mouse leave.
     let lastClickedLineData = null;
+    let lastClickedMcRangeData = null;
     // Make accessible to other scripts (e.g., updateCharts default load)
     window.lastClickedLineData = null;
 
@@ -178,8 +179,9 @@
                         if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                             window.netWorthChart.setLineData(revertLine);
                         }
-                        if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
-                            window.netWorthChart.setMcRangeData([]);
+                        const revertMc = lastClickedMcRangeData || window.lastClickedMcRangeData;
+                        if (revertMc && window.netWorthChart && typeof window.netWorthChart.setMcRangeData === 'function') {
+                            window.netWorthChart.setMcRangeData(revertMc);
                         }
                     });
                     tr.appendChild(td);
@@ -262,6 +264,9 @@
                             if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
                                 window.netWorthChart.setMcRangeData(rangeData);
                             }
+                            // Persist selection
+                            lastClickedMcRangeData = rangeData;
+                            window.lastClickedMcRangeData = rangeData;
                         })
                         .catch(err=>console.error('Error fetching MC range',err));
                     // Highlight the clicked cell if it is a parameter/value cell
@@ -279,6 +284,10 @@
             const revertLine = lastClickedLineData || window.lastClickedLineData;
             if (revertLine && window.netWorthChart && typeof window.netWorthChart.setLineData === 'function') {
                 window.netWorthChart.setLineData(revertLine);
+            }
+            const revertMc = lastClickedMcRangeData || window.lastClickedMcRangeData;
+            if (revertMc && window.netWorthChart && typeof window.netWorthChart.setMcRangeData === 'function') {
+                window.netWorthChart.setMcRangeData(revertMc);
             }
         });
     }

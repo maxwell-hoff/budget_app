@@ -1344,6 +1344,7 @@ function updateCharts() {
                                 if(window.netWorthChart && typeof window.netWorthChart.setMcRangeData==='function'){
                                     window.netWorthChart.setMcRangeData(rangeData);
                                 }
+                                window.lastClickedMcRangeData = rangeData;
                             })
                             .catch(err=>console.error('Error fetching default MC range',err));
                         // Expose for scenario_table preview reverts
