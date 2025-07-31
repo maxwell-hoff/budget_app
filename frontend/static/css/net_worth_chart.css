@@ -135,8 +135,9 @@
     color: #a0a0a0;
 }
 
-/* Zoom buttons */
-#net-worth-chart .net-worth-zoom-button {
+/* Zoom & pan buttons (shared styles) */
+#net-worth-chart .net-worth-zoom-button,
+#net-worth-chart .net-worth-pan-button {
     position: absolute;
     top: -50px;
     background: none;
@@ -145,6 +146,10 @@
     padding: 5px;
     color: #e0e0e0;
 }
+
+/* Pan button positions (left of zoom) */
+#net-worth-chart .net-worth-pan-button.pan-up   { right: 110px; }
+#net-worth-chart .net-worth-pan-button.pan-down { right: 80px; }
 #net-worth-chart .net-worth-zoom-button.zoom-in {
     right: 50px;
 }

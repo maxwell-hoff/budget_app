@@ -54,22 +54,45 @@ class NetWorthChart {
         this.mcAreaGroup = this.svg.append('g').attr('class', 'mc-range-area');
         this.lineGroup = this.svg.append('g').attr('class', 'scenario-line');
 
+        // ------------------------------------------------------------------
+        //  State for panning (vertical translation)
+        // ------------------------------------------------------------------
+        this.panOffset = 0; // additive offset in y-value units
+
         // Tooltip value display (reuse existing markup) --------------------
         this.valueDisplay = this.container.select('.net-worth-total-value');
 
         // Zoom factor ------------------------------------------------------
         this.zoomFactor = 1; // 1 = default scale
+        this.minZoomFactor = 1/128; // allow up to 7 successive zoom-in clicks
 
         // Hook up zoom buttons -------------------------------------------
         const zoomInBtn = this.container.select('.net-worth-zoom-button.zoom-in');
         const zoomOutBtn = this.container.select('.net-worth-zoom-button.zoom-out');
+        const panUpBtn = this.container.select('.net-worth-pan-button.pan-up');
+        const panDownBtn = this.container.select('.net-worth-pan-button.pan-down');
         if (!zoomInBtn.empty()) {
             zoomInBtn.on('click', () => {
                 // Halve the domain span (zoom in)
-                this.zoomFactor = Math.max(this.zoomFactor / 2, 0.125);
+                this.zoomFactor = Math.max(this.zoomFactor / 2, this.minZoomFactor);
                 this._render();
             });
         }
+        if (!panUpBtn.empty()) {
+            panUpBtn.on('click', () => {
+                const span = this.yScale.domain()[1] - this.yScale.domain()[0];
+                this.panOffset += span / 2;
+                this._render();
+            });
+        }
+        if (!panDownBtn.empty()) {
+            panDownBtn.on('click', () => {
+                const span = this.yScale.domain()[1] - this.yScale.domain()[0];
+                this.panOffset -= span / 2;
+                this._render();
+            });
+        }
+
         if (!zoomOutBtn.empty()) {
             zoomOutBtn.on('click', () => {
                 // Double the domain span (zoom out) but cap at 1 (original)
@@ -148,6 +171,10 @@ class NetWorthChart {
         }
 
         this.xScale.domain([xMin, xMax]).range([0, this.width]);
+        // Apply vertical panning offset ----------------------------------
+        yMin += this.panOffset;
+        yMax += this.panOffset;
+
         this.yScale.domain([yMin, yMax]).range([this.height, 0]).nice();
 
         // Render axes ------------------------------------------------------
