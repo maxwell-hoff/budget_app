@@ -13,7 +13,7 @@ clock = pygame.time.Clock()
 # Simulation parameters (tweak these to taste)
 # --------------------------------------------------
 # How many generations (node count) to keep visible at once
-GENERATION_LIMIT = 10
+GENERATION_LIMIT = 4
 
 # Number of vertical sections for directionality
 SECTION_COUNT = 10  # default sections left→right
@@ -38,20 +38,24 @@ LINE_COLOR = (100, 100, 100)
 BG_COLOR = (10, 10, 10)
 
 # Animation speed (0-1 growth increment per frame)
-GROWTH_SPEED = .2  # speed at which lines grow toward children
+GROWTH_SPEED = 0.2  # speed at which lines grow toward children
+
+# Frames between each generation spawn (smaller = faster)
+SPAWN_INTERVAL_FRAMES = 5
 
 # Attempts to find a non-overlapping child placement
 MAX_POSITION_TRIES = 25
 
 # Node structure
 class Node:
-    def __init__(self, position, section, parents=None):
+    def __init__(self, position, section, generation, parents=None):
         if parents is None:
             parents = []
         self.position = position
         self.parents = parents
         self.age = 0
         self.section = section
+        self.generation = generation
         # Growth progress for animation (0 = just born, 1 = fully grown)
         self.growth = 0.0
 
@@ -71,7 +75,7 @@ def segments_intersect(p1, p2, p3, p4):
     return _ccw(p1, p3, p4) != _ccw(p2, p3, p4) and _ccw(p1, p2, p3) != _ccw(p1, p2, p4)
 
 # First root node
-root_node = Node(position=(width // 2, height // 2), section=0)
+root_node = Node(position=(width // 2, height // 2), section=0, generation=0)
 root_node.growth = 1.0  # root is already visible
 nodes.append(root_node)
 
@@ -122,12 +126,12 @@ def add_children():
             if not intersects:
                 break  # found valid location
 
-        child = Node(position=candidate_pos, section=next_section, parents=[parent])
+        child = Node(position=candidate_pos, section=next_section, generation=parent.generation + 1, parents=[parent])
         nodes.append(child)
 
-    # Prune oldest nodes so list doesn't grow unbounded
-    while len(nodes) > GENERATION_LIMIT:
-        nodes.pop(0)
+    # Prune by generation rather than raw node count
+    max_gen = max(n.generation for n in nodes)
+    nodes[:] = [n for n in nodes if n.generation >= max_gen - (GENERATION_LIMIT - 1)]
 
 def draw():
     screen.fill(BG_COLOR)
@@ -164,8 +168,8 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # Spawn children every 15 frames
-    if frame_count % 15 == 0:
+    # Spawn children at configurable interval
+    if frame_count % SPAWN_INTERVAL_FRAMES == 0:
         add_children()
 
     draw()
