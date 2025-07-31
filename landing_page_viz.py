@@ -13,10 +13,10 @@ clock = pygame.time.Clock()
 # Simulation parameters (tweak these to taste)
 # --------------------------------------------------
 # How many generations (node count) to keep visible at once
-GENERATION_LIMIT = 4
+GENERATION_LIMIT = 5
 
 # Number of vertical sections for directionality
-SECTION_COUNT = 10  # default sections left→right
+SECTION_COUNT = 30  # default sections left→right
 
 # Current movement direction across sections: +1 (right) or -1 (left)
 direction = 1
@@ -43,6 +43,9 @@ BG_COLOR = (10, 10, 10)
 # Animation speed (0-1 growth increment per frame)
 GROWTH_SPEED = 0.2  # speed at which lines grow toward children
 
+# Fade-out speed per frame (1→0). Lower = slower fade
+FADE_SPEED = 0.02
+
 # Frames between each generation spawn (smaller = faster)
 SPAWN_INTERVAL_FRAMES = 5
 
@@ -61,6 +64,8 @@ class Node:
         self.generation = generation
         # Growth progress for animation (0 = just born, 1 = fully grown)
         self.growth = 0.0
+        # Fade value (1 = fully visible, 0 = invisible)
+        self.fade = 1.0
 
 nodes = []
 
@@ -138,33 +143,55 @@ def add_children():
 
 def draw():
     screen.fill(BG_COLOR)
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
 
-    # Update growth animation state
+    # Determine which generations are still considered "alive"
+    max_gen = max(n.generation for n in nodes)
+    min_alive_gen = max_gen - (GENERATION_LIMIT - 1)
+
+    # Update growth & fade state
     for node in nodes:
+        # Growth toward child
         if node.growth < 1.0:
             node.growth = min(1.0, node.growth + GROWTH_SPEED)
 
-    # Draw connections first (animated)
+        # Fade-out if older generation
+        if node.generation < min_alive_gen:
+            node.fade = max(0.0, node.fade - FADE_SPEED)
+        else:
+            node.fade = 1.0  # ensure fully visible if within limit
+
+    # Remove fully faded nodes
+    nodes[:] = [n for n in nodes if n.fade > 0.0]
+
+    # Draw connections first (animated & faded)
     for node in nodes:
         for parent in node.parents:
             if parent in nodes:
                 # Interpolate endpoint based on growth progress
                 end_x = parent.position[0] + (node.position[0] - parent.position[0]) * node.growth
                 end_y = parent.position[1] + (node.position[1] - parent.position[1]) * node.growth
-                pygame.draw.line(screen, LINE_COLOR, parent.position, (end_x, end_y), 1)
+                alpha = int(255 * min(node.fade, parent.fade))
+                color = (*LINE_COLOR[:3], alpha)
+                pygame.draw.line(overlay, color, parent.position, (end_x, end_y), 1)
 
-    # Draw nodes on top once their connecting line is fully grown
+    # Draw nodes on top using fade alpha
     for node in nodes:
         if node.growth >= 1.0:
             x, y = int(node.position[0]), int(node.position[1])
-                        # Outer circle (anti-aliased)
-            pygame.gfxdraw.aacircle(screen, x, y, NODE_RADIUS, NODE_OUTER_COLOR)
-            pygame.gfxdraw.filled_circle(screen, x, y, NODE_RADIUS, NODE_OUTER_COLOR)
+            alpha = int(255 * node.fade)
+            outer_color = (*NODE_OUTER_COLOR[:3], alpha)
+            inner_color = (*NODE_INNER_COLOR[:3], alpha)
 
-            # Inner fill (allows hollow appearance)
+            pygame.gfxdraw.aacircle(overlay, x, y, NODE_RADIUS, outer_color)
+            pygame.gfxdraw.filled_circle(overlay, x, y, NODE_RADIUS, outer_color)
+
             inner_r = int(NODE_RADIUS * INNER_FILL_PERCENT)
             if inner_r > 0:
-                pygame.gfxdraw.filled_circle(screen, x, y, inner_r, NODE_INNER_COLOR)
+                pygame.gfxdraw.filled_circle(overlay, x, y, inner_r, inner_color)
+
+    # Blit overlay with alpha to main screen
+    screen.blit(overlay, (0, 0))
 
 running = True
 frame_count = 0
