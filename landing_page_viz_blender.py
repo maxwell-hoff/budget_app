@@ -32,8 +32,55 @@ LINE_RADIUS = 0.1                      # cylinder radius for the edges
 
 # Light animation along edges
 LIGHT_TRAVEL_FRAMES = 15              # frames for a light to travel parent→child
+LIGHT_STAY_FRAMES = 15                # frames the light remains at the node
+LIGHT_FADE_FRAMES = 10                # frames it takes to fade out
 LIGHT_ENERGY = 1000                   # initial light energy (strength)
-LIGHT_SIZE = 1                      # light radius
+LIGHT_SIZE = 1                        # light radius
+
+# Node appearance
+NODE_COLOR = (0.0, 0.8, 0.0, 1.0)      # default green RGBA
+
+# -----------------------------------------------------------------------------
+# Material utilities -----------------------------------------------------------
+# -----------------------------------------------------------------------------
+_EDGE_MATERIAL = None  # cached grey material for cylinders
+_NODE_MATERIAL = None  # cached green material for spheres
+
+
+def _get_node_material():
+    """Create (once) and return the material used by every node sphere."""
+    global _NODE_MATERIAL
+    if _NODE_MATERIAL is None:
+        mat = bpy.data.materials.new("NodeGreen")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes.get("Principled BSDF")
+        bsdf.inputs["Base Color"].default_value = NODE_COLOR
+        bsdf.inputs["Emission"].default_value = NODE_COLOR
+        bsdf.inputs["Emission Strength"].default_value = 0.0
+        _NODE_MATERIAL = mat
+    return _NODE_MATERIAL
+
+
+def _flash_material(mat, frame, emission_strength=10.0):
+    """Insert keyframes so `mat` emits a flash at `frame`."""
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    inp = bsdf.inputs["Emission Strength"]
+    inp.default_value = emission_strength
+    inp.keyframe_insert(data_path="default_value", frame=frame)
+    inp.default_value = 0.0
+    inp.keyframe_insert(data_path="default_value", frame=frame + LIGHT_FADE_FRAMES)
+
+
+def _get_edge_material():
+    """Create (once) and return a neutral grey material for edges."""
+    global _EDGE_MATERIAL
+    if _EDGE_MATERIAL is None:
+        mat = bpy.data.materials.new("EdgeGrey")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes.get("Principled BSDF")
+        bsdf.inputs["Base Color"].default_value = (0.5, 0.5, 0.5, 1)
+        _EDGE_MATERIAL = mat
+    return _EDGE_MATERIAL
 
 # ----------------------------------------------------------------------------
 # ------------------------------ Data model ----------------------------------
@@ -77,10 +124,23 @@ def clear_scene():
 
 
 def add_sphere(node: Node):
-    """Create a UV-sphere for **node** at the correct position."""
+    """Create a UV-sphere for **node** at the correct position.
+    Uses a low-poly sphere for performance and applies the shared green material
+    with a brief emission flash.
+    """
     loc = pixel_to_world(node.position)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=NODE_RADIUS, location=loc)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=NODE_RADIUS, location=loc)
     node.sphere_obj = bpy.context.object
+
+    # Material
+    mat = _get_node_material()
+    if node.sphere_obj.data.materials:
+        node.sphere_obj.data.materials[0] = mat
+    else:
+        node.sphere_obj.data.materials.append(mat)
+
+    # Flash
+    _flash_material(mat, bpy.context.scene.frame_current)
 
 
 def add_edge(parent: Node, child: Node):
@@ -93,13 +153,20 @@ def add_edge(parent: Node, child: Node):
     mid = p1 + vec * 0.5
 
     # Cylinder created aligned to +Z; rotate so +Z aligns to vec
-    bpy.ops.mesh.primitive_cylinder_add(radius=LINE_RADIUS, depth=length, location=mid)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=LINE_RADIUS, depth=length, location=mid)
     cyl = bpy.context.object
 
     # Align the cylinder with the edge vector
     cyl.rotation_mode = "QUATERNION"
     z_axis = Vector((0, 0, 1))
     cyl.rotation_quaternion = z_axis.rotation_difference(vec.normalized())
+
+    # Edge material (shared)
+    mat_edge = _get_edge_material()
+    if cyl.data.materials:
+        cyl.data.materials[0] = mat_edge
+    else:
+        cyl.data.materials.append(mat_edge)
 
     # ----- Animated light travelling along the edge -----
     current_frame = bpy.context.scene.frame_current
@@ -114,13 +181,23 @@ def add_edge(parent: Node, child: Node):
     light_obj.keyframe_insert(data_path="location", frame=current_frame)
     light_data.keyframe_insert(data_path="energy", frame=current_frame)
 
-    # End at child and fade out
-    light_obj.location = p2
-    light_obj.keyframe_insert(data_path="location", frame=current_frame + LIGHT_TRAVEL_FRAMES)
-    light_data.energy = 0
-    light_data.keyframe_insert(data_path="energy", frame=current_frame + LIGHT_TRAVEL_FRAMES)
+    # Travel to child
+    arrival_frame = current_frame + LIGHT_TRAVEL_FRAMES
+    final_pos = p2 - norm * NODE_RADIUS * 0.8  # stop just before entering sphere
+    light_obj.location = final_pos
+    light_obj.keyframe_insert(data_path="location", frame=arrival_frame)
+    light_data.keyframe_insert(data_path="energy", frame=arrival_frame)  # still full energy
 
-    child.edge_objs.append(cyl)
+    # Stay bright at the node for a while
+    stay_frame = arrival_frame + LIGHT_STAY_FRAMES
+    light_data.keyframe_insert(data_path="energy", frame=stay_frame)
+
+    # Fade out
+    fade_frame = stay_frame + LIGHT_FADE_FRAMES
+    light_data.energy = 0
+    light_data.keyframe_insert(data_path="energy", frame=fade_frame)
+
+    child.edge_objs.extend([cyl, light_obj])
 
 
 # Core algorithm --------------------------------------------------------------
