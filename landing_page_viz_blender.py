@@ -22,13 +22,18 @@ GENERATION_LIMIT = 5                    # how many generations stay visible
 SECTION_COUNT = 10                       # vertical screen sections
 MIN_CHILDREN, MAX_CHILDREN = 1, 10         # children spawned per generation
 SCREEN_MARGIN = 60                       # margin from screen edges
-SPAWN_INTERVAL_FRAMES = 5                # blender frames between spawns
+SPAWN_INTERVAL_FRAMES = 15                # blender frames between spawns
 MAX_POSITION_TRIES = 25                  # placement retries to avoid overlap
 
 # Visual tuning
 SCALE = 1                             # blender units per pixel (0.01 → 8x8)
 NODE_RADIUS = 1                       # sphere radius in blender units
-LINE_RADIUS = .1                       # cylinder radius for the edges
+LINE_RADIUS = 0.1                      # cylinder radius for the edges
+
+# Light animation along edges
+LIGHT_TRAVEL_FRAMES = 15              # frames for a light to travel parent→child
+LIGHT_ENERGY = 1000                   # initial light energy (strength)
+LIGHT_SIZE = 1                      # light radius
 
 # ----------------------------------------------------------------------------
 # ------------------------------ Data model ----------------------------------
@@ -95,6 +100,25 @@ def add_edge(parent: Node, child: Node):
     cyl.rotation_mode = "QUATERNION"
     z_axis = Vector((0, 0, 1))
     cyl.rotation_quaternion = z_axis.rotation_difference(vec.normalized())
+
+    # ----- Animated light travelling along the edge -----
+    current_frame = bpy.context.scene.frame_current
+    light_data = bpy.data.lights.new(name="EdgeLight", type='POINT')
+    light_data.energy = LIGHT_ENERGY
+    light_data.shadow_soft_size = LIGHT_SIZE
+    light_obj = bpy.data.objects.new("EdgeLight", light_data)
+    bpy.context.collection.objects.link(light_obj)
+
+    # Start at parent
+    light_obj.location = p1
+    light_obj.keyframe_insert(data_path="location", frame=current_frame)
+    light_data.keyframe_insert(data_path="energy", frame=current_frame)
+
+    # End at child and fade out
+    light_obj.location = p2
+    light_obj.keyframe_insert(data_path="location", frame=current_frame + LIGHT_TRAVEL_FRAMES)
+    light_data.energy = 0
+    light_data.keyframe_insert(data_path="energy", frame=current_frame + LIGHT_TRAVEL_FRAMES)
 
     child.edge_objs.append(cyl)
 
