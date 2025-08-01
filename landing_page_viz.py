@@ -26,17 +26,17 @@ MIN_CHILDREN = 1
 MAX_CHILDREN = 20
 
 # Random positional jitter around the parent
-JITTER_DISTANCE = 80
+JITTER_DISTANCE = 0
 
 # A safety margin so nodes don't hug the screen edges (pixels)
 SCREEN_MARGIN = 60
 
 # Visual settings
-NODE_RADIUS = 6
+NODE_RADIUS = 2
 # Color parameters
 NODE_OUTER_COLOR = (50, 200, 255)   # outline / border color of node
 NODE_INNER_COLOR = (0, 0, 0)        # fill color (default black)
-INNER_FILL_PERCENT = 0.6            # 0→hollow, 1→solid
+INNER_FILL_PERCENT = 0.8            # 0→hollow, 1→solid
 LINE_COLOR = (100, 100, 100)        # edge color
 BG_COLOR = (10, 10, 10)
 

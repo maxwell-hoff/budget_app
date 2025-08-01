@@ -12,15 +12,15 @@ The script builds the same expanding node-graph animation on the X-Y plane.  A
 handler hooked to frame changes spawns new generations every
 ``SPAWN_INTERVAL_FRAMES`` and prunes old ones to keep memory usage under
 control.
-"""
+"""  
 
 # ----------------------------------------------------------------------------
 # --- Simulation parameters (kept in sync with the pygame implementation) ---
 # ----------------------------------------------------------------------------
-WIDTH, HEIGHT = 10, 10                 # virtual canvas size (pixels)
-GENERATION_LIMIT = 2                    # how many generations stay visible
-SECTION_COUNT = 4                       # vertical screen sections
-MIN_CHILDREN, MAX_CHILDREN = 1, 2       # children spawned per generation
+WIDTH, HEIGHT = 5, 5                 # virtual canvas size (pixels)
+GENERATION_LIMIT = 5                    # how many generations stay visible
+SECTION_COUNT = 10                       # vertical screen sections
+MIN_CHILDREN, MAX_CHILDREN = 1, 10         # children spawned per generation
 SCREEN_MARGIN = 60                       # margin from screen edges
 SPAWN_INTERVAL_FRAMES = 5                # blender frames between spawns
 MAX_POSITION_TRIES = 25                  # placement retries to avoid overlap
