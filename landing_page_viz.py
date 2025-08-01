@@ -13,7 +13,7 @@ clock = pygame.time.Clock()
 # Simulation parameters (tweak these to taste)
 # --------------------------------------------------
 # How many generations (node count) to keep visible at once
-GENERATION_LIMIT = 5
+GENERATION_LIMIT = 10
 
 # Number of vertical sections for directionality
 SECTION_COUNT = 30  # default sections left→right
@@ -23,7 +23,7 @@ direction = 1
 
 # New children spawned per parent (inclusive range)
 MIN_CHILDREN = 1
-MAX_CHILDREN = 10
+MAX_CHILDREN = 20
 
 # Random positional jitter around the parent
 JITTER_DISTANCE = 80
