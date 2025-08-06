@@ -13,6 +13,30 @@ $(document).ready(function() {
     console.log('Document ready, initializing application...');
     initializeEventListeners();
     loadProfile();
+
+    // Attempt to autoplay hero video when ready
+    const heroVid = document.getElementById('heroVideo');
+    if (heroVid) {
+        heroVid.muted = true; // satisfy autoplay policy
+        const tryPlay = () => {
+            heroVid.play().catch(() => {
+                // If automatic playback fails, try again after user interaction
+                const unlock = () => {
+                    heroVid.play().catch(()=>{});
+                    window.removeEventListener('click', unlock);
+                    window.removeEventListener('touchstart', unlock);
+                };
+                window.addEventListener('click', unlock, {once: true});
+                window.addEventListener('touchstart', unlock, {once: true});
+            });
+        };
+        // If not ready yet, wait for canplay
+        if (heroVid.readyState >= 3) {
+            tryPlay();
+        } else {
+            heroVid.addEventListener('canplay', tryPlay, {once: true});
+        }
+    }
     setupTabSwitching();
     
     // Ensure milestone details section exists
@@ -71,6 +95,17 @@ function setupTabSwitching() {
             $('.scenario-bar').show();
         } else {
             $('.scenario-bar').hide();
+        }
+
+        // Restart hero video if Home tab becomes active
+        if (tabId === 'tab-home') {
+            const vid = document.querySelector('.home-video');
+            if (vid) {
+                try {
+                    vid.currentTime = 0;
+                    vid.play();
+                } catch (err) { /* no-op */ }
+            }
         }
 
         // If Milestones tab became active, refresh timeline so it renders with correct width
