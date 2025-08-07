@@ -725,6 +725,9 @@ label {
 .home-video-container {
     position: relative;
     display: inline-block;
+    background-color: #000000; /* match video edges to body */
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 /* Centered overlay text */
@@ -741,6 +744,7 @@ label {
     text-align: center;
     pointer-events: none; /* let clicks through to video if needed */
     padding: 0 1rem;
+    background-color: rgba(18, 18, 18, 0.3); /* match page background with slight transparency */
 }
 
 /* Text styles for overlay */
