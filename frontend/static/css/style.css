@@ -711,4 +711,54 @@ label {
     white-space: pre-line; /* respect newlines */
     font-size: 1rem;
     line-height: 1.6;
+}
+
+/* Video hero element */
+.home-video {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Position container relative so overlay can sit on top */
+.home-video-container {
+    position: relative;
+    /* width: 90vw; */
+    max-width: 1200px;
+    /*margin: 0 auto 2rem auto; /* center and give bottom spacing */ */
+    background-color: #000000; /* match video edges to body */
+    overflow: hidden;
+}
+
+/* Centered overlay text */
+.home-video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    pointer-events: none; /* let clicks through to video if needed */
+    padding: 0 1rem;
+    background-color: rgba(18, 18, 18, 0.3); /* match page background with slight transparency */
+}
+
+/* Bound overlay content to narrower width */
+.home-video-overlay .overlay-inner {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Text styles for overlay */
+.home-video-overlay h1,
+.home-video-overlay p {
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 } 
