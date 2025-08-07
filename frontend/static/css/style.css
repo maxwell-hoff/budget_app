@@ -716,17 +716,18 @@ label {
 /* Video hero element */
 .home-video {
     width: 100%;
-    max-width: 800px;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+    height: auto;
+    display: block;
+    margin: 0 auto;
 }
 
 /* Position container relative so overlay can sit on top */
 .home-video-container {
     position: relative;
-    display: inline-block;
+    /* width: 90vw; */
+    max-width: 1200px;
+    /*margin: 0 auto 2rem auto; /* center and give bottom spacing */ */
     background-color: #000000; /* match video edges to body */
-    border-radius: 8px;
     overflow: hidden;
 }
 
@@ -745,6 +746,14 @@ label {
     pointer-events: none; /* let clicks through to video if needed */
     padding: 0 1rem;
     background-color: rgba(18, 18, 18, 0.3); /* match page background with slight transparency */
+}
+
+/* Bound overlay content to narrower width */
+.home-video-overlay .overlay-inner {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
 }
 
 /* Text styles for overlay */
