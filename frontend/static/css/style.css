@@ -1,7 +1,7 @@
 /* General Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(180deg, #000000 0%, #0c0c0c 45%, #121212 100%);
+    background-color: #000000;
     color: #e0e0e0;
     display: flex;
     min-height: 100vh;
@@ -771,7 +771,7 @@ label {
     text-align: center;
     pointer-events: none; /* disabled for overlay container ... */
     padding: 0 1rem;
-    background-color: rgba(18, 18, 18, 0.3); /* match page background with slight transparency */
+    background-color: rgba(0, 0, 0, 0.3); /* match page background with slight transparency */
 }
 
 /* Bound overlay content to narrower width */
