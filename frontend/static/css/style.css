@@ -1,7 +1,7 @@
 /* General Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #121212;
+    background: linear-gradient(180deg, #000000 0%, #0c0c0c 45%, #121212 100%);
     color: #e0e0e0;
     display: flex;
     min-height: 100vh;
@@ -378,6 +378,32 @@ body {
     margin-top: 20px;
 }
 
+/* Card-like wrappers */
+.card-like {
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    border: 1px solid #2a2a2a;
+    padding: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+/* Accounts manual entry */
+.accounts-list { display: flex; flex-direction: column; gap: 10px; }
+.account-row { background-color: #1b1b1b; border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px; }
+.account-row:hover { border-color: #3a3a3a; }
+.summary-card {
+    background: linear-gradient(180deg, #1f1f1f 0%, #181818 100%);
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.summary-card .label { color: #bdbdbd; }
+.summary-card .value { font-weight: 600; }
+.summary-total { display: flex; align-items: center; justify-content: space-between; background: #181818; border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px 14px; }
+.summary-total .label { color: #e0e0e0; }
+.summary-total .value { font-size: 1.1rem; font-weight: 700; }
+
 .balance-amount {
     font-size: 24px;
     font-weight: bold;
@@ -726,7 +752,7 @@ label {
     position: relative;
     /* width: 90vw; */
     max-width: 1200px;
-    /*margin: 0 auto 2rem auto; /* center and give bottom spacing */ */
+    /* margin: 0 auto 2rem auto; center and give bottom spacing */
     background-color: #000000; /* match video edges to body */
     overflow: hidden;
 }
@@ -743,7 +769,7 @@ label {
     justify-content: center;
     align-items: center;
     text-align: center;
-    pointer-events: none; /* let clicks through to video if needed */
+    pointer-events: none; /* disabled for overlay container ... */
     padding: 0 1rem;
     background-color: rgba(18, 18, 18, 0.3); /* match page background with slight transparency */
 }
@@ -762,3 +788,73 @@ label {
     color: #ffffff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 } 
+
+/* Make CTA buttons clickable while overlay remains non-interactive */
+.home-video-overlay .overlay-inner .btn {
+    pointer-events: auto;
+}
+
+/* CTA styles */
+.btn-cta {
+    background: linear-gradient(135deg, #4a9eff 0%, #3d8eff 100%);
+    border: none;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(74, 158, 255, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(74, 158, 255, 0.45);
+}
+.btn-cta:active { transform: translateY(0); }
+
+.btn-cta-secondary {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: saturate(120%) blur(2px);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+.btn-cta-secondary:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-1px); }
+
+/* Soft glow animation */
+.glow-button {
+    animation: glowPulse 2.8s ease-in-out infinite;
+}
+@keyframes glowPulse {
+    0% { filter: drop-shadow(0 0 0px rgba(74, 158, 255, 0)); }
+    50% { filter: drop-shadow(0 0 12px rgba(74, 158, 255, 0.5)); }
+    100% { filter: drop-shadow(0 0 0px rgba(74, 158, 255, 0)); }
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.8);
+    font-size: 1.25rem;
+    animation: bounce 1.8s infinite;
+    pointer-events: none;
+}
+@keyframes bounce {
+    0%, 100% { transform: translate(-50%, 0); opacity: 0.8; }
+    50% { transform: translate(-50%, -6px); opacity: 1; }
+}
+
+/* Feature section */
+.home-features { max-width: 1100px; margin: 0 auto; }
+.feature-card {
+    background: linear-gradient(180deg, #1f1f1f 0%, #181818 100%);
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: left;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.feature-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0,0,0,0.35); border-color: #3a3a3a; }
+.feature-icon { color: #4a9eff; font-size: 1.4rem; margin-bottom: 8px; }
+.feature-card h5 { margin: 4px 0 6px 0; }
+.feature-card p { color: #cfcfcf; margin: 0; }
