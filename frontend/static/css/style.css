@@ -368,6 +368,7 @@ body {
     .main-container {
         padding: 10px;
     }
+    .home-video-container { height: 50vh; border-radius: 8px; }
 }
 
 .bank-statements {
@@ -728,7 +729,7 @@ label {
 
 /* Home Section Styles */
 .home-section {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     text-align: center;
 }
@@ -742,7 +743,8 @@ label {
 /* Video hero element */
 .home-video {
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
     display: block;
     margin: 0 auto;
 }
@@ -755,6 +757,8 @@ label {
     /* margin: 0 auto 2rem auto; center and give bottom spacing */
     background-color: #000000; /* match video edges to body */
     overflow: hidden;
+    height: 70vh;
+    border-radius: 12px;
 }
 
 /* Centered overlay text */
