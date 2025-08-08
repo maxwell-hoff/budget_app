@@ -61,6 +61,161 @@ $(document).ready(function() {
     // Initialize bootstrap tooltips for sidebar icons
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('.nav-button[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+
+    // CTA interactions
+    const goToProfile = () => {
+        document.querySelector('.nav-button[data-tab="tab-profile"]').click();
+        const formEl = document.getElementById('userProfileForm');
+        if (formEl) { formEl.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+    };
+    const goToAnalysis = () => {
+        document.querySelector('.nav-button[data-tab="tab-analysis"]').click();
+        const chartsEl = document.getElementById('net-worth-chart');
+        if (chartsEl) { chartsEl.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+    };
+    const ctaStart = document.getElementById('cta-get-started');
+    const ctaDemo = document.getElementById('cta-see-demo');
+    if (ctaStart) { ctaStart.addEventListener('click', goToProfile); }
+    if (ctaDemo) { ctaDemo.addEventListener('click', goToAnalysis); }
+
+    // Hide scroll indicator after brief delay or on scroll
+    const indicator = document.getElementById('scrollIndicator');
+    if (indicator) {
+        const hideIndicator = () => indicator.style.display = 'none';
+        setTimeout(hideIndicator, 3500);
+        window.addEventListener('scroll', hideIndicator, { once: true });
+    }
+
+    // Accounts input mode toggle
+    const uploadPane = document.getElementById('accounts-upload-pane');
+    const manualPane = document.getElementById('accounts-manual-pane');
+    const modeUpload = document.getElementById('modeUpload');
+    const modeManual = document.getElementById('modeManual');
+    if (modeUpload && modeManual && uploadPane && manualPane) {
+        const updateMode = () => {
+            const manual = modeManual.checked;
+            manualPane.style.display = manual ? 'block' : 'none';
+            uploadPane.style.display = manual ? 'none' : 'block';
+        };
+        modeUpload.addEventListener('change', updateMode);
+        modeManual.addEventListener('change', updateMode);
+        updateMode();
+    }
+
+    // Manual accounts UI
+    const accountsList = document.getElementById('accountsList');
+    const addBtn = document.getElementById('addAccountBtn');
+    const saveBtn = document.getElementById('saveAccountsBtn');
+    const template = document.getElementById('accountRowTemplate');
+    const sumCash = document.getElementById('sumCash');
+    const sumInvestments = document.getElementById('sumInvestments');
+    const sumLiabilities = document.getElementById('sumLiabilities');
+    const sumNet = document.getElementById('sumNet');
+
+    const ACCOUNT_STORAGE_KEY = 'manualAccounts';
+
+    function loadAccountsFromStorage() {
+        try {
+            const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
+    }
+    function saveAccountsToStorage(data) {
+        localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(data));
+    }
+    function currency(n) {
+        const val = isNaN(n) || n === '' || n === null ? 0 : Number(n);
+        return val.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+    }
+
+    function categorize(type) {
+        const t = (type || '').toLowerCase();
+        if (t.includes('checking') || t.includes('savings')) return 'cash';
+        if (t.includes('brokerage') || t.includes('retirement') || t.includes('invest')) return 'investments';
+        if (t.includes('credit') || t.includes('loan') || t.includes('liabil')) return 'liabilities';
+        return 'cash';
+    }
+
+    function recalcSummary() {
+        const rows = accountsList ? accountsList.querySelectorAll('.account-row') : [];
+        let cash = 0, invest = 0, liab = 0;
+        rows.forEach(row => {
+            const type = row.querySelector('.account-type')?.value;
+            const bal = parseFloat(row.querySelector('.account-balance')?.value);
+            const cat = categorize(type);
+            const v = isNaN(bal) ? 0 : bal;
+            if (cat === 'cash') cash += v;
+            else if (cat === 'investments') invest += v;
+            else liab += v;
+        });
+        if (sumCash) sumCash.textContent = currency(cash);
+        if (sumInvestments) sumInvestments.textContent = currency(invest);
+        if (sumLiabilities) sumLiabilities.textContent = currency(liab);
+        if (sumNet) sumNet.textContent = currency(cash + invest - liab);
+    }
+
+    function bindRowEvents(row) {
+        const inputs = row.querySelectorAll('input, select');
+        inputs.forEach(inp => inp.addEventListener('input', recalcSummary));
+        const del = row.querySelector('.delete-account');
+        if (del) {
+            del.addEventListener('click', (e) => {
+                e.preventDefault();
+                row.remove();
+                recalcSummary();
+            });
+        }
+    }
+
+    function addAccountRow(data = {}) {
+        if (!template || !accountsList) return;
+        const fragment = template.content.cloneNode(true);
+        const row = fragment.querySelector('.account-row');
+        row.querySelector('.account-type').value = data.type || 'Checking';
+        row.querySelector('.account-institution').value = data.institution || '';
+        row.querySelector('.account-name').value = data.name || '';
+        row.querySelector('.account-balance').value = data.balance != null ? data.balance : '';
+        bindRowEvents(row);
+        accountsList.appendChild(fragment);
+        recalcSummary();
+    }
+
+    function serializeAccounts() {
+        if (!accountsList) return [];
+        return Array.from(accountsList.querySelectorAll('.account-row')).map(row => ({
+            type: row.querySelector('.account-type').value,
+            institution: row.querySelector('.account-institution').value,
+            name: row.querySelector('.account-name').value,
+            balance: parseFloat(row.querySelector('.account-balance').value) || 0,
+        }));
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            addAccountRow();
+        });
+    }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const data = serializeAccounts();
+            saveAccountsToStorage(data);
+            // Placeholder: could POST to backend if/when endpoint exists
+            // fetch('/api/accounts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accounts: data }) })
+            //     .then(r=>r.json()).then(()=>{/* success */}).catch(()=>{/* error */});
+        });
+    }
+
+    // Initialize list from storage
+    if (accountsList && template) {
+        const saved = loadAccountsFromStorage();
+        if (saved.length === 0) {
+            addAccountRow({ type: 'Checking', name: 'Checking', institution: '', balance: 0 });
+        } else {
+            saved.forEach(addAccountRow);
+        }
+    }
 });
 
 // Event Listeners
