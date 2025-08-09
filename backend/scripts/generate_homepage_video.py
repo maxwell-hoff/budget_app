@@ -33,7 +33,7 @@ import pygame.gfxdraw  # noqa: F401 – required for anti-aliased circles
 # ---------------------------------------------------------------------------
 # --------------------------- Simulation parameters -------------------------
 # ---------------------------------------------------------------------------
-WIDTH, HEIGHT = 1920, 1080       # canvas size (matches landing_page_viz.py)
+WIDTH, HEIGHT = 3000, 1000       # canvas size (matches landing_page_viz.py)
 FPS = 30                       # frames-per-second for both sim and video
 DURATION_SECONDS = 17          # total length of the exported clip
 TOTAL_FRAMES = FPS * DURATION_SECONDS

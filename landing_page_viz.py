@@ -5,7 +5,7 @@ import math
 
 # Initialize Pygame
 pygame.init()
-width, height = 1920, 1080 
+width, height = 3000, 1000 
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Financial Model Simulation")
 clock = pygame.time.Clock()

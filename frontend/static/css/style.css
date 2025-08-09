@@ -729,9 +729,10 @@ label {
 
 /* Home Section Styles */
 .home-section {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     text-align: center;
+    padding: 0 2rem; /* Add some padding for smaller screens */
 }
 
 .home-description {
@@ -752,9 +753,9 @@ label {
 /* Position container relative so overlay can sit on top */
 .home-video-container {
     position: relative;
-    /* width: 90vw; */
-    max-width: 1200px;
-    /* margin: 0 auto 2rem auto; center and give bottom spacing */
+    width: 95vw; /* Use 95% of viewport width for better coverage */
+    max-width: 1500px; /* Increased from 1200px */
+    margin: 0 auto 2rem auto; /* center and give bottom spacing */
     background-color: #000000; /* match video edges to body */
     overflow: hidden;
     height: 70vh;
@@ -952,5 +953,36 @@ label {
     
     .dcf-details-header h4 {
         font-size: 1.1rem;
+    }
+}
+
+/* Responsive adjustments for homepage video */
+@media (max-width: 1200px) {
+    .home-video-container {
+        width: 98vw; /* Use more screen width on smaller screens */
+        max-width: none; /* Remove max-width constraint on smaller screens */
+    }
+    
+    .home-section {
+        padding: 0 1rem; /* Reduce padding on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .home-video-container {
+        width: 100vw; /* Full width on mobile */
+        height: 60vh; /* Slightly shorter on mobile */
+        border-radius: 0; /* Remove border radius on full-width mobile */
+        margin: 0 0 1rem 0; /* Remove side margins on mobile */
+    }
+    
+    .home-section {
+        padding: 0;
+        max-width: none;
+    }
+    
+    .home-video-overlay .overlay-inner {
+        max-width: 90%; /* Allow more width for text on mobile */
+        padding: 0 0.5rem;
     }
 }
