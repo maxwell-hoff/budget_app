@@ -64,12 +64,9 @@
                         <!-- Example: <img src="/static/images/logo.png" alt="Tradeoffs Logo" class="home-logo"> -->
                     </div>
 
-                    <!-- Hero video -->
+                    <!-- Hero background animation -->
                     <div class="home-video-container mb-4">
-                        <video id="heroVideo" class="home-video" autoplay loop muted playsinline preload="auto">
-                            <source src="/static/videos/landing_visual.mp4" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
+                        <canvas id="heroCanvas" class="home-canvas"></canvas>
 
                         <!-- Text overlay -->
                         <div class="home-video-overlay">
@@ -381,6 +378,7 @@
     <script src="/static/js/sub_scenarios.js"></script>
     <script src="/static/js/scenario_table.js"></script>
     <script src="/static/js/dcf_details_table.js"></script>
+    <script src="/static/js/neural_hero.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/calculate_button.js"></script>
 </body>
