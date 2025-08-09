@@ -64,17 +64,14 @@
                         <!-- Example: <img src="/static/images/logo.png" alt="Tradeoffs Logo" class="home-logo"> -->
                     </div>
 
-                    <!-- Hero video -->
+                    <!-- Hero background animation -->
                     <div class="home-video-container mb-4">
-                        <video id="heroVideo" class="home-video" autoplay loop muted playsinline preload="auto">
-                            <source src="/static/videos/landing_visual.mp4" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
+                        <canvas id="heroCanvas" class="home-canvas"></canvas>
 
                         <!-- Text overlay -->
                         <div class="home-video-overlay">
                             <div class="overlay-inner">
-                                <h1 class="mb-4">Don't build a budget. Build an understanding of your finances.</h1>
+                                <h1 class="mb-4">Don't just build a budget. Build an understanding of your finances.</h1>
                                 <p class="home-description">
                                     You don't need a categorized budget. You need a way to understand the impact of your choices. Tradeoffs helps you compare scenarios, test assumptions, and reflect on your values, and adapt with clarity.
                                 </p>
@@ -381,6 +378,7 @@
     <script src="/static/js/sub_scenarios.js"></script>
     <script src="/static/js/scenario_table.js"></script>
     <script src="/static/js/dcf_details_table.js"></script>
+    <script src="/static/js/neural_hero.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/calculate_button.js"></script>
 </body>
