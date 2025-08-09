@@ -545,10 +545,21 @@
             if (pitch < -maxPitch) pitch = -maxPitch;
         });
         canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
             const dy = e.deltaY * Y_PAN_SPEED;
-            cameraY = clamp(cameraY + dy, CAMERA_Y_MIN, CAMERA_Y_MAX);
-            spawnYOffset += dy;
+            const proposed = cameraY + dy;
+            const clamped = clamp(proposed, CAMERA_Y_MIN, CAMERA_Y_MAX);
+            const canPanInternally = clamped !== cameraY; // movement remaining inside hero
+
+            if (canPanInternally) {
+                // Consume the wheel only while we still have internal panning to apply
+                e.preventDefault();
+                const appliedDy = clamped - cameraY;
+                cameraY = clamped;
+                spawnYOffset += appliedDy;
+            } else {
+                // At limit and scrolling further in that direction: allow page to scroll
+                // (do not preventDefault)
+            }
         }, { passive: false });
         canvas.addEventListener('dblclick', () => {
             yaw = -0.5; pitch = -0.12; zoom = 0.35; cameraY = 0; spawnYOffset = 0;
