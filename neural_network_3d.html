@@ -77,6 +77,8 @@
     const NODE_INNER_COLOR = 'rgb(0, 0, 0)';
     const INNER_FILL_PERCENT = 0.8;
     const LINE_COLOR = 'rgb(120, 120, 140)';
+    const BIRTH_GLOW_DURATION_MS = 900; // glow duration for new nodes
+    const GLOW_COLOR = 'rgba(50, 200, 255, 1)';
 
     // Animation speeds (per frame, tuned for ~60fps)
     const GROWTH_SPEED = 0.2; // 0->1 growth in ~5 frames
@@ -105,6 +107,7 @@
         this.parents = parents; // array of Node
         this.growth = 0.0; // 0..1 edge growth toward this node from its parents
         this.fade = 1.0;   // 1..0 visibility
+        this.createdAt = performance.now(); // for birth glow
       }
     }
 
@@ -259,6 +262,23 @@
 
         const alpha = n.fade;
         if (alpha <= 0) continue;
+
+        // Birth glow (brief, decaying)
+        const ageMs = performance.now() - (n.createdAt || 0);
+        if (ageMs >= 0 && ageMs < BIRTH_GLOW_DURATION_MS) {
+          const t = 1 - ageMs / BIRTH_GLOW_DURATION_MS; // 1 -> 0
+          const glowRadius = NODE_RADIUS * (1.2 + 0.6 * t);
+          const blur = 18 + 24 * t;
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, alpha * (0.35 + 0.45 * t));
+          ctx.fillStyle = GLOW_COLOR;
+          ctx.shadowColor = GLOW_COLOR;
+          ctx.shadowBlur = blur;
+          ctx.beginPath();
+          ctx.arc(pr.x, pr.y, glowRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
 
         // Outer filled circle
         ctx.globalAlpha = alpha;
