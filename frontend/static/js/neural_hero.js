@@ -5,6 +5,7 @@
 (function initNeuralHero() {
   const canvas = document.getElementById('heroCanvas');
   if (!canvas) return; // nothing to do if hero canvas is absent
+  if (canvas.dataset && canvas.dataset.interactive === '1') return; // skip background mode if interactive is enabled
 
   const ctx = canvas.getContext('2d');
 
@@ -545,21 +546,18 @@
             if (pitch < -maxPitch) pitch = -maxPitch;
         });
         canvas.addEventListener('wheel', (e) => {
-            const dy = e.deltaY * Y_PAN_SPEED;
-            const proposed = cameraY + dy;
-            const clamped = clamp(proposed, CAMERA_Y_MIN, CAMERA_Y_MAX);
-            const canPanInternally = clamped !== cameraY; // movement remaining inside hero
-
-            if (canPanInternally) {
-                // Consume the wheel only while we still have internal panning to apply
-                e.preventDefault();
-                const appliedDy = clamped - cameraY;
-                cameraY = clamped;
-                spawnYOffset += appliedDy;
-            } else {
-                // At limit and scrolling further in that direction: allow page to scroll
-                // (do not preventDefault)
+            const mainContainer = document.querySelector('.main-container');
+            const snapActive = !!(mainContainer && mainContainer.classList.contains('snap-enabled'));
+            if (!snapActive) {
+                // While snap is off, tie internal pan to container scroll to keep
+                // nodes moving with the page. Do not consume the event.
+                const dy = e.deltaY * Y_PAN_SPEED;
+                cameraY = clamp(cameraY + dy, CAMERA_Y_MIN, CAMERA_Y_MAX);
+                spawnYOffset += dy;
+                return;
             }
+            // When snap is active, let the container handle the wheel to move
+            // between snap sections. Users can still drag to pan the hero.
         }, { passive: false });
         canvas.addEventListener('dblclick', () => {
             yaw = -0.5; pitch = -0.12; zoom = 0.35; cameraY = 0; spawnYOffset = 0;

@@ -64,6 +64,14 @@ body {
     flex-direction: column;
 }
 
+/* Full-page scroll snapping (disabled by default; enabled via JS) */
+.main-container.snap-enabled {
+    scroll-snap-type: y mandatory;
+}
+.snap-section {
+    scroll-snap-align: start;
+}
+
 /* Scenario Bar Styles */
 .scenario-bar {
     background-color: #1e1e1e;
@@ -863,6 +871,10 @@ label {
 .feature-icon { color: #4a9eff; font-size: 1.4rem; margin-bottom: 8px; }
 .feature-card h5 { margin: 4px 0 6px 0; }
 .feature-card p { color: #cfcfcf; margin: 0; }
+
+/* Reveal-on-scroll animation */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 500ms ease, transform 500ms ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
 
 /* DCF Details Table Styles */
 #dcf-details-container {
