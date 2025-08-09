@@ -170,6 +170,12 @@
                                         }
                                     })
                                     .catch(err=>console.error('Error fetching MC range',err));
+                                
+                                // Update DCF details table for hovered scenario
+                                const goalParam = document.getElementById('goalDropdown').value;
+                                if (window.DCFDetailsTable && goalParam) {
+                                    window.DCFDetailsTable.loadDCFData(goalParam, p, v, scenarioName, subScenarioName);
+                                }
                             })
                             .catch(err => console.error('Error fetching param preview line', err));
                     });
@@ -182,6 +188,24 @@
                         const revertMc = lastClickedMcRangeData || window.lastClickedMcRangeData;
                         if (revertMc && window.netWorthChart && typeof window.netWorthChart.setMcRangeData === 'function') {
                             window.netWorthChart.setMcRangeData(revertMc);
+                        }
+                        
+                        // Revert DCF details table to last clicked scenario
+                        if (lastClickedCell && window.DCFDetailsTable) {
+                            const goalParam = document.getElementById('goalDropdown').value;
+                            const clickedParam = lastClickedCell.dataset.param;
+                            const clickedValue = lastClickedCell.dataset.value;
+                            
+                            // Get scenario names from the clicked cell's row
+                            const clickedRow = lastClickedCell.closest('tr');
+                            if (goalParam && clickedParam && clickedValue && clickedRow) {
+                                const cells = clickedRow.querySelectorAll('td');
+                                if (cells.length >= 2) {
+                                    const scenarioName = cells[0].textContent.trim();
+                                    const subScenarioName = cells[1].textContent.trim();
+                                    window.DCFDetailsTable.loadDCFData(goalParam, clickedParam, clickedValue, scenarioName, subScenarioName);
+                                }
+                            }
                         }
                     });
                     tr.appendChild(td);
@@ -273,6 +297,12 @@
                     if (param && value) {
                         setHighlightedCell(cell);
                         lastClickedCell = cell;
+                        
+                        // Update DCF details table for clicked scenario
+                        const goalParam = document.getElementById('goalDropdown').value;
+                        if (window.DCFDetailsTable && goalParam) {
+                            window.DCFDetailsTable.loadDCFData(goalParam, param, value, scenarioName, subScenarioName);
+                        }
                     }
                 })
                 .catch(err => console.error('Error fetching scenario net-worth line', err));
@@ -288,6 +318,24 @@
             const revertMc = lastClickedMcRangeData || window.lastClickedMcRangeData;
             if (revertMc && window.netWorthChart && typeof window.netWorthChart.setMcRangeData === 'function') {
                 window.netWorthChart.setMcRangeData(revertMc);
+            }
+            
+            // Revert DCF details table to last clicked scenario
+            if (lastClickedCell && window.DCFDetailsTable) {
+                const goalParam = document.getElementById('goalDropdown').value;
+                const clickedParam = lastClickedCell.dataset.param;
+                const clickedValue = lastClickedCell.dataset.value;
+                
+                // Get scenario names from the clicked cell's row
+                const clickedRow = lastClickedCell.closest('tr');
+                if (goalParam && clickedParam && clickedValue && clickedRow) {
+                    const cells = clickedRow.querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        const scenarioName = cells[0].textContent.trim();
+                        const subScenarioName = cells[1].textContent.trim();
+                        window.DCFDetailsTable.loadDCFData(goalParam, clickedParam, clickedValue, scenarioName, subScenarioName);
+                    }
+                }
             }
         });
     }
