@@ -109,6 +109,11 @@
       <div id="autorotate" class="toggle">Auto-rotate</div>
       <div id="shuffle" class="toggle">Shuffle layout</div>
     </div>
+    <div class="row" style="margin-top:8px;">
+      <label for="connDensity">Connections/node:</label>
+      <input id="connDensity" type="range" min="1" max="6" step="1" value="3" />
+      <span id="connDensityValue">3</span>
+    </div>
   </div>
 
   <div class="footer">Standalone HTML • No external libraries</div>
@@ -155,6 +160,14 @@
     let nodeLifetime = 8.0; // seconds a node lives
     let edgeLifetime = 6.0; // seconds an edge lives
     let spawnRate = 0.3; // probability per frame of spawning new elements
+
+    // Connection density and styling controls
+    let targetConnectionsPerNode = 3; // adjustable via HUD
+    let reselectionInterval = 1.5; // seconds between reconnection passes
+    let lastReselectionTime = 0;
+    let forceReselectConnections = false;
+    const dashFlowSpeed = 80; // pixels per second for dashed overlay
+    const curvatureFactor = 0.18; // curve strength as fraction of segment length
 
     // Visual tuning
     const perspective = 900; // virtual focal length
@@ -212,7 +225,8 @@
       }
 
       // Create initial connections
-      updateConnections();
+      recomputeConnectionsDensityBased();
+      lastReselectionTime = time;
     }
 
     function createNode(layerIndex, neuronIndex, layerX, color, rng) {
@@ -239,48 +253,43 @@
       };
     }
 
-    function updateConnections() {
-      // Remove old edges
-      edges = edges.filter(edge => {
-        const lifecycle = edgeLifecycles.get(edge.id);
-        return lifecycle && time < lifecycle.deathTime;
-      });
-
-      // Create new connections between existing nodes
-      const rng = randomSeededNoise(shuffleSeed + Math.floor(time * 100));
+    function recomputeConnectionsDensityBased() {
       const numLayers = maxNodesPerLayer.length;
-      
+      const newEdges = [];
+      const incomingCounts = new Map();
+
       for (let l = 0; l < numLayers - 1; l++) {
-        const leftNodes = nodes.filter(n => n.layerIndex === l);
-        const rightNodes = nodes.filter(n => n.layerIndex === l + 1);
-        
-        for (const leftNode of leftNodes) {
-          for (const rightNode of rightNodes) {
-            const edgeId = `${leftNode.id}->${rightNode.id}`;
-            const existingEdge = edges.find(e => e.id === edgeId);
-            
-            if (!existingEdge && rng() < 0.1) { // 10% chance to create connection
-              const edge = {
-                id: edgeId,
-                from: leftNode,
-                to: rightNode,
-                pulseOffset: rng() * Math.PI * 2,
-                pulseSpeed: 0.8 + rng() * 0.6,
-                opacity: 0, // Start invisible
-                // Animation properties for flowing effect
-                flowSpeed: 0.5 + rng() * 1.0,
-                flowOffset: rng() * Math.PI * 2,
-                particleCount: 2 + Math.floor(rng() * 3) // 2-4 particles per connection
-              };
-              edges.push(edge);
-              edgeLifecycles.set(edgeId, { 
-                birthTime: time, 
-                deathTime: time + edgeLifetime + rng() * 3 
-              });
-            }
+        const leftNodes = nodes.filter(n => n.layerIndex === l).sort((a,b)=>a.neuronIndex-b.neuronIndex);
+        const rightNodes = nodes.filter(n => n.layerIndex === l + 1).sort((a,b)=>a.neuronIndex-b.neuronIndex);
+        const L = leftNodes.length;
+        const R = rightNodes.length;
+        if (L === 0 || R === 0) continue;
+
+        for (let i = 0; i < L; i++) {
+          const leftNode = leftNodes[i];
+          const idealRightIndex = L === 1 ? Math.floor(R/2) : Math.round(i * (R - 1) / (L - 1));
+          // Build right indices in order of proximity to ideal to minimize crossings
+          const orderedIndices = [];
+          for (let k = 0; k < R; k++) {
+            const s = Math.floor((k + 1) / 2) * (k % 2 === 0 ? 1 : -1); // 0, +1, -1, +2, -2...
+            const idx = idealRightIndex + s;
+            if (idx >= 0 && idx < R) orderedIndices.push(idx);
+          }
+
+          let added = 0;
+          for (const idx of orderedIndices) {
+            const rightNode = rightNodes[idx];
+            const inCount = incomingCounts.get(rightNode.id) || 0;
+            if (inCount >= targetConnectionsPerNode) continue;
+            newEdges.push({ id: `${leftNode.id}->${rightNode.id}`, from: leftNode, to: rightNode });
+            incomingCounts.set(rightNode.id, inCount + 1);
+            added++;
+            if (added >= targetConnectionsPerNode) break;
           }
         }
       }
+
+      edges = newEdges;
     }
 
     function spawnNewNodes() {
@@ -308,31 +317,32 @@
               birthTime: time, 
               deathTime: time + nodeLifetime + rng() * 4 
             });
+            forceReselectConnections = true;
           }
         }
       }
     }
 
     function removeExpiredElements() {
+      let removedNode = false;
       // Remove expired nodes
       nodes = nodes.filter(node => {
         const lifecycle = nodeLifecycles.get(node.id);
         if (!lifecycle || time > lifecycle.deathTime) {
           nodeLifecycles.delete(node.id);
+          removedNode = true;
           return false;
         }
         return true;
       });
 
-      // Remove expired edges
-      edges = edges.filter(edge => {
-        const lifecycle = edgeLifecycles.get(edge.id);
-        if (!lifecycle || time > lifecycle.deathTime) {
-          edgeLifecycles.delete(edge.id);
-          return false;
-        }
-        return true;
-      });
+      // Remove edges pointing to missing nodes
+      const existingIds = new Set(nodes.map(n => n.id));
+      edges = edges.filter(edge => existingIds.has(edge.from.id) && existingIds.has(edge.to.id));
+
+      if (removedNode) {
+        forceReselectConnections = true;
+      }
     }
 
     function rotateX(point, angle) {
@@ -365,92 +375,46 @@
 
     function drawEdges(rotatedPositions) {
       ctx.save();
-      
+      const dashOffset = -(time * dashFlowSpeed);
+
       for (const edge of edges) {
         const a = rotatedPositions.get(edge.from.id);
         const b = rotatedPositions.get(edge.to.id);
         if (!a || !b) continue;
-        // Clip trivial far-behind points to avoid numeric issues
         if (a.depth < -perspective * 0.98 || b.depth < -perspective * 0.98) continue;
-        
-        // Calculate lifecycle fade in/out
-        const lifecycle = edgeLifecycles.get(edge.id);
-        let lifecycleAlpha = 1;
-        if (lifecycle) {
-          const age = time - lifecycle.birthTime;
-          const lifetime = lifecycle.deathTime - lifecycle.birthTime;
-          const fadeTime = 1.0; // seconds to fade in/out
-          
-          if (age < fadeTime) {
-            lifecycleAlpha = age / fadeTime; // Fade in
-          } else if (age > lifetime - fadeTime) {
-            lifecycleAlpha = (lifetime - age) / fadeTime; // Fade out
-          }
-          lifecycleAlpha = Math.max(0, Math.min(1, lifecycleAlpha));
-        }
-        
-        // Draw base connection line
-        const pulseValue = Math.sin(time * connectionAnimationSpeed * edge.pulseSpeed + edge.pulseOffset);
-        const baseAlpha = edgeAlpha + (edgeAlpha * 0.6 * pulseValue);
-        const intensity = 0.4 + 0.6 * pulseValue;
-        
+
+        // Quadratic bezier control point to create a gentle curve
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const length = Math.sqrt(dx * dx + dy * dy) || 1;
+        const nx = -dy / length;
+        const ny = dx / length;
+        const cx = (a.x + b.x) / 2 + nx * length * curvatureFactor;
+        const cy = (a.y + b.y) / 2 + ny * length * curvatureFactor;
+
+        // Base line
         ctx.lineWidth = edgeWidth;
-        ctx.globalAlpha = Math.max(0.05, baseAlpha * lifecycleAlpha);
-        ctx.strokeStyle = `rgba(${120 + intensity * 80}, ${160 + intensity * 60}, 255, ${baseAlpha * lifecycleAlpha})`;
-        
+        ctx.globalAlpha = edgeAlpha;
+        ctx.strokeStyle = 'rgba(150, 190, 255, 0.95)';
+        ctx.setLineDash([]);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
+        ctx.quadraticCurveTo(cx, cy, b.x, b.y);
         ctx.stroke();
-        
-        // Draw flowing particles along the connection
-        drawFlowingParticles(edge, a, b, lifecycleAlpha);
-      }
-      
-      ctx.restore();
-    }
 
-    function drawFlowingParticles(edge, startPos, endPos, lifecycleAlpha) {
-      if (!edge.particleCount) return;
-      
-      ctx.save();
-      
-      const dx = endPos.x - startPos.x;
-      const dy = endPos.y - startPos.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      
-      if (length < 5) return; // Skip very short connections
-      
-      const unitX = dx / length;
-      const unitY = dy / length;
-      
-      // Draw multiple particles flowing along the connection
-      for (let i = 0; i < edge.particleCount; i++) {
-        const particleOffset = (i / edge.particleCount) * Math.PI * 2;
-        const flowProgress = ((time * edge.flowSpeed + edge.flowOffset + particleOffset) % (Math.PI * 2)) / (Math.PI * 2);
-        
-        // Position along the line
-        const particleX = startPos.x + dx * flowProgress;
-        const particleY = startPos.y + dy * flowProgress;
-        
-        // Particle brightness based on position (brighter in middle)
-        const centerDistance = Math.abs(flowProgress - 0.5) * 2; // 0 at center, 1 at edges
-        const brightness = (1 - centerDistance * 0.7) * lifecycleAlpha;
-        
-        // Particle size varies with flow
-        const particleSize = 2 + Math.sin(time * 3 + particleOffset) * 1;
-        
-        // Draw glowing particle
-        ctx.shadowColor = `rgba(100, 200, 255, ${brightness})`;
-        ctx.shadowBlur = particleSize * 3;
-        ctx.fillStyle = `rgba(150, 220, 255, ${brightness})`;
-        ctx.globalAlpha = brightness;
-        
+        // Flow overlay with animated dash
+        ctx.lineWidth = Math.max(1, edgeWidth - 0.6);
+        ctx.globalAlpha = Math.min(1, edgeAlpha + 0.25);
+        ctx.strokeStyle = 'rgba(220, 240, 255, 0.95)';
+        ctx.setLineDash([10, 14]);
+        ctx.lineDashOffset = dashOffset;
         ctx.beginPath();
-        ctx.arc(particleX, particleY, particleSize, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(cx, cy, b.x, b.y);
+        ctx.stroke();
       }
-      
+
+      ctx.setLineDash([]);
       ctx.restore();
     }
 
@@ -503,7 +467,11 @@
       // Dynamic network updates
       if (Math.floor(time * 10) % 3 === 0) { // Every ~0.3 seconds
         spawnNewNodes();
-        updateConnections();
+      }
+      if (forceReselectConnections || (time - lastReselectionTime) > reselectionInterval) {
+        recomputeConnectionsDensityBased();
+        forceReselectConnections = false;
+        lastReselectionTime = time;
       }
       removeExpiredElements();
 
@@ -600,6 +568,8 @@
     const applyBtn = document.getElementById('apply');
     const toggleRotateBtn = document.getElementById('autorotate');
     const shuffleBtn = document.getElementById('shuffle');
+    const connDensitySlider = document.getElementById('connDensity');
+    const connDensityValue = document.getElementById('connDensityValue');
 
     function updateToggles() {
       toggleRotateBtn.classList.toggle('active', autoRotate);
@@ -624,6 +594,12 @@
     shuffleBtn.addEventListener('click', () => {
       shuffleSeed = Math.floor(Math.random() * 1e9);
       rebuildGraph();
+    });
+
+    connDensitySlider.addEventListener('input', () => {
+      targetConnectionsPerNode = parseInt(connDensitySlider.value, 10);
+      connDensityValue.textContent = String(targetConnectionsPerNode);
+      forceReselectConnections = true;
     });
 
     // Init
