@@ -39,7 +39,7 @@
 <body>
   <canvas id="canvas"></canvas>
   <div class="hud">
-    Drag to rotate • Scroll to zoom • Double-click to reset • Space toggles auto-rotate
+    Drag to rotate • Scroll to pan Y • Double-click to reset • Space toggles auto-rotate
   </div>
 
   <script>
@@ -89,8 +89,15 @@
     const PERSPECTIVE = 1000; // focal length
     let yaw = -0.5;   // rotate around Y
     let pitch = -0.12; // rotate around X
-    let zoom = 1.0;   // uniform scale
-    let autoRotate = false;
+    let zoom = 0.35;   // start zoomed all the way out (min)
+    let autoRotate = true; // default to auto-rotate
+
+    // Camera Y pan and spawn Y offset
+    let cameraY = 0;          // camera translation along Y (up/down)
+    let spawnYOffset = 0;     // shifts where new nodes are created in Y
+    const Y_PAN_SPEED = 0.5;  // world units per wheel delta unit (match former Z pan rate)
+    const CAMERA_Y_MIN = -600;
+    const CAMERA_Y_MAX = 600;
 
     // Interaction state
     let isDragging = false;
@@ -128,10 +135,13 @@
     }
 
     function project(p) {
-      const scale = (PERSPECTIVE * zoom) / (PERSPECTIVE + p.z);
+      const zRel = p.z; // no Z camera translation; keep depth for perspective
+      const yRel = p.y - cameraY; // translate camera along Y (pan up/down)
+      const denom = PERSPECTIVE + zRel;
+      const scale = (PERSPECTIVE * zoom) / Math.max(1, denom);
       const cx = canvas.width / (window.devicePixelRatio || 1) / 2;
       const cy = canvas.height / (window.devicePixelRatio || 1) / 2;
-      return { x: cx + p.x * scale, y: cy + p.y * scale };
+      return { x: cx + p.x * scale, y: cy + yRel * scale };
     }
 
     // Root node at world center
@@ -168,7 +178,7 @@
         for (let t = 0; t < MAX_POSITION_TRIES; t++) {
           const x = rand(clamp(left + SCREEN_MARGIN, -WORLD_WIDTH/2, WORLD_WIDTH/2),
                          clamp(right - SCREEN_MARGIN, -WORLD_WIDTH/2, WORLD_WIDTH/2));
-          const y = rand(-WORLD_HEIGHT/2 + SCREEN_MARGIN, WORLD_HEIGHT/2 - SCREEN_MARGIN);
+          const y = rand(-WORLD_HEIGHT/2 + SCREEN_MARGIN, WORLD_HEIGHT/2 - SCREEN_MARGIN) + spawnYOffset;
           const z = rand(-180, 180); // modest depth jitter
           childPos = { x, y, z };
           // In 2D version, edges avoid intersections. For simplicity in 3D, skip intersection tests.
@@ -332,16 +342,17 @@
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const delta = -Math.sign(e.deltaY);
-      const factor = 1 + 0.1 * delta;
-      zoom *= factor;
-      zoom = Math.max(0.35, Math.min(4.0, zoom));
+      const dy = e.deltaY * Y_PAN_SPEED; // scroll down -> pan downward (+Y)
+      cameraY = clamp(cameraY + dy, CAMERA_Y_MIN, CAMERA_Y_MAX);
+      spawnYOffset += dy; // keep spawn moving with camera along Y
     }, { passive: false });
 
     canvas.addEventListener('dblclick', () => {
       yaw = -0.5;
       pitch = -0.12;
-      zoom = 1.0;
+      zoom = 0.35; // reset to fully zoomed out
+      cameraY = 0;
+      spawnYOffset = 0;
     });
 
     window.addEventListener('keydown', (e) => {
