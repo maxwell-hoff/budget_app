@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Neural Network (Standalone)</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: radial-gradient(1200px 800px at 70% 30%, #12182b 0%, #0a0f1f 60%, #070b17 100%);
+      color: #ccd6f6;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      overflow: hidden;
+    }
+
+    #canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(7, 11, 23, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(99, 114, 255, 0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      max-width: 360px;
+      line-height: 1.4;
+      user-select: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .hud h3 {
+      margin: 0 0 8px 0;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.4px;
+      color: #e6f1ff;
+    }
+
+    .hud .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hud label {
+      font-size: 12px;
+      opacity: 0.9;
+      white-space: nowrap;
+    }
+
+    .hud input[type="text"] {
+      width: 180px;
+      border-radius: 8px;
+      border: 1px solid rgba(99, 114, 255, 0.25);
+      background: rgba(18, 24, 43, 0.6);
+      color: #e6f1ff;
+      padding: 6px 8px;
+      outline: none;
+    }
+
+    .hud button, .hud .toggle {
+      border-radius: 8px;
+      border: 1px solid rgba(99, 114, 255, 0.25);
+      background: rgba(18, 24, 43, 0.6);
+      color: #e6f1ff;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .hud .toggle.active {
+      border-color: rgba(99, 214, 255, 0.6);
+      box-shadow: 0 0 0 2px rgba(99, 214, 255, 0.15) inset;
+    }
+
+    .footer {
+      position: fixed;
+      right: 16px;
+      bottom: 14px;
+      color: #99a3c8;
+      font-size: 12px;
+      opacity: 0.9;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div class="hud">
+    <h3>3D Neural Network</h3>
+    <div style="margin-bottom:8px; font-size:12px; color:#aab6ff;">
+      Drag to rotate • Scroll to zoom • Double-click to reset • Space to toggle auto-rotate
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <label for="layers">Layers:</label>
+      <input id="layers" type="text" value="5,10,8,6,3" title="Comma-separated neuron counts per layer" />
+      <button id="apply">Apply</button>
+    </div>
+    <div class="row">
+      <div id="autorotate" class="toggle">Auto-rotate</div>
+      <div id="shuffle" class="toggle">Shuffle layout</div>
+    </div>
+  </div>
+
+  <div class="footer">Standalone HTML • No external libraries</div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Sizing
+    function resize() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = '100vw';
+      canvas.style.height = '100vh';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Scene state
+    let layerSizes = [5, 10, 8, 6, 3];
+    let nodes = [];
+    let edges = [];
+
+    // Interaction state
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let yaw = -0.5;   // rotation around Y
+    let pitch = -0.12; // rotation around X
+    let zoom = 1.0;   // model scale factor
+    let autoRotate = false;
+
+    // Animation state
+    let time = 0;
+    let nodeAnimationSpeed = 0.8;
+    let connectionAnimationSpeed = 1.2;
+    
+    // Dynamic network state
+    let maxNodesPerLayer = [];
+    let nodeLifecycles = new Map(); // tracks node birth/death times
+    let edgeLifecycles = new Map(); // tracks edge birth/death times
+    let nodeLifetime = 8.0; // seconds a node lives
+    let edgeLifetime = 6.0; // seconds an edge lives
+    let spawnRate = 0.3; // probability per frame of spawning new elements
+
+    // Visual tuning
+    const perspective = 900; // virtual focal length
+    const baseNodeRadius = 6;
+    const layerSpacing = 110; // world units
+    const neuronVerticalSpacing = 26;
+    const jitterAmount = 12; // random Z jitter for depth
+    const edgeAlpha = 0.25; // Increased visibility
+    const edgeWidth = 1.8; // Thicker lines
+
+    function generatePalette(num) {
+      const colors = [];
+      const startHue = 220; // bluish
+      const endHue = 280;   // violet
+      for (let i = 0; i < num; i++) {
+        const t = num <= 1 ? 0 : i / (num - 1);
+        const hue = startHue + (endHue - startHue) * t;
+        colors.push(`hsl(${hue}, 75%, 65%)`);
+      }
+      return colors;
+    }
+
+    function randomSeededNoise(seed) {
+      let s = seed % 2147483647;
+      if (s <= 0) s += 2147483646;
+      return () => (s = s * 16807 % 2147483647) / 2147483647;
+    }
+
+    let shuffleSeed = Math.floor(Math.random() * 1e9);
+    function rebuildGraph() {
+      const rng = randomSeededNoise(shuffleSeed);
+      nodes = [];
+      edges = [];
+      nodeLifecycles.clear();
+      edgeLifecycles.clear();
+
+      // Store max nodes per layer for dynamic spawning
+      maxNodesPerLayer = [...layerSizes];
+      
+      const numLayers = layerSizes.length;
+      const palette = generatePalette(numLayers);
+
+      // Start with fewer nodes that will grow over time
+      const totalWidth = (numLayers - 1) * layerSpacing;
+      for (let layerIndex = 0; layerIndex < numLayers; layerIndex++) {
+        const maxNeurons = layerSizes[layerIndex];
+        const initialNeurons = Math.max(1, Math.floor(maxNeurons * 0.3)); // Start with 30% of max
+        const layerX = -totalWidth / 2 + layerIndex * layerSpacing;
+
+        for (let neuronIndex = 0; neuronIndex < initialNeurons; neuronIndex++) {
+          const node = createNode(layerIndex, neuronIndex, layerX, palette[layerIndex], rng);
+          nodes.push(node);
+          nodeLifecycles.set(node.id, { birthTime: time, deathTime: time + nodeLifetime + rng() * 4 });
+        }
+      }
+
+      // Create initial connections
+      updateConnections();
+    }
+
+    function createNode(layerIndex, neuronIndex, layerX, color, rng) {
+      const maxNeuronsInLayer = maxNodesPerLayer[layerIndex];
+      const totalHeight = (maxNeuronsInLayer - 1) * neuronVerticalSpacing;
+      const y = -totalHeight / 2 + neuronIndex * neuronVerticalSpacing;
+      const zJitter = (rng() - 0.5) * 2 * jitterAmount;
+      
+      return {
+        id: `${layerIndex}:${neuronIndex}`,
+        layerIndex,
+        neuronIndex,
+        color: color,
+        baseX: layerX,
+        baseY: y,
+        baseZ: zJitter,
+        x: layerX,
+        y: y,
+        z: zJitter,
+        // Animation properties
+        floatOffset: rng() * Math.PI * 2,
+        floatAmplitude: 3 + rng() * 4,
+        opacity: 0 // Start invisible, will fade in
+      };
+    }
+
+    function updateConnections() {
+      // Remove old edges
+      edges = edges.filter(edge => {
+        const lifecycle = edgeLifecycles.get(edge.id);
+        return lifecycle && time < lifecycle.deathTime;
+      });
+
+      // Create new connections between existing nodes
+      const rng = randomSeededNoise(shuffleSeed + Math.floor(time * 100));
+      const numLayers = maxNodesPerLayer.length;
+      
+      for (let l = 0; l < numLayers - 1; l++) {
+        const leftNodes = nodes.filter(n => n.layerIndex === l);
+        const rightNodes = nodes.filter(n => n.layerIndex === l + 1);
+        
+        for (const leftNode of leftNodes) {
+          for (const rightNode of rightNodes) {
+            const edgeId = `${leftNode.id}->${rightNode.id}`;
+            const existingEdge = edges.find(e => e.id === edgeId);
+            
+            if (!existingEdge && rng() < 0.1) { // 10% chance to create connection
+              const edge = {
+                id: edgeId,
+                from: leftNode,
+                to: rightNode,
+                pulseOffset: rng() * Math.PI * 2,
+                pulseSpeed: 0.8 + rng() * 0.6,
+                opacity: 0, // Start invisible
+                // Animation properties for flowing effect
+                flowSpeed: 0.5 + rng() * 1.0,
+                flowOffset: rng() * Math.PI * 2,
+                particleCount: 2 + Math.floor(rng() * 3) // 2-4 particles per connection
+              };
+              edges.push(edge);
+              edgeLifecycles.set(edgeId, { 
+                birthTime: time, 
+                deathTime: time + edgeLifetime + rng() * 3 
+              });
+            }
+          }
+        }
+      }
+    }
+
+    function spawnNewNodes() {
+      const rng = randomSeededNoise(shuffleSeed + Math.floor(time * 50));
+      const numLayers = maxNodesPerLayer.length;
+      const palette = generatePalette(numLayers);
+      
+      for (let layerIndex = 0; layerIndex < numLayers; layerIndex++) {
+        const currentNodes = nodes.filter(n => n.layerIndex === layerIndex).length;
+        const maxNodes = maxNodesPerLayer[layerIndex];
+        
+        if (currentNodes < maxNodes && rng() < spawnRate * 0.02) {
+          // Find available neuron index
+          const usedIndices = new Set(nodes.filter(n => n.layerIndex === layerIndex).map(n => n.neuronIndex));
+          let neuronIndex = 0;
+          while (usedIndices.has(neuronIndex) && neuronIndex < maxNodes) {
+            neuronIndex++;
+          }
+          
+          if (neuronIndex < maxNodes) {
+            const layerX = -((numLayers - 1) * layerSpacing) / 2 + layerIndex * layerSpacing;
+            const node = createNode(layerIndex, neuronIndex, layerX, palette[layerIndex], rng);
+            nodes.push(node);
+            nodeLifecycles.set(node.id, { 
+              birthTime: time, 
+              deathTime: time + nodeLifetime + rng() * 4 
+            });
+          }
+        }
+      }
+    }
+
+    function removeExpiredElements() {
+      // Remove expired nodes
+      nodes = nodes.filter(node => {
+        const lifecycle = nodeLifecycles.get(node.id);
+        if (!lifecycle || time > lifecycle.deathTime) {
+          nodeLifecycles.delete(node.id);
+          return false;
+        }
+        return true;
+      });
+
+      // Remove expired edges
+      edges = edges.filter(edge => {
+        const lifecycle = edgeLifecycles.get(edge.id);
+        if (!lifecycle || time > lifecycle.deathTime) {
+          edgeLifecycles.delete(edge.id);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function rotateX(point, angle) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const y = point.y * cos - point.z * sin;
+      const z = point.y * sin + point.z * cos;
+      return { x: point.x, y, z };
+    }
+
+    function rotateY(point, angle) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const x = point.x * cos + point.z * sin;
+      const z = -point.x * sin + point.z * cos;
+      return { x, y: point.y, z };
+    }
+
+    function project(point) {
+      // Perspective projection with simple camera at origin looking down -Z
+      const scale = (perspective * zoom) / (perspective + point.z);
+      const screenX = canvas.width / (window.devicePixelRatio || 1) / 2 + point.x * scale;
+      const screenY = canvas.height / (window.devicePixelRatio || 1) / 2 + point.y * scale;
+      return { x: screenX, y: screenY, scale, depth: point.z };
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawEdges(rotatedPositions) {
+      ctx.save();
+      
+      for (const edge of edges) {
+        const a = rotatedPositions.get(edge.from.id);
+        const b = rotatedPositions.get(edge.to.id);
+        if (!a || !b) continue;
+        // Clip trivial far-behind points to avoid numeric issues
+        if (a.depth < -perspective * 0.98 || b.depth < -perspective * 0.98) continue;
+        
+        // Calculate lifecycle fade in/out
+        const lifecycle = edgeLifecycles.get(edge.id);
+        let lifecycleAlpha = 1;
+        if (lifecycle) {
+          const age = time - lifecycle.birthTime;
+          const lifetime = lifecycle.deathTime - lifecycle.birthTime;
+          const fadeTime = 1.0; // seconds to fade in/out
+          
+          if (age < fadeTime) {
+            lifecycleAlpha = age / fadeTime; // Fade in
+          } else if (age > lifetime - fadeTime) {
+            lifecycleAlpha = (lifetime - age) / fadeTime; // Fade out
+          }
+          lifecycleAlpha = Math.max(0, Math.min(1, lifecycleAlpha));
+        }
+        
+        // Draw base connection line
+        const pulseValue = Math.sin(time * connectionAnimationSpeed * edge.pulseSpeed + edge.pulseOffset);
+        const baseAlpha = edgeAlpha + (edgeAlpha * 0.6 * pulseValue);
+        const intensity = 0.4 + 0.6 * pulseValue;
+        
+        ctx.lineWidth = edgeWidth;
+        ctx.globalAlpha = Math.max(0.05, baseAlpha * lifecycleAlpha);
+        ctx.strokeStyle = `rgba(${120 + intensity * 80}, ${160 + intensity * 60}, 255, ${baseAlpha * lifecycleAlpha})`;
+        
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        
+        // Draw flowing particles along the connection
+        drawFlowingParticles(edge, a, b, lifecycleAlpha);
+      }
+      
+      ctx.restore();
+    }
+
+    function drawFlowingParticles(edge, startPos, endPos, lifecycleAlpha) {
+      if (!edge.particleCount) return;
+      
+      ctx.save();
+      
+      const dx = endPos.x - startPos.x;
+      const dy = endPos.y - startPos.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      if (length < 5) return; // Skip very short connections
+      
+      const unitX = dx / length;
+      const unitY = dy / length;
+      
+      // Draw multiple particles flowing along the connection
+      for (let i = 0; i < edge.particleCount; i++) {
+        const particleOffset = (i / edge.particleCount) * Math.PI * 2;
+        const flowProgress = ((time * edge.flowSpeed + edge.flowOffset + particleOffset) % (Math.PI * 2)) / (Math.PI * 2);
+        
+        // Position along the line
+        const particleX = startPos.x + dx * flowProgress;
+        const particleY = startPos.y + dy * flowProgress;
+        
+        // Particle brightness based on position (brighter in middle)
+        const centerDistance = Math.abs(flowProgress - 0.5) * 2; // 0 at center, 1 at edges
+        const brightness = (1 - centerDistance * 0.7) * lifecycleAlpha;
+        
+        // Particle size varies with flow
+        const particleSize = 2 + Math.sin(time * 3 + particleOffset) * 1;
+        
+        // Draw glowing particle
+        ctx.shadowColor = `rgba(100, 200, 255, ${brightness})`;
+        ctx.shadowBlur = particleSize * 3;
+        ctx.fillStyle = `rgba(150, 220, 255, ${brightness})`;
+        ctx.globalAlpha = brightness;
+        
+        ctx.beginPath();
+        ctx.arc(particleX, particleY, particleSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
+
+    function drawNodes(projectedNodes) {
+      ctx.save();
+      for (const n of projectedNodes) {
+        // Calculate lifecycle fade in/out
+        const lifecycle = nodeLifecycles.get(n.nodeId);
+        let lifecycleAlpha = 1;
+        if (lifecycle) {
+          const age = time - lifecycle.birthTime;
+          const lifetime = lifecycle.deathTime - lifecycle.birthTime;
+          const fadeTime = 1.5; // seconds to fade in/out
+          
+          if (age < fadeTime) {
+            lifecycleAlpha = age / fadeTime; // Fade in
+          } else if (age > lifetime - fadeTime) {
+            lifecycleAlpha = (lifetime - age) / fadeTime; // Fade out
+          }
+          lifecycleAlpha = Math.max(0, Math.min(1, lifecycleAlpha));
+        }
+        
+        // Constant radius (no size pulsing)
+        const radius = Math.max(1.2, baseNodeRadius * 0.25 + baseNodeRadius * 0.75 * n.scale);
+        
+        // Animated glow intensity
+        const glowIntensity = 0.7 + 0.3 * Math.sin(time * nodeAnimationSpeed * 0.8 + (n.floatOffset || 0));
+        const shadowBlur = Math.min(24, radius * 2.5 * glowIntensity);
+        
+        // Node glow
+        ctx.shadowColor = n.color;
+        ctx.shadowBlur = shadowBlur;
+        ctx.fillStyle = n.color;
+        ctx.globalAlpha = (0.8 + 0.2 * glowIntensity) * lifecycleAlpha;
+        
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function render() {
+      time += 0.016; // Approximate 60fps time increment
+      
+      if (autoRotate) {
+        yaw += 0.0022;
+      }
+
+      // Dynamic network updates
+      if (Math.floor(time * 10) % 3 === 0) { // Every ~0.3 seconds
+        spawnNewNodes();
+        updateConnections();
+      }
+      removeExpiredElements();
+
+      clearCanvas();
+
+      // Update node positions with floating animation
+      for (const n of nodes) {
+        // Gentle floating motion
+        const floatY = Math.sin(time * nodeAnimationSpeed + n.floatOffset) * n.floatAmplitude;
+        const floatX = Math.cos(time * nodeAnimationSpeed * 0.7 + n.floatOffset) * (n.floatAmplitude * 0.3);
+        const floatZ = Math.sin(time * nodeAnimationSpeed * 0.5 + n.floatOffset + 1) * (n.floatAmplitude * 0.5);
+        
+        n.x = n.baseX + floatX;
+        n.y = n.baseY + floatY;
+        n.z = n.baseZ + floatZ;
+      }
+
+      // Compute rotated, projected positions
+      const rotated = new Map();
+      for (const n of nodes) {
+        const scaled = { x: n.x, y: n.y, z: n.z };
+        let p = rotateY(scaled, yaw);
+        p = rotateX(p, pitch);
+        const proj = project(p);
+        rotated.set(n.id, { 
+          ...proj, 
+          color: n.color, 
+          layerIndex: n.layerIndex,
+          floatOffset: n.floatOffset,
+          nodeId: n.id
+        });
+      }
+
+      // Draw edges behind nodes
+      drawEdges(rotated);
+
+      // Sort nodes by depth (back-to-front)
+      const projectedNodes = [];
+      for (const n of nodes) {
+        const p = rotated.get(n.id);
+        if (p) projectedNodes.push({ ...p, color: n.color });
+      }
+      projectedNodes.sort((a, b) => a.depth - b.depth);
+
+      drawNodes(projectedNodes);
+
+      requestAnimationFrame(render);
+    }
+
+    // Interaction
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('mouseleave', () => { isDragging = false; });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      yaw += dx * 0.005;
+      pitch += dy * 0.005;
+      const maxPitch = Math.PI / 2 - 0.05;
+      if (pitch > maxPitch) pitch = maxPitch;
+      if (pitch < -maxPitch) pitch = -maxPitch;
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = -Math.sign(e.deltaY);
+      const factor = 1 + 0.1 * delta;
+      zoom *= factor;
+      zoom = Math.max(0.3, Math.min(4.5, zoom));
+    }, { passive: false });
+
+    canvas.addEventListener('dblclick', () => {
+      yaw = -0.5;
+      pitch = -0.12;
+      zoom = 1.0;
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        autoRotate = !autoRotate;
+        updateToggles();
+      }
+    });
+
+    // HUD controls
+    const layersInput = document.getElementById('layers');
+    const applyBtn = document.getElementById('apply');
+    const toggleRotateBtn = document.getElementById('autorotate');
+    const shuffleBtn = document.getElementById('shuffle');
+
+    function updateToggles() {
+      toggleRotateBtn.classList.toggle('active', autoRotate);
+    }
+
+    applyBtn.addEventListener('click', () => {
+      const text = layersInput.value.trim();
+      const parts = text.split(',').map(s => parseInt(s, 10)).filter(n => Number.isFinite(n) && n > 0);
+      if (parts.length >= 2) {
+        layerSizes = parts;
+        rebuildGraph();
+      } else {
+        alert('Please enter at least two positive integers, e.g. 5,10,8,6,3');
+      }
+    });
+
+    toggleRotateBtn.addEventListener('click', () => {
+      autoRotate = !autoRotate;
+      updateToggles();
+    });
+
+    shuffleBtn.addEventListener('click', () => {
+      shuffleSeed = Math.floor(Math.random() * 1e9);
+      rebuildGraph();
+    });
+
+    // Init
+    rebuildGraph();
+    updateToggles();
+    render();
+  </script>
+</body>
+</html>
+
