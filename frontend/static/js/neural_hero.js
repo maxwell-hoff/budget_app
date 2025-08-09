@@ -37,8 +37,8 @@
   const MAX_POSITION_TRIES = 20;
 
   // World extents (arbitrary units projected to screen)
-  const WORLD_WIDTH = 2400;  // X spans sections across this width
-  const WORLD_HEIGHT = 1400; // clamp Y within this height
+  const WORLD_WIDTH = 100000;  // X spans sections across this width
+  const WORLD_HEIGHT = 100000; // clamp Y within this height
   const SCREEN_MARGIN = 120; // world-margin when placing nodes
 
   // Visuals
