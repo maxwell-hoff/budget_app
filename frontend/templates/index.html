@@ -313,6 +313,41 @@
                         </div>
                     </div>
                 </div>
+                <!-- DCF Details Table Section -->
+                <div class="chart-container">
+                    <div id="dcf-details-container">
+                        <div class="dcf-details-header">
+                            <h4>DCF Details by Age</h4>
+                            <div class="dcf-details-info">
+                                <span id="dcf-details-scenario">Select a scenario to view details</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="dcf-details-table" class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Age</th>
+                                        <th>Beginning Assets</th>
+                                        <th>Assets Income</th>
+                                        <th>Beginning Liabilities</th>
+                                        <th>Liabilities Expense</th>
+                                        <th>Salary</th>
+                                        <th>Expenses</th>
+                                        <th>Net Worth</th>
+                                        <th>Cash Flow</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dcf-details-tbody">
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted">
+                                            Select a scenario from the table above to view DCF details
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 <!-- Liquidity Chart Section -->
                 <div class="chart-container">
                     <div id="liquidity-chart">
@@ -345,6 +380,7 @@
     <script src="/static/js/scenarios.js"></script>
     <script src="/static/js/sub_scenarios.js"></script>
     <script src="/static/js/scenario_table.js"></script>
+    <script src="/static/js/dcf_details_table.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/calculate_button.js"></script>
 </body>

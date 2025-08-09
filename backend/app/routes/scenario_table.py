@@ -98,6 +98,8 @@ def get_solved_dcf():
         • goal  – goal parameter (e.g. "amount")
         • scenario_parameter  – parameter that was varied (e.g. "age_at_occurrence")
         • scenario_value      – concrete value of the scenario parameter
+        • scenario  – scenario name for filtering
+        • sub_scenario  – sub-scenario name for filtering
 
     The response is a flat JSON list with one entry per age-year row.
     """
@@ -105,6 +107,8 @@ def get_solved_dcf():
     goal_param = request.args.get('goal')
     scen_param = request.args.get('scenario_parameter')
     scen_value = request.args.get('scenario_value')
+    scenario_name = request.args.get('scenario')
+    sub_scenario_name = request.args.get('sub_scenario')
 
     query = db.session.query(
         SolvedDCF,
@@ -121,6 +125,10 @@ def get_solved_dcf():
         query = query.filter(SolvedDCF.scenario_parameter == scen_param)
     if scen_value is not None:
         query = query.filter(SolvedDCF.scenario_value == scen_value)
+    if scenario_name:
+        query = query.filter(Milestone.scenario_name == scenario_name)
+    if sub_scenario_name:
+        query = query.filter(Milestone.sub_scenario_name == sub_scenario_name)
 
     rows = query.order_by(
         SolvedDCF.scenario_id,

@@ -729,9 +729,10 @@ label {
 
 /* Home Section Styles */
 .home-section {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     text-align: center;
+    padding: 0 2rem; /* Add some padding for smaller screens */
 }
 
 .home-description {
@@ -752,9 +753,9 @@ label {
 /* Position container relative so overlay can sit on top */
 .home-video-container {
     position: relative;
-    /* width: 90vw; */
-    max-width: 1200px;
-    /* margin: 0 auto 2rem auto; center and give bottom spacing */
+    width: 95vw; /* Use 95% of viewport width for better coverage */
+    max-width: 1500px; /* Increased from 1200px */
+    margin: 0 auto 2rem auto; /* center and give bottom spacing */
     background-color: #000000; /* match video edges to body */
     overflow: hidden;
     height: 70vh;
@@ -862,3 +863,126 @@ label {
 .feature-icon { color: #4a9eff; font-size: 1.4rem; margin-bottom: 8px; }
 .feature-card h5 { margin: 4px 0 6px 0; }
 .feature-card p { color: #cfcfcf; margin: 0; }
+
+/* DCF Details Table Styles */
+#dcf-details-container {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.dcf-details-header {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.dcf-details-header h4 {
+    color: #4a9eff;
+    margin-bottom: 5px;
+}
+
+.dcf-details-info {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+#dcf-details-table {
+    background-color: #222;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+#dcf-details-table th {
+    background-color: #333 !important;
+    color: #e0e0e0;
+    border: none;
+    padding: 12px 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+#dcf-details-table td {
+    border: none;
+    padding: 10px 8px;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    background-color: #1a1a1a;
+}
+
+#dcf-details-table td:first-child {
+    text-align: center;
+    font-weight: 600;
+    color: #4a9eff;
+}
+
+/* Color highlighting for positive and negative values */
+.dcf-positive {
+    color: #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.1) !important;
+}
+
+.dcf-negative {
+    color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.dcf-zero {
+    color: #6c757d !important;
+}
+
+/* Hover effects for DCF table rows */
+#dcf-details-table tbody tr:hover {
+    background-color: #2d2d2d !important;
+}
+
+#dcf-details-table tbody tr:hover td {
+    background-color: #2d2d2d !important;
+}
+
+/* Responsive adjustments for DCF table */
+@media (max-width: 768px) {
+    #dcf-details-table th,
+    #dcf-details-table td {
+        padding: 8px 4px;
+        font-size: 0.75rem;
+    }
+    
+    .dcf-details-header h4 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Responsive adjustments for homepage video */
+@media (max-width: 1200px) {
+    .home-video-container {
+        width: 98vw; /* Use more screen width on smaller screens */
+        max-width: none; /* Remove max-width constraint on smaller screens */
+    }
+    
+    .home-section {
+        padding: 0 1rem; /* Reduce padding on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .home-video-container {
+        width: 100vw; /* Full width on mobile */
+        height: 60vh; /* Slightly shorter on mobile */
+        border-radius: 0; /* Remove border radius on full-width mobile */
+        margin: 0 0 1rem 0; /* Remove side margins on mobile */
+    }
+    
+    .home-section {
+        padding: 0;
+        max-width: none;
+    }
+    
+    .home-video-overlay .overlay-inner {
+        max-width: 90%; /* Allow more width for text on mobile */
+        padding: 0 0.5rem;
+    }
+}
