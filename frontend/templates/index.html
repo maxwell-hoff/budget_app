@@ -30,7 +30,7 @@
     </div>
 
     <!-- The main content area -->
-    <div class="main-container">
+    <div class="main-container" data-fullpage-threshold="400">
         <!-- Scenario Bar at the top -->
         <div class="scenario-bar" style="display: none;">
             <div class="scenario-controls d-flex align-items-center gap-2">
@@ -65,15 +65,17 @@
                     </div>
 
                     <!-- Hero background animation -->
-                    <div class="home-video-container mb-4">
-                        <canvas id="heroCanvas" class="home-canvas"></canvas>
+                    <div class="home-video-container mb-4 snap-section">
+                        <canvas id="heroCanvas" class="home-canvas" data-interactive="1"></canvas>
 
                         <!-- Text overlay -->
                         <div class="home-video-overlay">
-                            <div class="overlay-inner">
-                                <h1 class="mb-4">Don't just build a budget. Build an understanding of your finances.</h1>
+                            <div class="overlay-inner reveal">
+                                <h1 class="mb-4">Life isn’t meant to be lived by following a perfect plan.</h1>
                                 <p class="home-description">
-                                    You don't need a categorized budget. You need a way to understand the impact of your choices. Tradeoffs helps you compare scenarios, test assumptions, and reflect on your values, and adapt with clarity.
+                                    It’s shaped by small decisions, chance encounters, unexpected changes, and how well you adapt along the way. Your finances should work the same way. 
+                                    
+                                    Tradeoffs helps you stay actively involved in your money, not hand it over to a black box. Compare scenarios, test assumptions, and see how different choices shape your future. By engaging directly with your finances, you gain the awareness and flexibility to keep your life — and your money — aligned with what matters most.
                                 </p>
                                  <div class="cta-group mt-4">
                                      <button id="cta-get-started" class="btn btn-cta glow-button btn-lg me-2">
@@ -91,25 +93,25 @@
                     </div>
  
                      <!-- Feature highlights -->
-                     <section class="home-features py-5">
+                     <section class="home-features py-5 snap-section">
                          <div class="container">
                              <div class="row g-4">
                                  <div class="col-12 col-md-4">
-                                     <div class="feature-card h-100">
+                                     <div class="feature-card h-100 reveal">
                                          <i class="fas fa-sliders-h feature-icon"></i>
                                          <h5>Compare scenarios</h5>
                                          <p>Model tradeoffs side-by-side to see how choices change your future.</p>
                                      </div>
                                  </div>
                                  <div class="col-12 col-md-4">
-                                     <div class="feature-card h-100">
+                                     <div class="feature-card h-100 reveal">
                                          <i class="fas fa-bolt feature-icon"></i>
                                          <h5>Test assumptions</h5>
                                          <p>Stress-test variables and spot cash crunches before they happen.</p>
                                      </div>
                                  </div>
                                  <div class="col-12 col-md-4">
-                                     <div class="feature-card h-100">
+                                     <div class="feature-card h-100 reveal">
                                          <i class="fas fa-heart feature-icon"></i>
                                          <h5>Align with values</h5>
                                          <p>Anchor decisions to what matters and adapt with clarity over time.</p>

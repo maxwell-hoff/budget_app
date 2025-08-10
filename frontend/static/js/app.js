@@ -86,6 +86,94 @@ $(document).ready(function() {
         window.addEventListener('scroll', hideIndicator, { once: true });
     }
 
+    // Full-page scroll snapping threshold + reveal-on-scroll
+    const mainContainer = document.querySelector('.main-container');
+    if (mainContainer) {
+        const thresholdAttr = mainContainer.getAttribute('data-fullpage-threshold');
+        const fullpageThreshold = Math.max(0, parseInt(thresholdAttr || '400', 10) || 0);
+
+        const applySnapState = () => {
+            if (mainContainer.scrollTop >= fullpageThreshold) {
+                mainContainer.classList.add('snap-enabled');
+            } else {
+                mainContainer.classList.remove('snap-enabled');
+            }
+        };
+
+        // Reveal-on-scroll using IntersectionObserver scoped to the container
+        let hasUserScrolled = false;
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const isHeroOverlay = entry.target.matches('.home-video-overlay .overlay-inner.reveal');
+                // Keep hero overlay hidden until the user scrolls
+                if (isHeroOverlay && !hasUserScrolled) return;
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { root: null, threshold: 0.15 });
+
+        const revealTargets = mainContainer.querySelectorAll('.reveal');
+        revealTargets.forEach(el => revealObserver.observe(el));
+
+        const revealNowIfInViewport = () => {
+            // Fallback check: mark any reveal elements visible if they are in viewport
+            const vpH = window.innerHeight || document.documentElement.clientHeight;
+            revealTargets.forEach(el => {
+                if (el.classList.contains('visible')) return;
+                const rect = el.getBoundingClientRect();
+                const inView = rect.top < vpH * 0.9 && rect.bottom > vpH * 0.1;
+                if (inView && (hasUserScrolled || !el.closest('.home-video-overlay'))) {
+                    el.classList.add('visible');
+                    revealObserver.unobserve(el);
+                }
+            });
+        };
+
+        const onContainerScroll = () => {
+            if (!hasUserScrolled && mainContainer.scrollTop > 2) {
+                hasUserScrolled = true;
+                // Re-observe all targets once to force a fresh intersection
+                // calculation now that reveals are allowed.
+                revealTargets.forEach(el => {
+                    revealObserver.unobserve(el);
+                    revealObserver.observe(el);
+                });
+                // Ensure hero overlay becomes visible once user has scrolled
+                const heroOverlayInner = document.querySelector('.home-video-overlay .overlay-inner.reveal');
+                if (heroOverlayInner) heroOverlayInner.classList.add('visible');
+            }
+            applySnapState();
+            revealNowIfInViewport();
+        };
+
+        mainContainer.addEventListener('scroll', onContainerScroll, { passive: true });
+        window.addEventListener('scroll', onContainerScroll, { passive: true });
+        // Mark that the user scrolled even if container didn't move (e.g. wheel over hero)
+        const markScrolled = () => {
+            if (hasUserScrolled) return;
+            hasUserScrolled = true;
+            const heroOverlayInner = document.querySelector('.home-video-overlay .overlay-inner.reveal');
+            if (heroOverlayInner) heroOverlayInner.classList.add('visible');
+            // Kick observer
+            revealTargets.forEach(el => {
+                revealObserver.unobserve(el);
+                revealObserver.observe(el);
+            });
+        };
+        window.addEventListener('wheel', markScrolled, { passive: true });
+        window.addEventListener('touchmove', markScrolled, { passive: true });
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowDown','PageDown','Space'].includes(e.code)) markScrolled();
+        });
+        window.addEventListener('resize', revealNowIfInViewport, { passive: true });
+        // Initialize state on load
+        applySnapState();
+        // Initial pass to reveal anything already in view (non-hero)
+        revealNowIfInViewport();
+    }
+
     // Accounts input mode toggle
     const uploadPane = document.getElementById('accounts-upload-pane');
     const manualPane = document.getElementById('accounts-manual-pane');
