@@ -946,6 +946,12 @@ label {
     color: #6c757d !important;
 }
 
+/* DCF details expand/collapse rows */
+.dcf-main-row td { vertical-align: middle; }
+.dcf-detail-row td { background: #151515; }
+.dcf-toggle { color: #4a9eff; text-decoration: none; }
+.dcf-toggle:hover { color: #3d8eff; text-decoration: none; }
+
 /* Hover effects for DCF table rows */
 #dcf-details-table tbody tr:hover {
     background-color: #2d2d2d !important;
