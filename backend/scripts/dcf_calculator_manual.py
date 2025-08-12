@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 import math
 import pandas as pd
 
@@ -141,6 +141,8 @@ class DCFModel:
         liability_events: List[tuple[int, float]] | None = None,
         # Mapping ``age → List[Tuple[principal, custom_rate | None, duration]]``
         liability_templates: Dict[int, List[tuple]] | None = None,
+        # Optional fine-grained asset buckets: name → (opening_balance, roi)
+        asset_buckets: Optional[Dict[str, Tuple[float, float]]] = None,
     ):
         # ── store scenario settings ────────────────────────────────
         self.start_age = start_age
@@ -166,6 +168,15 @@ class DCFModel:
         self._liability_events = {age: amt for age, amt in (liability_events or [])}
         # Detailed loan descriptions coming from milestone parsing
         self._loan_templates: Dict[int, List[tuple]] = liability_templates or {}
+
+        # Optional per-bucket asset balances with individual ROIs
+        # Stored as: name → { 'balance': float, 'roi': float }
+        self._asset_buckets: Optional[Dict[str, Dict[str, float]]] = None
+        if asset_buckets:
+            self._asset_buckets = {
+                name: {"balance": bal, "roi": roi}
+                for name, (bal, roi) in asset_buckets.items()
+            }
 
         # results populated by run()
         self._table: pd.DataFrame | None = None
@@ -240,7 +251,18 @@ class DCFModel:
 
             # Beginning of year balances ---------------------------------
             a_begin_prev = self.assets[-1]
-            a_begin = a_begin_prev + self._asset_events.get(age, 0.0)
+            event_inflow = self._asset_events.get(age, 0.0)
+
+            if self._asset_buckets is not None and event_inflow:
+                if "checking" not in self._asset_buckets:
+                    self._asset_buckets["checking"] = {
+                        "balance": 0.0,
+                        "roi": self.assump.rate_of_return,
+                    }
+                self._asset_buckets["checking"]["balance"] += event_inflow
+                a_begin = sum(d["balance"] for d in self._asset_buckets.values())
+            else:
+                a_begin = a_begin_prev + event_inflow
             l_begin = sum(l.principal_remaining for l in active_loans)
 
             # Regular income / expenses ----------------------------------
@@ -256,13 +278,33 @@ class DCFModel:
 
             # Apply cash flows first? Excel assumes growth on beginning assets.
             # 1) Interest on assets already invested at the **start** of the year
-            a_income = a_begin * self.assump.rate_of_return
+            if self._asset_buckets is None:
+                a_income = a_begin * self.assump.rate_of_return
+            else:
+                a_income = 0.0
+                for meta in self._asset_buckets.values():
+                    a_income += meta["balance"] * meta["roi"]
 
             # 2) Net cash flow during the year (salary – expenses – debt service)
             net_saving = salary - expenses - liab_expense
 
             # 3) End-of-year balance
-            a_next = a_begin + a_income + net_saving
+            if self._asset_buckets is None:
+                a_next = a_begin + a_income + net_saving
+            else:
+                # Apply interest on beginning balances only
+                for meta in self._asset_buckets.values():
+                    meta["balance"] += meta["balance"] * meta["roi"]
+
+                # Then add net savings (no interest within the same year)
+                if "checking" not in self._asset_buckets:
+                    self._asset_buckets["checking"] = {
+                        "balance": 0.0,
+                        "roi": self.assump.rate_of_return,
+                    }
+                self._asset_buckets["checking"]["balance"] += net_saving
+
+                a_next = sum(d["balance"] for d in self._asset_buckets.values())
             l_next = sum(l.principal_remaining for l in active_loans)
 
             if t < years:
@@ -513,6 +555,9 @@ class DCFModel:
         # override the global asset growth assumption when provided.
         asset_roi_data: List[tuple[float, float]] = []  # (amount, roi)
 
+        # Buckets for opening assets with per-bucket ROI: name → list[(amt, roi|None)]
+        bucket_raw: Dict[str, List[Tuple[float, Optional[float]]]] = {}
+
         # Detailed liability descriptors (age → list[(principal, roi_override, duration)])
         from collections import defaultdict
         liability_templates: Dict[int, List[tuple]] = defaultdict(list)
@@ -550,6 +595,10 @@ class DCFModel:
                 roi_val = _get("rate_of_return", ms)
                 if roi_val is not None:
                     asset_roi_data.append((amt, roi_val))
+
+                norm_name = _norm_name(_get("name", ms))
+                if norm_name in {"savings", "checking", "stocks", "bonds"}:
+                    bucket_raw.setdefault(norm_name, []).append((amt, roi_val))
 
             elif key == "income":
                 current_income_found = True
@@ -695,6 +744,21 @@ class DCFModel:
                 start = _effective_age(ms)
                 liab_years.update(range(start, start + _effective_duration(ms)))
 
+        # Build optional per-bucket initial balances with ROI if suitable
+        buckets_param: Optional[Dict[str, Tuple[float, float]]] = None
+        if bucket_raw:
+            buckets_param = {}
+            default_bucket_roi = assumptions.rate_of_return
+            for bname, items in bucket_raw.items():
+                total = sum(a for a, _ in items)
+                roi_vals = [(a, r) for a, r in items if r is not None]
+                if roi_vals:
+                    w = sum(a for a, _ in roi_vals)
+                    r = sum(a * rv for a, rv in roi_vals) / w if w else default_bucket_roi
+                else:
+                    r = default_bucket_roi
+                buckets_param[bname] = (total, r)
+
         model: "DCFModel" = cls(
             start_age=start_age,
             end_age=end_age,
@@ -708,6 +772,7 @@ class DCFModel:
             asset_events=asset_events,
             liability_events=liability_events,
             liability_templates=liability_templates,
+            asset_buckets=buckets_param,
         )
 
         model._liab_interest_years = liab_years

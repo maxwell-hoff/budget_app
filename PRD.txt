@@ -290,10 +290,10 @@ The personal finance app will help users plan for major life events and retireme
      - If income > expenses, add to current liquid assets
      - If expenses > income, subtract from current liquid assets
      - If current liquid assets would go negative, add excess to current debt
-  3. For Current Liquid Assets:
-     - Start with initial amount
-     - Add/subtract income/expense impact
-     - Apply rate of return to remaining balance
+  3. For Liquid Assets:
+     - Split into Savings, Checking, Stocks, Bonds
+     - Each bucket has its own rate of return
+     - Sum of buckets equals total liquid assets
   4. For Current Debt:
      - Start with initial amount
      - Add any excess expenses that would make liquid assets negative

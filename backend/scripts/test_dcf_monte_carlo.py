@@ -23,9 +23,9 @@ def _sample_milestones() -> tuple[list[Milestone], ScenarioParameterValue]:
 
     milestones: list[Milestone] = []
 
-    # Liquid assets baseline – rate_of_return will be varied by Monte Carlo
+    # Opening buckets baseline – rates varied by Monte Carlo via scenario params
     liquid_assets = Milestone(
-        name="Current Liquid Assets",
+        name="Savings",
         milestone_type="Asset",
         age_at_occurrence=30,
         disbursement_type="Perpetuity",

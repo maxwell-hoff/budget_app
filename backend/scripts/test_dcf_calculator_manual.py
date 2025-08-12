@@ -104,7 +104,7 @@ def dcf_from_db() -> DCFModel:
     milestones = [
         # Opening balances & flows (current_*) --------------------------------
         _mock_ms(
-            name="Current Liquid Assets",
+            name="Savings",
             milestone_type="Asset",
             age_at_occurrence=30,
             disbursement_type="Perpetuity",
@@ -299,7 +299,7 @@ def _build_dynamic_milestones(retirement_age: int):
     milestones = [
         # Opening balances ----------------------------------------------------
         _mock_ms(
-            name="Current Liquid Assets",
+            name="Savings",
             milestone_type="Asset",
             age_at_occurrence=current_age,
             disbursement_type="Perpetuity",

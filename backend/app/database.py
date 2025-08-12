@@ -62,9 +62,7 @@ def create_default_milestones():
     from .models.sub_scenario import SubScenario
     from .models.goal import Goal
     from .models.scenario_parameter_value import ScenarioParameterValue
-
-    if Milestone.query.first():  # already populated → skip
-        return
+    from .models.net_worth import MilestoneValueByAge
 
     # Tiny helper ------------------------------------------------------
     def _get_or_create(model, defaults=None, **kwargs):
@@ -79,6 +77,84 @@ def create_default_milestones():
                     setattr(obj, k, v)
         return obj
 
+    PARENT_GROUPS = {
+        "Current Lifestyle": (30, 70),
+        "Retirement": (70, 100),
+        "Long Term Care": (96, 100),
+        "Inheritance": (100, 100),
+    }
+
+    # If there are existing milestones, run a one-off migration to split
+    # 'Current Liquid Assets' into four buckets. Otherwise, insert defaults.
+    from sqlalchemy import and_
+    if Milestone.query.first():
+        # Ensure parent groups exist (used for newly created bucket rows)
+        # and build a name → id map for convenience.
+        parent_map: dict[str, int] = {}
+        for name, (min_age, max_age) in PARENT_GROUPS.items():
+            p = _get_or_create(ParentMilestone, name=name, min_age=min_age, max_age=max_age)
+            db.session.flush()
+            parent_map[name] = p.id
+
+        # For every (scenario, sub_scenario) convert the legacy row if present.
+        legacy_rows = Milestone.query.filter(Milestone.name == 'Current Liquid Assets').all()
+
+        # Proactively remove dependent milestone-values to avoid NOT NULL updates on flush
+        legacy_ids = [row.id for row in legacy_rows]
+        if legacy_ids:
+            MilestoneValueByAge.query.filter(MilestoneValueByAge.milestone_id.in_(legacy_ids)).delete(synchronize_session=False)
+            db.session.flush()
+
+        for legacy in legacy_rows:
+            # Skip when buckets already exist to keep idempotency
+            with db.session.no_autoflush:
+                existing_bucket = Milestone.query.filter(
+                    and_(
+                        Milestone.scenario_id == legacy.scenario_id,
+                        Milestone.sub_scenario_id == legacy.sub_scenario_id,
+                        Milestone.name.in_(['Savings', 'Checking', 'Stocks', 'Bonds'])
+                    )
+                ).first()
+            if existing_bucket:
+                # Safe to delete the legacy row to avoid double-counting
+                db.session.delete(legacy)
+                db.session.flush()
+                continue
+
+            total_amt = legacy.amount or 0.0
+            split = total_amt / 4.0
+            bucket_specs = [
+                ("Savings", 0.02),
+                ("Checking", 0.01),
+                ("Stocks", 0.07),
+                ("Bonds", 0.03),
+            ]
+
+            # Create four new asset milestones
+            for idx, (nm, roi) in enumerate(bucket_specs):
+                m = Milestone(
+                    name=nm,
+                    age_at_occurrence=legacy.age_at_occurrence,
+                    milestone_type="Asset",
+                    disbursement_type="Perpetuity",
+                    amount=split,
+                    rate_of_return=roi,
+                    parent_milestone_id=parent_map.get("Current Lifestyle"),
+                    order=idx,
+                    scenario_id=legacy.scenario_id,
+                    scenario_name=legacy.scenario_name,
+                    sub_scenario_id=legacy.sub_scenario_id,
+                    sub_scenario_name=legacy.sub_scenario_name,
+                )
+                db.session.add(m)
+
+            # Remove the legacy row (its dependent values were cleared above)
+            db.session.delete(legacy)
+            db.session.flush()
+
+        db.session.commit()
+        return
+
     DEFAULT_SCENARIOS = [
         {"name": "Base Scenario", "subs": ["2 Kids", "3 Kids"]},
         {"name": "Good Scenario", "subs": ["2 Kids", "3 Kids"]},
@@ -88,13 +164,6 @@ def create_default_milestones():
     #  Ensure parent milestone *groups* exist so child milestones can reference
     #  them via ``parent_milestone_id`` (used by the front-end to group rows).
     # ------------------------------------------------------------------
-
-    PARENT_GROUPS = {
-        "Current Lifestyle": (30, 70),
-        "Retirement": (70, 100),
-        "Long Term Care": (96, 100),
-        "Inheritance": (100, 100),
-    }
 
     parent_map: dict[str, int] = {}
     for name, (min_age, max_age) in PARENT_GROUPS.items():
@@ -107,18 +176,46 @@ def create_default_milestones():
     # ------------------------------------------------------------------
 
     TEMPLATE_MILESTONES = [
+        # Split former 'Current Liquid Assets' into four buckets
         {
-            "name": "Current Liquid Assets",
+            "name": "Savings",
             "age_at_occurrence": 30,
             "milestone_type": "Asset",
             "disbursement_type": "Perpetuity",
-            "amount": 30_000,
-            "rate_of_return": 0.07,
-            "scenario_values": {
-                "rate_of_return": ["0.05", "0.07", "0.09"],
-            },
+            "amount": 7_500,
+            "rate_of_return": 0.02,
             "parent_group": "Current Lifestyle",
             "order": 0,
+        },
+        {
+            "name": "Checking",
+            "age_at_occurrence": 30,
+            "milestone_type": "Asset",
+            "disbursement_type": "Perpetuity",
+            "amount": 7_500,
+            "rate_of_return": 0.01,
+            "parent_group": "Current Lifestyle",
+            "order": 1,
+        },
+        {
+            "name": "Stocks",
+            "age_at_occurrence": 30,
+            "milestone_type": "Asset",
+            "disbursement_type": "Perpetuity",
+            "amount": 7_500,
+            "rate_of_return": 0.07,
+            "parent_group": "Current Lifestyle",
+            "order": 2,
+        },
+        {
+            "name": "Bonds",
+            "age_at_occurrence": 30,
+            "milestone_type": "Asset",
+            "disbursement_type": "Perpetuity",
+            "amount": 7_500,
+            "rate_of_return": 0.03,
+            "parent_group": "Current Lifestyle",
+            "order": 3,
         },
         {
             "name": "Current Debt",
@@ -131,7 +228,7 @@ def create_default_milestones():
             "duration": 120,        # months
             "rate_of_return": 0.07,
             "parent_group": "Current Lifestyle",
-            "order": 1,
+            "order": 4,
         },
         {
             "name": "Current Salary (incl. Bonus, Side Hustle, etc.)",
@@ -144,7 +241,7 @@ def create_default_milestones():
             "duration_end_at_milestone": "Retirement",
             "rate_of_return": 0.02,
             "parent_group": "Current Lifestyle",
-            "order": 2,
+            "order": 5,
         },
         {
             "name": "Current Average Expenses",
@@ -157,7 +254,7 @@ def create_default_milestones():
             "duration_end_at_milestone": "Retirement",
             "rate_of_return": 0.03,
             "parent_group": "Current Lifestyle",
-            "order": 3,
+            "order": 6,
         },
         {
             "name": "Retirement",
@@ -173,7 +270,7 @@ def create_default_milestones():
             "rate_of_return": 0.02,
             "goal_parameters": ["age_at_occurrence"],
             "parent_group": "Retirement",
-            "order": 4,
+            "order": 7,
         },
         {
             "name": "Long Term Care (self)",
@@ -186,7 +283,7 @@ def create_default_milestones():
             "duration": 48,
             "rate_of_return": 0.02,
             "parent_group": "Long Term Care",
-            "order": 5,
+            "order": 8,
         },
         {
             "name": "Inheritance",
@@ -198,7 +295,7 @@ def create_default_milestones():
             "duration": 1,
             "rate_of_return": 0.0,
             "parent_group": "Inheritance",
-            "order": 6,
+            "order": 9,
         },
     ]
 

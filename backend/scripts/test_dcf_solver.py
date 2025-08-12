@@ -90,9 +90,9 @@ def sample_data(request):
         ),
     ])
 
-    # Simple liquid asset + salary + expense baseline (like earlier unit-tests)Milestone(
+    # Simple opening asset bucket + salary + expense baseline
     liquid_assets = _new_ms(
-        name="Current Liquid Assets",
+        name="Savings",
         milestone_type="Asset",
         age_at_occurrence=30,
         disbursement_type="Perpetuity",

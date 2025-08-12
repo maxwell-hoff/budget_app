@@ -58,18 +58,11 @@ DEFAULT_SCENARIOS: List[Dict] = [
 # figures unless noted otherwise.
 DEFAULT_MILESTONES: List[Dict] = [
     # Opening balances / flows at age 30
-    {
-        "name": "Current Liquid Assets",
-        "age_at_occurrence": 30,
-        "milestone_type": "Asset",
-        "disbursement_type": "Perpetuity",
-        "amount": 30_000,
-        "rate_of_return": 0.07,
-        # Mark the *amount* parameter as goal so that the solver can adjust it
-        "goal_parameters": ["amount"],
-        # Scenario sensitivity: test 25k and 40k as alternative openings
-        "scenario_values": {"amount": ["25000", "40000"]},
-    },
+    # Split former 'Current Liquid Assets' into four buckets with distinct ROIs
+    {"name": "Savings",  "age_at_occurrence": 30, "milestone_type": "Asset", "disbursement_type": "Perpetuity", "amount": 7_500,  "rate_of_return": 0.02, "goal_parameters": ["amount"]},
+    {"name": "Checking", "age_at_occurrence": 30, "milestone_type": "Asset", "disbursement_type": "Perpetuity", "amount": 7_500,  "rate_of_return": 0.01, "goal_parameters": ["amount"]},
+    {"name": "Stocks",   "age_at_occurrence": 30, "milestone_type": "Asset", "disbursement_type": "Perpetuity", "amount": 7_500,  "rate_of_return": 0.07, "goal_parameters": ["amount"]},
+    {"name": "Bonds",    "age_at_occurrence": 30, "milestone_type": "Asset", "disbursement_type": "Perpetuity", "amount": 7_500,  "rate_of_return": 0.03, "goal_parameters": ["amount"]},
     {
         "name": "Current Debt",
         "age_at_occurrence": 30,
