@@ -989,7 +989,7 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control mb-2" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1" ${milestone.rate_of_return_curve ? 'disabled' : ''}>
                     ${scenarioControls('rate_of_return')}
                     <div class="rate-curve-editor mt-2" style="display:${milestone.rate_of_return_curve ? 'block' : 'none'}">
-                        <svg class="curve-canvas" width="100%" height="140" style="border:1px dashed #666; background:#000"></svg>
+                        <svg class="curve-canvas" width="100%" height="140" style="border:1px dashed #2b2f36; background:#0f1117; border-radius:6px"></svg>
                         <input type="hidden" name="rate_of_return_curve" value='${milestone.rate_of_return_curve ? milestone.rate_of_return_curve : ''}'>
                         <div class="form-text">Drag nodes: X snaps to years, Y snaps to 0.1%. Click anywhere inside the chart to add a node. Right-click a node to remove it.</div>
                     </div>
@@ -1539,14 +1539,22 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     const x = d3.scaleLinear().domain([0, maxYears]).range([margin.left, width - margin.right]);
     const y = d3.scaleLinear().domain([0, 0.2]).range([height - margin.bottom, margin.top]);
 
-    const xAxis = (g) => g.attr('transform', `translate(0, ${height - margin.bottom})`).call(d3.axisBottom(x).ticks(maxYears).tickFormat(d=>d)).call(s=>s.selectAll('text').attr('fill','#ccc')).call(s=>s.selectAll('line,path').attr('stroke','#666'));
-    const yAxis = (g) => g.attr('transform', `translate(${margin.left}, 0)`).call(d3.axisLeft(y).ticks(10).tickFormat(d=>`${(d*100).toFixed(0)}%`)).call(s=>s.selectAll('text').attr('fill','#ccc')).call(s=>s.selectAll('line,path').attr('stroke','#666'));
+    const xAxis = (g) => g
+        .attr('transform', `translate(0, ${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(Math.min(maxYears, 12)).tickFormat(d=>d))
+        .call(s=>s.selectAll('text').attr('fill','#cdd3de'))
+        .call(s=>s.selectAll('line,path').attr('stroke','#2b2f36'));
+    const yAxis = (g) => g
+        .attr('transform', `translate(${margin.left}, 0)`)
+        .call(d3.axisLeft(y).ticks(10).tickFormat(d=>`${(d*100).toFixed(0)}%`))
+        .call(s=>s.selectAll('text').attr('fill','#cdd3de'))
+        .call(s=>s.selectAll('line,path').attr('stroke','#2b2f36'));
 
     svg.append('g').attr('class','x-axis').call(xAxis);
     svg.append('g').attr('class','y-axis').call(yAxis);
 
     // Vertical grid lines
-    svg.append('g').attr('stroke', '#333')
+    svg.append('g').attr('stroke', '#1b1f26')
         .selectAll('line.h').data(d3.range(0, maxYears+1)).enter()
         .append('line').attr('x1', d => x(d)).attr('y1', margin.top)
         .attr('x2', d => x(d)).attr('y2', height - margin.bottom);
@@ -1560,7 +1568,7 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     }
 
     function clampPts() {
-        points = points.map(p=>({ x: Math.max(0, Math.min(maxYears, Math.round(p.x))), y: Math.max(0, Math.min(0.2, Math.round(p.y*10)/10)) }));
+        points = points.map(p=>({ x: Math.max(0, Math.min(maxYears, Math.round(p.x))), y: Math.max(0, Math.min(0.2, Math.round(p.y*1000)/1000)) }));
         points.sort((a,b)=>a.x-b.x);
     }
     clampPts();
@@ -1575,6 +1583,8 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     const segments = svg.append('g').attr('class','segments');
 
     function save() { hiddenInput.val(JSON.stringify(points)); }
+
+    let isDragging = false;
 
     let selectedIndex = -1; // currently selected node index
 
@@ -1606,15 +1616,21 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
             .attr('r',5)
             .attr('fill','#4cc3ff')
             .style('cursor','pointer')
-            .call(d3.drag()
-                .on('drag', function(event, d){
-                    const xi = Math.round(x.invert(event.x));
-                    const yi = Math.round((y.invert(event.y))*10)/10; // 0.1 increments
-                    d.x = Math.max(0, Math.min(maxYears, xi));
-                    d.y = Math.max(0, Math.min(0.2, yi));
-                    render();
-                    save();
-                })
+            .call(
+                d3.drag()
+                  .on('start', function(){ isDragging = true; })
+                  .on('drag', function(event, d){
+                      const [px, py] = d3.pointer(event, svgEl);
+                      const clampedX = Math.max(margin.left, Math.min(px, width - margin.right));
+                      const clampedY = Math.max(margin.top, Math.min(py, height - margin.bottom));
+                      const xi = Math.round(x.invert(clampedX));
+                       const yi = Math.round((y.invert(clampedY))*1000)/1000; // 0.1% increments
+                      d.x = Math.max(0, Math.min(maxYears, xi));
+                      d.y = Math.max(0, Math.min(0.2, yi));
+                      render();
+                      save();
+                  })
+                  .on('end', function(){ isDragging = false; })
             )
             .on('click', function(event, d){
                 const idx = points.findIndex(p => p.x === d.x && p.y === d.y);
@@ -1632,9 +1648,15 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     }
 
     svg.on('click', function(event){
-        const [px, py] = d3.pointer(event);
-        const xi = Math.round(x.invert(px));
-        const yi = Math.round((y.invert(py))*10)/10;
+        if (isDragging) return; // ignore click that follows a drag
+        // Prevent conflict when clicking on existing nodes
+        if (event.target && event.target.tagName && event.target.tagName.toLowerCase() === 'circle') return;
+        const [px, py] = d3.pointer(event, svgEl);
+        // Clamp pointer within the plotting area to allow adding near the axes
+        const clampedX = Math.max(margin.left, Math.min(px, width - margin.right));
+        const clampedY = Math.max(margin.top, Math.min(py, height - margin.bottom));
+        const xi = Math.round(x.invert(clampedX));
+        const yi = Math.round((y.invert(clampedY))*1000)/1000;
         if (xi < 0 || xi > maxYears) return;
         if (!points.some(p=>p.x===xi)) {
             points.push({ x: xi, y: Math.max(0, Math.min(0.2, yi)) });
