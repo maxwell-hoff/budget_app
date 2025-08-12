@@ -983,7 +983,7 @@ function createMilestoneForm(milestone) {
                         <div class="d-flex align-items-center">
                             <button type="button" class="btn btn-sm btn-outline-primary me-2 add-curve-node" style="display:${milestone.rate_of_return_curve ? 'inline-block' : 'none'}">Add Node</button>
                             <button type="button" class="btn btn-sm btn-outline-danger me-2 delete-curve-node" style="display:${milestone.rate_of_return_curve ? 'inline-block' : 'none'}" disabled>Delete Node</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-curve-editor ms-2">${milestone.rate_of_return_curve ? 'Edit Curve' : 'Use Curve'}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-curve-editor ms-2">${milestone.rate_of_return_curve ? 'Use Fixed Rate' : 'Use Curve'}</button>
                         </div>
                     </div>
                     <input type="number" class="form-control mb-2" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1" ${milestone.rate_of_return_curve ? 'disabled' : ''}>
@@ -1133,7 +1133,7 @@ function createMilestoneForm(milestone) {
             input.prop('disabled', true);
             addBtn.show();
             delBtn.show();
-            $(this).text('Edit Curve');
+            $(this).text('Use Fixed Rate');
             initCurveEditor(svg.get(0), hidden, milestone);
         }
     });
