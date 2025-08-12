@@ -978,9 +978,17 @@ function createMilestoneForm(milestone) {
                     </div>
                 </div>
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
-                    <label class="form-label">Rate of Return ($%)${goalCheckbox('rate_of_return')}</label>
-                    <input type="number" class="form-control" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Rate of Return ($%)${goalCheckbox('rate_of_return')}</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2 toggle-curve-editor">${milestone.rate_of_return_curve ? 'Edit Curve' : 'Use Curve'}</button>
+                    </div>
+                    <input type="number" class="form-control mb-2" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1" ${milestone.rate_of_return_curve ? 'disabled' : ''}>
                     ${scenarioControls('rate_of_return')}
+                    <div class="rate-curve-editor mt-2" style="display:${milestone.rate_of_return_curve ? 'block' : 'none'}">
+                        <svg class="curve-canvas" width="100%" height="140" style="border:1px dashed #666; background:#000"></svg>
+                        <input type="hidden" name="rate_of_return_curve" value='${milestone.rate_of_return_curve ? milestone.rate_of_return_curve : ''}'>
+                        <div class="form-text">Drag nodes: X snaps to years, Y snaps to 0.1%. Click anywhere inside the chart to add a node. Right-click a node to remove it.</div>
+                    </div>
                 </div>
             </form>
             <div class="sub-milestones-container"></div>
@@ -1084,6 +1092,55 @@ function createMilestoneForm(milestone) {
         handleMilestoneUpdate({ preventDefault: () => {} }, form.find('.milestone-form-content'));
     });
     form.find('.delete-milestone').on('click', handleMilestoneDelete);
+
+    // Toggle curve editor
+    form.find('.toggle-curve-editor').on('click', function() {
+        const editor = form.find('.rate-curve-editor');
+        const input = form.find('[name="rate_of_return"]');
+        const hidden = form.find('[name="rate_of_return_curve"]');
+        const svg = form.find('svg.curve-canvas');
+        const addBtn = form.find('.add-curve-node');
+        const isShown = editor.is(':visible');
+        if (isShown) {
+            // Hide → disable curve
+            editor.hide();
+            hidden.val('');
+            input.prop('disabled', false);
+            addBtn.hide();
+            $(this).text('Use Curve');
+        } else {
+            editor.show();
+            input.prop('disabled', true);
+            addBtn.show();
+            $(this).text('Edit Curve');
+            initCurveEditor(svg.get(0), hidden, milestone);
+        }
+    });
+
+    // Add Node button handler
+    form.find('.add-curve-node').on('click', function() {
+        const hidden = form.find('[name="rate_of_return_curve"]');
+        let pts = [];
+        try { pts = JSON.parse(hidden.val() || '[]'); } catch(e) { pts = []; }
+        const maxYears = (milestone.duration && milestone.disbursement_type === 'Fixed Duration') ? milestone.duration : 30;
+        pts.sort((a,b)=>a.x-b.x);
+        const last = pts[pts.length-1] || { x: 0, y: (parseFloat(form.find('[name=\"rate_of_return\"]').val())||0)/100 };
+        const nextX = Math.min(maxYears, (last.x || 0) + 1);
+        const nextY = last.y || 0;
+        if (!pts.some(p=>p.x===nextX)) {
+            pts.push({ x: nextX, y: Math.round(nextY*10)/10 });
+            hidden.val(JSON.stringify(pts));
+            const svg = form.find('svg.curve-canvas');
+            initCurveEditor(svg.get(0), hidden, milestone);
+        }
+    });
+
+    // Initialize editor if curve present on load
+    if (milestone.rate_of_return_curve) {
+        const svg = form.find('svg.curve-canvas');
+        const hidden = form.find('[name="rate_of_return_curve"]');
+        initCurveEditor(svg.get(0), hidden, milestone);
+    }
     
     // Add event listener for the editable header to update the milestone name on blur
     form.find('.editable-header').on('blur', function() {
@@ -1392,7 +1449,14 @@ function handleMilestoneUpdate(e, form) {
         
         if (disbursementType) {
             updatedMilestone.occurrence = form.find('[name="occurrence"]').val();
-            updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
+            const curveVal = form.find('[name="rate_of_return_curve"]').val();
+            if (curveVal && curveVal.length) {
+                updatedMilestone.rate_of_return = null;
+                updatedMilestone.rate_of_return_curve = curveVal;
+            } else {
+                updatedMilestone.rate_of_return = parseFloat(form.find('[name="rate_of_return"]').val()) / 100;
+                updatedMilestone.rate_of_return_curve = null;
+            }
             
             if (!dynCheckboxActive && disbursementType === 'Fixed Duration') {
                 updatedMilestone.duration = parseInt(form.find('[name="duration"]').val());
@@ -1401,6 +1465,7 @@ function handleMilestoneUpdate(e, form) {
             updatedMilestone.occurrence = null;
             updatedMilestone.duration = null;
             updatedMilestone.rate_of_return = null;
+            updatedMilestone.rate_of_return_curve = null;
         }
         
         // After computing updatedMilestone fields, collect goal parameters
@@ -1453,6 +1518,109 @@ function handleMilestoneUpdate(e, form) {
     }
 }
 
+// Curve editor implementation
+function initCurveEditor(svgEl, hiddenInput, milestone) {
+    if (!svgEl) return;
+    const svg = d3.select(svgEl);
+    svg.selectAll('*').remove();
+    const width = (svgEl.clientWidth && svgEl.clientWidth > 0) ? svgEl.clientWidth : 600;
+    const height = (svgEl.clientHeight && svgEl.clientHeight > 0) ? svgEl.clientHeight : 140;
+
+    const maxYears = (milestone && milestone.duration && milestone.disbursement_type === 'Fixed Duration') ? milestone.duration : 30;
+
+    const margin = { left: 40, right: 10, top: 10, bottom: 24 };
+    const x = d3.scaleLinear().domain([0, maxYears]).range([margin.left, width - margin.right]);
+    const y = d3.scaleLinear().domain([0, 0.2]).range([height - margin.bottom, margin.top]);
+
+    const xAxis = (g) => g.attr('transform', `translate(0, ${height - margin.bottom})`).call(d3.axisBottom(x).ticks(maxYears).tickFormat(d=>d)).call(s=>s.selectAll('text').attr('fill','#ccc')).call(s=>s.selectAll('line,path').attr('stroke','#666'));
+    const yAxis = (g) => g.attr('transform', `translate(${margin.left}, 0)`).call(d3.axisLeft(y).ticks(10).tickFormat(d=>`${(d*100).toFixed(0)}%`)).call(s=>s.selectAll('text').attr('fill','#ccc')).call(s=>s.selectAll('line,path').attr('stroke','#666'));
+
+    svg.append('g').attr('class','x-axis').call(xAxis);
+    svg.append('g').attr('class','y-axis').call(yAxis);
+
+    // Vertical grid lines
+    svg.append('g').attr('stroke', '#333')
+        .selectAll('line.h').data(d3.range(0, maxYears+1)).enter()
+        .append('line').attr('x1', d => x(d)).attr('y1', margin.top)
+        .attr('x2', d => x(d)).attr('y2', height - margin.bottom);
+
+    let points = [];
+    try { points = JSON.parse(hiddenInput.val() || '[]'); } catch(e) { points = []; }
+    if (!Array.isArray(points) || points.length === 0) {
+        const basePct = parseFloat($(svgEl).closest('.annuity-fields').find('[name="rate_of_return"]').val());
+        const baseDec = isNaN(basePct) ? 0.0 : (basePct/100);
+        points = [{ x: 0, y: baseDec }];
+    }
+
+    function clampPts() {
+        points = points.map(p=>({ x: Math.max(0, Math.min(maxYears, Math.round(p.x))), y: Math.max(0, Math.min(0.2, Math.round(p.y*10)/10)) }));
+        points.sort((a,b)=>a.x-b.x);
+    }
+    clampPts();
+
+    const line = d3.line()
+        .x(d => x(d.x))
+        .y(d => y(d.y))
+        .curve(d3.curveStepAfter);
+
+    const path = svg.append('path').attr('fill','none').attr('stroke','#4cc3ff').attr('stroke-width',2);
+    const baseline = svg.append('path').attr('fill','none').attr('stroke','#888').attr('stroke-dasharray','4,4').attr('stroke-width',1.5);
+
+    function save() { hiddenInput.val(JSON.stringify(points)); }
+
+    function render() {
+        clampPts();
+        path.attr('d', line(points));
+        // Baseline from leftmost node to right edge at that node's Y
+        if (points.length) {
+            const left = points[0];
+            const blPoints = [{ x: left.x, y: left.y }, { x: maxYears, y: left.y }];
+            baseline.attr('d', line(blPoints));
+        }
+        const nodes = svg.selectAll('circle.node').data(points, d=>d.x);
+        nodes.enter().append('circle')
+            .attr('class','node')
+            .attr('r',5)
+            .attr('fill','#4cc3ff')
+            .style('cursor','pointer')
+            .call(d3.drag()
+                .on('drag', function(event, d){
+                    const xi = Math.round(x.invert(event.x));
+                    const yi = Math.round((y.invert(event.y))*10)/10; // 0.1 increments
+                    d.x = Math.max(0, Math.min(maxYears, xi));
+                    d.y = Math.max(0, Math.min(0.2, yi));
+                    render();
+                    save();
+                })
+            )
+            .on('contextmenu', function(event, d){
+                event.preventDefault();
+                if (points.length > 1) {
+                    points = points.filter(p => !(p.x === d.x && p.y === d.y));
+                    render();
+                    save();
+                }
+            })
+            .merge(nodes)
+            .attr('cx', d=>x(d.x))
+            .attr('cy', d=>y(d.y));
+        nodes.exit().remove();
+    }
+
+    svg.on('click', function(event){
+        const [px, py] = d3.pointer(event);
+        const xi = Math.round(x.invert(px));
+        const yi = Math.round((y.invert(py))*10)/10;
+        if (xi < 0 || xi > maxYears) return;
+        if (!points.some(p=>p.x===xi)) {
+            points.push({ x: xi, y: Math.max(0, Math.min(0.2, yi)) });
+            render();
+            save();
+        }
+    });
+
+    render();
+}
 function handleMilestoneDelete(e) {
     const form = $(e.target).closest('.milestone-form, .sub-milestone-form');
     const milestoneId = form.data('id');

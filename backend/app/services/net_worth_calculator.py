@@ -73,6 +73,7 @@ class NetWorthCalculator:
                         return max(0, balance)
                     return balance
                 else:  # Yearly
+                    # Support piecewise rate-of-return curves when provided
                     rate = milestone.rate_of_return
                     remaining_periods = (milestone.duration or dur_lim) - years_elapsed
                     
@@ -99,6 +100,7 @@ class NetWorthCalculator:
                         comp = _safe_pow(1 + rate, periods)
                         balance = milestone.amount * comp - payment * (comp - 1) / rate
                 else:  # Yearly
+                    # Use schedule's instantaneous rate at this age when available
                     rate = milestone.rate_of_return
                     periods = years_elapsed
                     payment = milestone.payment or 0

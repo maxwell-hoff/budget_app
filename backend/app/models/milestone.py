@@ -83,6 +83,9 @@ class Milestone(db.Model):
     occurrence = db.Column(db.String(10), nullable=True)  # 'Monthly' or 'Yearly'
     duration = db.Column(db.Integer, nullable=True)  # Duration in years
     rate_of_return = db.Column(db.Float, nullable=True)  # Rate of return as decimal
+    # Optional piecewise rate-of-return schedule stored as JSON string.
+    # Format: [{"x": int_offset_years, "y": decimal_rate}, ...] sorted by x.
+    rate_of_return_curve = db.Column(db.Text, nullable=True)
     # --- dynamic linkage helpers -----------------------------------------
     # When *duration_end_at_milestone* is set the milestone's duration is
     # derived at runtime so the numeric ``duration`` can be NULL.
@@ -103,7 +106,8 @@ class Milestone(db.Model):
                  start_after_milestone: str | None = None,
                  amount_value_type: str = 'FV',
                  payment_value_type: str | None = 'FV',
-                 ):
+                  rate_of_return_curve: str | None = None,
+                  ):
         self.name = name
         self.age_at_occurrence = age_at_occurrence
         self.milestone_type = milestone_type
@@ -121,6 +125,7 @@ class Milestone(db.Model):
         self.rate_of_return = rate_of_return
         self.duration_end_at_milestone = duration_end_at_milestone
         self.start_after_milestone = start_after_milestone
+        self.rate_of_return_curve = rate_of_return_curve
         
         if disbursement_type in ['Fixed Duration', 'Perpetuity']:
             self.occurrence = occurrence or 'Yearly'
@@ -149,6 +154,7 @@ class Milestone(db.Model):
             'occurrence': self.occurrence,
             'duration': self.duration,
             'rate_of_return': self.rate_of_return,
+            'rate_of_return_curve': self.rate_of_return_curve,
             'order': self.order,
             'parent_milestone_id': self.parent_milestone_id,
             'duration_end_at_milestone': self.duration_end_at_milestone,

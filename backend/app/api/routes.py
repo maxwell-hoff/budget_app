@@ -87,7 +87,8 @@ ALLOWED_GOAL_PARAMS = {
     'payment',
     'occurrence',
     'duration',
-    'rate_of_return'
+    'rate_of_return',
+    'rate_of_return_curve',
 }
 
 
@@ -261,6 +262,7 @@ def create_milestone():
         occurrence=data.get('occurrence'),
         duration=data.get('duration'),
         rate_of_return=data.get('rate_of_return'),
+        rate_of_return_curve=data.get('rate_of_return_curve'),
         order=data.get('order', 0),
         parent_milestone_id=data.get('parent_milestone_id'),
         scenario_id=data.get('scenario_id', 1),
@@ -320,6 +322,17 @@ def update_milestone(milestone_id):
             conv_val = _convert_amount(value, vtype, milestone.age_at_occurrence)
             setattr(milestone, key, conv_val)
             setattr(milestone, vt_key, vtype)
+            continue
+
+        # Allow raw JSON string or parsed list for rate_of_return_curve
+        if key == 'rate_of_return_curve' and value is not None:
+            import json
+            if isinstance(value, list):
+                try:
+                    value = json.dumps(value, separators=(',', ':'))
+                except Exception:
+                    value = None
+            setattr(milestone, key, value)
             continue
 
         # Prevent setting NOT NULL columns to None – this can happen when

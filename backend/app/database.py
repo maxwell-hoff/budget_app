@@ -50,6 +50,18 @@ def init_db(app):
 
         db.create_all()
 
+        # Lightweight migration: add missing columns when upgrading
+        try:
+            with db.engine.connect() as conn:  # type: ignore[attr-defined]
+                # Check if 'rate_of_return_curve' exists on milestones table
+                res = conn.execute(db.text("PRAGMA table_info(milestones)"))
+                cols = [row[1] for row in res]  # row[1] is 'name'
+                if 'rate_of_return_curve' not in cols:
+                    conn.execute(db.text("ALTER TABLE milestones ADD COLUMN rate_of_return_curve TEXT"))
+        except Exception:
+            # Best effort; if this fails we rely on a fresh DB
+            pass
+
 def create_default_milestones():
     """Create default milestones if none exist."""
     # ------------------------------------------------------------------

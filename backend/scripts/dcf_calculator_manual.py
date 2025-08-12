@@ -506,6 +506,39 @@ class DCFModel:
                 amt *= (1 + inflation_default) ** years
             return amt
 
+        def _roi_at(ms, step: int, default_rate: float) -> float:
+            """Per-year ROI at given step using an optional piecewise curve.
+
+            The curve is a JSON string in attribute 'rate_of_return_curve' with
+            entries [{"x": int, "y": float}] where x is years since start_age.
+            """
+            import json
+            curve = _get('rate_of_return_curve', ms)
+            if not curve:
+                return _get('rate_of_return', ms) or default_rate
+            try:
+                pts = json.loads(curve)
+            except Exception:
+                return _get('rate_of_return', ms) or default_rate
+            if not isinstance(pts, list) or not pts:
+                return _get('rate_of_return', ms) or default_rate
+            pts_sorted = sorted(
+                (p for p in pts if isinstance(p, dict) and 'x' in p and 'y' in p),
+                key=lambda p: int(p['x'])
+            )
+            roi = _get('rate_of_return', ms) or default_rate
+            for p in pts_sorted:
+                try:
+                    x = int(p['x'])
+                    y = float(p['y'])
+                except Exception:
+                    continue
+                if step >= x:
+                    roi = y
+                else:
+                    break
+            return roi
+
         # ------------------------------------------------------------------
         # 2. Derive projection horizon – stop at inheritance age when present
         # ------------------------------------------------------------------
@@ -603,13 +636,13 @@ class DCFModel:
             elif key == "income":
                 current_income_found = True
                 duration = _effective_duration(ms)
-                growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+                growth = _roi_at(ms, 0, inflation_default)
                 income_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
 
             elif key == "expense":
                 current_expense_found = True
                 duration = _effective_duration(ms)
-                growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+                growth = _roi_at(ms, 0, inflation_default)
                 expense_streams.append(GrowingSeries(amt, growth, start_step=0, duration=duration))
 
             elif key == "liability":
@@ -677,7 +710,7 @@ class DCFModel:
 
             start_step = _effective_age(ms) - start_age
             duration = _effective_duration(ms)
-            growth = _get("rate_of_return", ms) if _get("rate_of_return", ms) is not None else inflation_default
+            growth = _roi_at(ms, start_step, inflation_default)
 
             if mt == "Income":
                 income_streams.append(GrowingSeries(amt, growth, start_step=start_step, duration=duration))
