@@ -991,10 +991,16 @@ function createMilestoneForm(milestone) {
                     <div class="rate-curve-editor mt-2" style="display:${milestone.rate_of_return_curve ? 'block' : 'none'}">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div class="small text-muted">Scroll to zoom Y; click to add; drag to move. Y snaps to 0.1%.</div>
-                            <div class="curve-zoom-controls btn-group btn-group-sm" role="group" aria-label="Zoom Y">
-                                <button type="button" class="btn btn-outline-secondary curve-zoom-out">−</button>
-                                <button type="button" class="btn btn-outline-secondary curve-zoom-in">+</button>
-                                <button type="button" class="btn btn-outline-secondary curve-zoom-reset">Reset</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="curve-pan-controls btn-group btn-group-sm" role="group" aria-label="Pan Y">
+                                    <button type="button" class="btn btn-outline-secondary curve-pan-down" title="Pan Down">▼</button>
+                                    <button type="button" class="btn btn-outline-secondary curve-pan-up" title="Pan Up">▲</button>
+                                </div>
+                                <div class="curve-zoom-controls btn-group btn-group-sm" role="group" aria-label="Zoom Y">
+                                    <button type="button" class="btn btn-outline-secondary curve-zoom-out" title="Zoom Out">−</button>
+                                    <button type="button" class="btn btn-outline-secondary curve-zoom-in" title="Zoom In">+</button>
+                                    <button type="button" class="btn btn-outline-secondary curve-zoom-reset" title="Reset View">Reset</button>
+                                </div>
                             </div>
                         </div>
                         <svg class="curve-canvas" width="100%" height="140" style="border:1px dashed #2b2f36; background:#0f1117; border-radius:6px"></svg>
@@ -1725,6 +1731,26 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     editorWrap.find('.curve-zoom-in').off('click.roi').on('click.roi', function(){ zoomY(0.8); });
     editorWrap.find('.curve-zoom-out').off('click.roi').on('click.roi', function(){ zoomY(1.25); });
     editorWrap.find('.curve-zoom-reset').off('click.roi').on('click.roi', function(){ setYDomain(globalYMin, globalYMax); });
+
+    // Pan handlers – shift by 25% of current span, clamped to global bounds
+    function panY(direction){
+        const [curMin, curMax] = yDomain;
+        const span = curMax - curMin;
+        const shift = span * 0.25 * direction; // direction: +1 up, -1 down
+        let newMin = curMin + shift;
+        let newMax = curMax + shift;
+        if (newMin < globalYMin){
+            newMax += (globalYMin - newMin);
+            newMin = globalYMin;
+        }
+        if (newMax > globalYMax){
+            newMin -= (newMax - globalYMax);
+            newMax = globalYMax;
+        }
+        setYDomain(newMin, newMax);
+    }
+    editorWrap.find('.curve-pan-up').off('click.roi').on('click.roi', function(){ panY(+1); });
+    editorWrap.find('.curve-pan-down').off('click.roi').on('click.roi', function(){ panY(-1); });
 
     render();
 
