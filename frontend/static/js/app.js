@@ -980,7 +980,11 @@ function createMilestoneForm(milestone) {
                 <div class="mb-3 annuity-fields" style="display: ${milestone.disbursement_type ? 'block' : 'none'}">
                     <div class="d-flex justify-content-between align-items-center">
                         <label class="form-label mb-0">Rate of Return ($%)${goalCheckbox('rate_of_return')}</label>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2 toggle-curve-editor">${milestone.rate_of_return_curve ? 'Edit Curve' : 'Use Curve'}</button>
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-2 add-curve-node" style="display:${milestone.rate_of_return_curve ? 'inline-block' : 'none'}">Add Node</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger me-2 delete-curve-node" style="display:${milestone.rate_of_return_curve ? 'inline-block' : 'none'}" disabled>Delete Node</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-curve-editor ms-2">${milestone.rate_of_return_curve ? 'Edit Curve' : 'Use Curve'}</button>
+                        </div>
                     </div>
                     <input type="number" class="form-control mb-2" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1" ${milestone.rate_of_return_curve ? 'disabled' : ''}>
                     ${scenarioControls('rate_of_return')}
@@ -1100,6 +1104,7 @@ function createMilestoneForm(milestone) {
         const hidden = form.find('[name="rate_of_return_curve"]');
         const svg = form.find('svg.curve-canvas');
         const addBtn = form.find('.add-curve-node');
+        const delBtn = form.find('.delete-curve-node');
         const isShown = editor.is(':visible');
         if (isShown) {
             // Hide → disable curve
@@ -1107,11 +1112,13 @@ function createMilestoneForm(milestone) {
             hidden.val('');
             input.prop('disabled', false);
             addBtn.hide();
+            delBtn.hide();
             $(this).text('Use Curve');
         } else {
             editor.show();
             input.prop('disabled', true);
             addBtn.show();
+            delBtn.show();
             $(this).text('Edit Curve');
             initCurveEditor(svg.get(0), hidden, milestone);
         }
@@ -1565,12 +1572,28 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
 
     const path = svg.append('path').attr('fill','none').attr('stroke','#4cc3ff').attr('stroke-width',2);
     const baseline = svg.append('path').attr('fill','none').attr('stroke','#888').attr('stroke-dasharray','4,4').attr('stroke-width',1.5);
+    const segments = svg.append('g').attr('class','segments');
 
     function save() { hiddenInput.val(JSON.stringify(points)); }
+
+    let selectedIndex = -1; // currently selected node index
 
     function render() {
         clampPts();
         path.attr('d', line(points));
+        // Draw piecewise-constant segments extending to next node or end
+        segments.selectAll('*').remove();
+        for (let i = 0; i < points.length; i++) {
+            const x0 = points[i].x;
+            const y0 = points[i].y;
+            const x1 = (i < points.length - 1) ? points[i+1].x : maxYears;
+            const segPts = [{ x: x0, y: y0 }, { x: x1, y: y0 }];
+            segments.append('path')
+                .attr('fill','none')
+                .attr('stroke','#4cc3ff')
+                .attr('stroke-width',2)
+                .attr('d', line(segPts));
+        }
         // Baseline from leftmost node to right edge at that node's Y
         if (points.length) {
             const left = points[0];
@@ -1593,13 +1616,14 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
                     save();
                 })
             )
-            .on('contextmenu', function(event, d){
-                event.preventDefault();
-                if (points.length > 1) {
-                    points = points.filter(p => !(p.x === d.x && p.y === d.y));
-                    render();
-                    save();
-                }
+            .on('click', function(event, d){
+                const idx = points.findIndex(p => p.x === d.x && p.y === d.y);
+                selectedIndex = (selectedIndex === idx) ? -1 : idx;
+                svg.selectAll('circle.node')
+                   .attr('stroke', (n,i)=> i===selectedIndex ? '#fff' : 'none')
+                   .attr('stroke-width', (n,i)=> i===selectedIndex ? 2 : 0);
+                const delBtn = $(svgEl).closest('.annuity-fields').find('.delete-curve-node');
+                delBtn.prop('disabled', !(selectedIndex >= 0 && points.length > 1));
             })
             .merge(nodes)
             .attr('cx', d=>x(d.x))
@@ -1620,6 +1644,18 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     });
 
     render();
+
+    // Delete selected node button
+    const delBtn = $(svgEl).closest('.annuity-fields').find('.delete-curve-node');
+    delBtn.off('click.roi').on('click.roi', function(){
+        if (selectedIndex >= 0 && points.length > 1) {
+            points.splice(selectedIndex, 1);
+            selectedIndex = -1;
+            render();
+            save();
+            $(this).prop('disabled', true);
+        }
+    });
 }
 function handleMilestoneDelete(e) {
     const form = $(e.target).closest('.milestone-form, .sub-milestone-form');
