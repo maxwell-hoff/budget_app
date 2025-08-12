@@ -989,9 +989,17 @@ function createMilestoneForm(milestone) {
                     <input type="number" class="form-control mb-2" name="rate_of_return" value="${milestone.rate_of_return ? milestone.rate_of_return * 100 : ''}" step="0.1" ${milestone.rate_of_return_curve ? 'disabled' : ''}>
                     ${scenarioControls('rate_of_return')}
                     <div class="rate-curve-editor mt-2" style="display:${milestone.rate_of_return_curve ? 'block' : 'none'}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="small text-muted">Scroll to zoom Y; click to add; drag to move. Y snaps to 0.1%.</div>
+                            <div class="curve-zoom-controls btn-group btn-group-sm" role="group" aria-label="Zoom Y">
+                                <button type="button" class="btn btn-outline-secondary curve-zoom-out">−</button>
+                                <button type="button" class="btn btn-outline-secondary curve-zoom-in">+</button>
+                                <button type="button" class="btn btn-outline-secondary curve-zoom-reset">Reset</button>
+                            </div>
+                        </div>
                         <svg class="curve-canvas" width="100%" height="140" style="border:1px dashed #2b2f36; background:#0f1117; border-radius:6px"></svg>
                         <input type="hidden" name="rate_of_return_curve" value='${milestone.rate_of_return_curve ? milestone.rate_of_return_curve : ''}'>
-                        <div class="form-text">Drag nodes: X snaps to years, Y snaps to 0.1%. Click anywhere inside the chart to add a node. Right-click a node to remove it.</div>
+                        <div class="form-text">Drag nodes: X snaps to years, Y snaps to 0.1%. Click anywhere in the chart to add a node.</div>
                     </div>
                 </div>
             </form>
@@ -1537,7 +1545,9 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
 
     const margin = { left: 40, right: 10, top: 10, bottom: 24 };
     const x = d3.scaleLinear().domain([0, maxYears]).range([margin.left, width - margin.right]);
-    const y = d3.scaleLinear().domain([0, 0.2]).range([height - margin.bottom, margin.top]);
+    const globalYMin = 0.0, globalYMax = 0.2;
+    let yDomain = [globalYMin, globalYMax];
+    const y = d3.scaleLinear().domain(yDomain).range([height - margin.bottom, margin.top]);
 
     const xAxis = (g) => g
         .attr('transform', `translate(0, ${height - margin.bottom})`)
@@ -1546,7 +1556,12 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
         .call(s=>s.selectAll('line,path').attr('stroke','#2b2f36'));
     const yAxis = (g) => g
         .attr('transform', `translate(${margin.left}, 0)`)
-        .call(d3.axisLeft(y).ticks(10).tickFormat(d=>`${(d*100).toFixed(0)}%`))
+        .call(d3.axisLeft(y).ticks(10).tickFormat(d=>{
+            const span = y.domain()[1] - y.domain()[0];
+            if (span <= 0.02) return `${(d*100).toFixed(2)}%`;
+            if (span <= 0.10) return `${(d*100).toFixed(1)}%`;
+            return `${(d*100).toFixed(0)}%`;
+        }))
         .call(s=>s.selectAll('text').attr('fill','#cdd3de'))
         .call(s=>s.selectAll('line,path').attr('stroke','#2b2f36'));
 
@@ -1568,7 +1583,7 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
     }
 
     function clampPts() {
-        points = points.map(p=>({ x: Math.max(0, Math.min(maxYears, Math.round(p.x))), y: Math.max(0, Math.min(0.2, Math.round(p.y*1000)/1000)) }));
+        points = points.map(p=>({ x: Math.max(0, Math.min(maxYears, Math.round(p.x))), y: Math.max(globalYMin, Math.min(globalYMax, Math.round(p.y*1000)/1000)) }));
         points.sort((a,b)=>a.x-b.x);
     }
     clampPts();
@@ -1610,6 +1625,9 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
             const blPoints = [{ x: left.x, y: left.y }, { x: maxYears, y: left.y }];
             baseline.attr('d', line(blPoints));
         }
+        // Update Y axis with dynamic tick precision on each render
+        svg.select('.y-axis').call(yAxis);
+
         const nodes = svg.selectAll('circle.node').data(points, d=>d.x);
         nodes.enter().append('circle')
             .attr('class','node')
@@ -1624,9 +1642,9 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
                       const clampedX = Math.max(margin.left, Math.min(px, width - margin.right));
                       const clampedY = Math.max(margin.top, Math.min(py, height - margin.bottom));
                       const xi = Math.round(x.invert(clampedX));
-                       const yi = Math.round((y.invert(clampedY))*1000)/1000; // 0.1% increments
+                      const yi = Math.round((y.invert(clampedY))*1000)/1000; // 0.1% increments
                       d.x = Math.max(0, Math.min(maxYears, xi));
-                      d.y = Math.max(0, Math.min(0.2, yi));
+                       d.y = Math.max(globalYMin, Math.min(globalYMax, yi));
                       render();
                       save();
                   })
@@ -1659,11 +1677,54 @@ function initCurveEditor(svgEl, hiddenInput, milestone) {
         const yi = Math.round((y.invert(clampedY))*1000)/1000;
         if (xi < 0 || xi > maxYears) return;
         if (!points.some(p=>p.x===xi)) {
-            points.push({ x: xi, y: Math.max(0, Math.min(0.2, yi)) });
+            points.push({ x: xi, y: Math.max(globalYMin, Math.min(globalYMax, yi)) });
             render();
             save();
         }
     });
+
+    // --- Zoom helpers (Y-axis only) -------------------------------------
+    function setYDomain(min, max) {
+        let newMin = Math.max(globalYMin, Math.min(min, globalYMax));
+        let newMax = Math.max(newMin + 0.001, Math.min(max, globalYMax));
+        yDomain = [newMin, newMax];
+        y.domain(yDomain);
+        render();
+    }
+
+    function zoomY(factor, anchorValue) {
+        const [curMin, curMax] = yDomain;
+        const curSpan = curMax - curMin;
+        let newSpan = curSpan * factor;
+        newSpan = Math.max(0.002, Math.min(globalYMax - globalYMin, newSpan));
+        const anchor = typeof anchorValue === 'number' ? anchorValue : (curMin + curMax) / 2;
+        let newMin = anchor - newSpan / 2;
+        let newMax = anchor + newSpan / 2;
+        if (newMin < globalYMin) {
+            newMax += (globalYMin - newMin);
+            newMin = globalYMin;
+        }
+        if (newMax > globalYMax) {
+            newMin -= (newMax - globalYMax);
+            newMax = globalYMax;
+        }
+        setYDomain(newMin, newMax);
+    }
+
+    // Wheel zoom handler – zoom around pointer position
+    svg.on('wheel.zoomY', function(event){
+        event.preventDefault();
+        const [, py] = d3.pointer(event, svgEl);
+        const anchor = y.invert(py);
+        const factor = event.deltaY > 0 ? 1.25 : 0.8; // out vs in
+        zoomY(factor, anchor);
+    });
+
+    // Button zoom handlers
+    const editorWrap = $(svgEl).closest('.rate-curve-editor');
+    editorWrap.find('.curve-zoom-in').off('click.roi').on('click.roi', function(){ zoomY(0.8); });
+    editorWrap.find('.curve-zoom-out').off('click.roi').on('click.roi', function(){ zoomY(1.25); });
+    editorWrap.find('.curve-zoom-reset').off('click.roi').on('click.roi', function(){ setYDomain(globalYMin, globalYMax); });
 
     render();
 
