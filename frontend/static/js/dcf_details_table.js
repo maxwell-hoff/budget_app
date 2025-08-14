@@ -164,102 +164,7 @@
         currentScenarioData = dcfData;
     }
 
-    // Add column-expansion toggles for Salary and Expenses headers
-    function enableColumnExpansion(goalParam, scenarioParameter, scenarioValue, scenarioName, subScenarioName) {
-        const table = document.getElementById('dcf-details-table');
-        if (!table) return;
-        const headerCells = Array.from(table.querySelectorAll('thead th'));
-        const labels = headerCells.map(th => th.textContent.trim());
-
-        const salaryIdx = labels.indexOf('Salary');
-        const expensesIdx = labels.indexOf('Expenses');
-        const targets = [
-            { idx: salaryIdx, key: 'salary', label: 'Salary' },
-            { idx: expensesIdx, key: 'expenses', label: 'Expenses' },
-        ].filter(t => t.idx >= 0);
-
-        targets.forEach(target => {
-            const th = headerCells[target.idx];
-            if (!th || th.dataset.expandBound === '1') return;
-            th.dataset.expandBound = '1';
-
-            // Insert a toggle icon
-            const toggle = document.createElement('button');
-            toggle.className = 'btn btn-sm btn-link p-0 ms-1 dcf-toggle';
-            toggle.innerHTML = '<i class="fas fa-plus-circle"></i>';
-            toggle.setAttribute('aria-expanded', 'false');
-            th.appendChild(toggle);
-
-            let expandedState = { columns: [], insertedCount: 0 };
-
-            toggle.addEventListener('click', () => {
-                const expanded = toggle.getAttribute('aria-expanded') === 'true';
-                if (expanded) {
-                    // Collapse: remove inserted sub-columns
-                    collapseColumns(target.idx, expandedState.insertedCount);
-                    expandedState = { columns: [], insertedCount: 0 };
-                    toggle.setAttribute('aria-expanded', 'false');
-                    toggle.innerHTML = '<i class="fas fa-plus-circle"></i>';
-                    return;
-                }
-
-                // Expand: fetch matrix and insert columns
-                const url = `/api/dcf-breakdown-matrix?scenario=${encodeURIComponent(scenarioName)}&sub_scenario=${encodeURIComponent(subScenarioName)}${scenarioParameter?`&scenario_parameter=${encodeURIComponent(scenarioParameter)}`:''}${scenarioValue!==undefined?`&scenario_value=${encodeURIComponent(scenarioValue)}`:''}`;
-                fetch(url)
-                    .then(r => r.json())
-                    .then(matrix => {
-                        const set = matrix[target.key];
-                        const columns = set.columns || [];
-                        const data = set.data || [];
-                        if (!columns.length) return;
-                        expandedState.columns = columns.slice();
-                        expandedState.insertedCount = insertColumns(target.idx, columns, data);
-                        toggle.setAttribute('aria-expanded', 'true');
-                        toggle.innerHTML = '<i class="fas fa-minus-circle"></i>';
-                    })
-                    .catch(err => console.error('Error loading breakdown matrix', err));
-            });
-        });
-
-        function insertColumns(baseIdx, subColumnNames, matrixRows) {
-            const theadRow = table.querySelector('thead tr');
-            // Insert header cells after baseIdx
-            subColumnNames.forEach((name, i) => {
-                const th = document.createElement('th');
-                th.textContent = name;
-                th.className = 'text-center';
-                theadRow.insertBefore(th, theadRow.children[baseIdx + 1 + i]);
-            });
-
-            // Insert data cells per row using matrixRows aligned by ages order of table body
-            const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
-            bodyRows.forEach((tr, rIdx) => {
-                // Get the cell value row; fallback zeros if out of range
-                const values = matrixRows[rIdx] || Array(subColumnNames.length).fill(0);
-                values.forEach((val, i) => {
-                    const td = document.createElement('td');
-                    td.textContent = formatCurrency(val);
-                    td.className = getValueClass(val);
-                    tr.insertBefore(td, tr.children[baseIdx + 1 + i]);
-                });
-            });
-
-            return subColumnNames.length;
-        }
-
-        function collapseColumns(baseIdx, count) {
-            if (!count) return;
-            const theadRow = table.querySelector('thead tr');
-            for (let i = 0; i < count; i++) {
-                const idx = baseIdx + 1; // always remove the first inserted after base
-                if (theadRow.children[idx]) theadRow.removeChild(theadRow.children[idx]);
-                const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
-                bodyRows.forEach(tr => {
-                    if (tr.children[idx]) tr.removeChild(tr.children[idx]);
-                });
-            }
-        }
-    }
+    // Expansion capability removed per request
 
     // Function to fetch and display DCF data for a specific scenario
     function loadDCFData(goalParameter, scenarioParameter, scenarioValue, scenarioName, subScenarioName) {
@@ -284,8 +189,6 @@
             .then(data => {
                 console.log('DCF data received:', data);
                 updateTable(data);
-                // After table render, enable column expansion controls
-                enableColumnExpansion(goalParameter, scenarioParameter, scenarioValue, scenarioName, subScenarioName);
             })
             .catch(error => {
                 console.error('Error fetching DCF data:', error);
